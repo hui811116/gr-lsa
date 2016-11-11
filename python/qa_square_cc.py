@@ -48,7 +48,7 @@ class qa_square_cc (gr_unittest.TestCase):
         # set up fg
         self.tb.run ()
         result_data=dst.data()
-
+        #
         self.assertFloatTuplesAlmostEqual(expected_result, result_data, 5)
         # count the differences in places
         self.assertEqual(len(expected_result), len(result_data))
