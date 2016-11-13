@@ -9,8 +9,11 @@
 
 %{
 #include "lsa/square_cc.h"
+#include "lsa/eng_det_cc.h"
 %}
 
 
 %include "lsa/square_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, square_cc);
+%include "lsa/eng_det_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, eng_det_cc);

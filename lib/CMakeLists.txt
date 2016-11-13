@@ -27,6 +27,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 
 list(APPEND lsa_sources
     square_cc_impl.cc
+    eng_det_cc_impl.cc
 )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)

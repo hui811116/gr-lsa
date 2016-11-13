@@ -18,5 +18,6 @@
 # Boston, MA 02110-1301, USA.
 
 install(FILES
-    lsa_square_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_square_cc.xml
+    lsa_eng_det_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

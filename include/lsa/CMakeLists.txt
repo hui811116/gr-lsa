@@ -22,5 +22,6 @@
 ########################################################################
 install(FILES
     api.h
-    square_cc.h DESTINATION include/lsa
+    square_cc.h
+    eng_det_cc.h DESTINATION include/lsa
 )
