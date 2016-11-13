@@ -22,10 +22,9 @@
 from gnuradio import gr, gr_unittest
 from gnuradio import blocks
 import lsa_swig as lsa
-import math
-
 from numpy import array
-class qa_eng_det_cc (gr_unittest.TestCase):
+
+class qa_lsa_queue_cc (gr_unittest.TestCase):
 
     def setUp (self):
         self.tb = gr.top_block ()
@@ -34,25 +33,22 @@ class qa_eng_det_cc (gr_unittest.TestCase):
         self.tb = None
 
     def test_001_t (self):
-    	iphase = array([1,1,1,1,1,2])
-    	qphase = array([-1,1,-1,1,-1,-2])
-    	src_data = iphase + 1j*qphase
-    	expected=(10.0,16.0,0,0,0,0)
-    	src = blocks.vector_source_c(src_data)
-    	eng_cc = lsa.eng_det_cc()
-    	dst = blocks.vector_sink_f()
-    	self.tb.connect(src,eng_cc)
-    	self.tb.connect(eng_cc,dst)
-
         # set up fg
+        iphase=array([1,1,2,3])
+        qphase=array([2,3,1,1])
+        src_data=iphase + 1j*qphase
+        expected=[]
+        src = blocks.vector_source_c(src_data)
+        queue_cc=lsa.lsa_queue_cc()
+        #queue_cc.set_status(False)
+        dst=blocks.vector_sink_c()
+        self.tb.connect(src,queue_cc)
+        self.tb.connect(queue_cc,dst)
         self.tb.run ()
-        result_data=dst.data()
-        #print(src_data)
-        #print(result_data)
         # check data
-        self.assertFloatTuplesAlmostEqual(expected, result_data, 5)
-        self.assertEqual(len(expected), len(result_data))
+        result_data=dst.data()
+        self.assertEqual(len(expected),len(result_data))
 
 
 if __name__ == '__main__':
-    gr_unittest.run(qa_eng_det_cc, "qa_eng_det_cc.xml")
+    gr_unittest.run(qa_lsa_queue_cc, "qa_lsa_queue_cc.xml")

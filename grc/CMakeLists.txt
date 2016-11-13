@@ -19,5 +19,6 @@
 
 install(FILES
     lsa_square_cc.xml
-    lsa_eng_det_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_eng_det_cc.xml
+    lsa_lsa_queue_cc.xml DESTINATION share/gnuradio/grc/blocks
 )
