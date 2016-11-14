@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::eng_det_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make();
+      static sptr make(float threshold=1e-3, int bin=5);
     };
 
   } // namespace lsa

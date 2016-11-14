@@ -31,9 +31,10 @@ namespace gr {
      private:
       // Nothing to declare in this block.
       float d_threshold_db;
+      int   d_bin;
 
      public:
-      eng_det_cc_impl();
+      eng_det_cc_impl(float threshold,int bin);
       ~eng_det_cc_impl();
 
       // Where all the action really happens
@@ -45,7 +46,10 @@ namespace gr {
            gr_vector_void_star &output_items);
 
       void set_thres(float thes_db);
+      void set_bin(int bin);
+
       float get_thres() const;
+      int   get_bin()   const;
     };
 
   } // namespace lsa

@@ -32,21 +32,22 @@ namespace gr {
   namespace lsa {
 
     eng_det_cc::sptr
-    eng_det_cc::make()
+    eng_det_cc::make(float threshold, int bin)
     {
       return gnuradio::get_initial_sptr
-        (new eng_det_cc_impl());
+        (new eng_det_cc_impl(threshold, bin));
     }
 
     /*
      * The private constructor
      */
-    eng_det_cc_impl::eng_det_cc_impl()
+    eng_det_cc_impl::eng_det_cc_impl(float threshold, int bin)
       : gr::block("eng_det_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(float)))
     {
-      d_threshold_db=-30.0;
+      d_threshold_db=threshold;
+      d_bin=bin;
     }
 
     /*
@@ -79,33 +80,44 @@ namespace gr {
       }
       // fixed bin, may be a parameter in future implementation
       //const int ss=noutput_items;
-      int bin=5;
-      
-      for(int i=0;i<nin;++i)
+      //int bin=5;
+      int noutput_items_calc=nin-d_bin+1;
+      for(int i=0;i<noutput_items_calc;++i)
       {
-        if(i<nin-bin+1)
-          out[i]=std::accumulate(temp+i,temp+i+bin,0.0);
-        else
-          out[i]=0.0;
+          out[i]=std::accumulate(temp+i,temp+i+d_bin,0.0);
       }
       
       // Do <+signal processing+>
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      consume_each (noutput_items);
+      consume_each (nin);
       // Tell runtime system how many output items we produced.
-      return noutput_items;
+      return noutput_items_calc;
     }
-
+//**************************
+//    SET functions
+//**************************    
     void eng_det_cc_impl::set_thres(float thes_db)
     {
       d_threshold_db=thes_db;
     }
-
+    void eng_det_cc_impl::set_bin(int bin)
+    {
+      d_bin=bin;
+    }
+//***************************
+//   GET functions
+//***************************
     float eng_det_cc_impl::get_thres() const
     {
       return d_threshold_db;
     }
+
+    int eng_det_cc_impl::get_bin() const
+    {
+      return d_bin;
+    }
+
 
     
 

@@ -34,12 +34,14 @@ class qa_eng_det_cc (gr_unittest.TestCase):
         self.tb = None
 
     def test_001_t (self):
+        thresh=1e-3
+        bin_size=5;
     	iphase = array([1,1,1,1,1,2])
     	qphase = array([-1,1,-1,1,-1,-2])
     	src_data = iphase + 1j*qphase
-    	expected=(10.0,16.0,0,0,0,0)
+    	expected=(10.0,16.0)
     	src = blocks.vector_source_c(src_data)
-    	eng_cc = lsa.eng_det_cc()
+    	eng_cc = lsa.eng_det_cc(thresh,bin_size)
     	dst = blocks.vector_sink_f()
     	self.tb.connect(src,eng_cc)
     	self.tb.connect(eng_cc,dst)
@@ -48,7 +50,7 @@ class qa_eng_det_cc (gr_unittest.TestCase):
         self.tb.run ()
         result_data=dst.data()
         #print(src_data)
-        #print(result_data)
+        print(result_data)
         # check data
         self.assertFloatTuplesAlmostEqual(expected, result_data, 5)
         self.assertEqual(len(expected), len(result_data))
