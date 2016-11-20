@@ -29,23 +29,23 @@ namespace gr {
   namespace lsa {
 
     lsa_queue_cc::sptr
-    lsa_queue_cc::make()
+    lsa_queue_cc::make(int capacity)
     {
       return gnuradio::get_initial_sptr
-        (new lsa_queue_cc_impl());
+        (new lsa_queue_cc_impl(capacity));
     }
 
     /*
      * The private constructor
      */
-    lsa_queue_cc_impl::lsa_queue_cc_impl()
+    lsa_queue_cc_impl::lsa_queue_cc_impl(int capacity)
       : gr::block("lsa_queue_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(gr_complex)))
     {
       //d_queue_size=0;
       d_status=false;
-      d_queue_capacity=1024;
+      d_queue_capacity=(capacity>0)? capacity:1024;
       d_q_ptr=new std::vector<std::complex<float> >;
     }
 
@@ -101,16 +101,8 @@ namespace gr {
     void
     lsa_queue_cc_impl::enqueue(const gr_complex* in, int nin)
     {
-      if(nin<(d_queue_capacity-d_q_ptr->size()))
-      {
-        for(int i=0;i<nin;++i)
-          d_q_ptr->push_back(in[i]);
-      }
-      else
-      {
-        d_q_ptr->clear();
-        for(int i=nin-d_queue_capacity;i<nin;++i)
-          d_q_ptr->push_back(in[i]);
+      for(int i=0;i<nin;++i){
+        d_q_ptr->push_back(in[i]);
       }
     }
     void
@@ -130,7 +122,7 @@ namespace gr {
     bool
     lsa_queue_cc_impl::check_status()
     {
-      return d_status;
+      return d_status||(d_q_ptr->size()>d_queue_capacity);
     }
     void
     lsa_queue_cc_impl::set_status(bool new_sta)

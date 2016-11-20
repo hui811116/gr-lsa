@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::lsa_queue_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make();
+      static sptr make(int capacity=1024);
     };
 
   } // namespace lsa

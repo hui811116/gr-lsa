@@ -34,12 +34,13 @@ class qa_lsa_queue_cc (gr_unittest.TestCase):
 
     def test_001_t (self):
         # set up fg
-        iphase=array([1,1,2,3])
-        qphase=array([2,3,1,1])
+        cap=4
+        iphase=array(range(20))
+        qphase=array(range(20))
         src_data=iphase + 1j*qphase
-        expected=[]
+        expected=array(range(20))
         src = blocks.vector_source_c(src_data)
-        queue_cc=lsa.lsa_queue_cc()
+        queue_cc=lsa.lsa_queue_cc(cap)
         #queue_cc.set_status(False)
         dst=blocks.vector_sink_c()
         self.tb.connect(src,queue_cc)
@@ -47,6 +48,8 @@ class qa_lsa_queue_cc (gr_unittest.TestCase):
         self.tb.run ()
         # check data
         result_data=dst.data()
+        #print(src_data)
+        print(result_data)
         self.assertEqual(len(expected),len(result_data))
 
 

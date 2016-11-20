@@ -42,9 +42,10 @@ namespace gr {
       void dequeue_n(int nSample);
       void enqueue(const std::complex<float>* in,int nin);
       bool check_status();
+      //void handle_queue();
 
      public:
-      lsa_queue_cc_impl();
+      lsa_queue_cc_impl(int capacity);
       ~lsa_queue_cc_impl();
 
       // Where all the action really happens
