@@ -4,4 +4,4 @@ log/*.log
 *.o
 *.app
 build/
-example/*.py
+examples/*.py
