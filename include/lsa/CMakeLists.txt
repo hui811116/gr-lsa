@@ -24,5 +24,6 @@ install(FILES
     api.h
     square_cc.h
     eng_det_cc.h
-    lsa_queue_cc.h DESTINATION include/lsa
+    lsa_queue_cc.h
+    autoCorr_cc.h DESTINATION include/lsa
 )

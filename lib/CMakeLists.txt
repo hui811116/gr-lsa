@@ -29,6 +29,7 @@ list(APPEND lsa_sources
     square_cc_impl.cc
     eng_det_cc_impl.cc
     lsa_queue_cc_impl.cc
+    autoCorr_cc_impl.cc
 )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
