@@ -93,7 +93,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(112, 548)</value>
+      <value>(40, 548)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -147,7 +147,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(224, 628)</value>
+      <value>(104, 548)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -205,7 +205,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(120, 612)</value>
+      <value>(48, 612)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -311,7 +311,7 @@ FEC is Dummy</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(328, 756)</value>
+      <value>(168, 548)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -396,7 +396,7 @@ FEC is Dummy</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(144, 840)</value>
+      <value>(48, 688)</value>
     </param>
     <param>
       <key>_rotation</key>
