@@ -25,5 +25,6 @@ install(FILES
     square_cc.h
     eng_det_cc.h
     lsa_queue_cc.h
-    autoCorr_cc.h DESTINATION include/lsa
+    autoCorr_cc.h
+    correlate_extract_cc.h DESTINATION include/lsa
 )

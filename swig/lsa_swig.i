@@ -12,6 +12,7 @@
 #include "lsa/eng_det_cc.h"
 #include "lsa/lsa_queue_cc.h"
 #include "lsa/autoCorr_cc.h"
+#include "lsa/correlate_extract_cc.h"
 %}
 
 
@@ -23,3 +24,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, eng_det_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, lsa_queue_cc);
 %include "lsa/autoCorr_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, autoCorr_cc);
+%include "lsa/correlate_extract_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, correlate_extract_cc);
