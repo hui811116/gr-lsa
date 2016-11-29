@@ -22,5 +22,6 @@ install(FILES
     lsa_eng_det_cc.xml
     lsa_lsa_queue_cc.xml
     lsa_autoCorr_cc.xml
-    lsa_correlate_extract_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_correlate_extract_cc.xml
+    lsa_my_access_corr_bb.xml DESTINATION share/gnuradio/grc/blocks
 )

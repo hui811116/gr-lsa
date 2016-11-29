@@ -44,7 +44,7 @@ namespace gr {
                                                          float threshold)
       : gr::block("correlate_extract_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(1, 1, sizeof(gr_complex)))
+              gr::io_signature::make(2, 2, sizeof(gr_complex)))
     {
       d_symbols=symbols;
       d_threshold=( (threshold>=0) && (threshold<=1) )? threshold : 0.5;
@@ -111,17 +111,18 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
+      gr_complex *corr_out = (gr_complex*) output_items[1];
 
       int nin=ninput_items[0];
       int ns=d_symbols.size();
       int n_out=((nin-ns+1)>0)?nin-ns+1:0;
-      gr_complex corr[n_out];
-      calc_corr(corr,in,n_out);
+      //gr_complex corr[n_out];
+      calc_corr(corr_out,in,n_out);
       // Do <+signal processing+>
       int iter=0;bool found=false;
       int index=nin;
       while((!found)&&(iter<n_out)){
-        if(abs(corr[iter])>=d_threshold){
+        if(abs(corr_out[iter])>=d_threshold){
           index=iter;
           found=true;
         }
@@ -134,7 +135,7 @@ namespace gr {
       }
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      consume_each (noutput_items);
+      consume_each (n_out);
 
       // Tell runtime system how many output items we produced.
       return noutput_items;

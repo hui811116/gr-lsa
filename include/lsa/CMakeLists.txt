@@ -26,5 +26,6 @@ install(FILES
     eng_det_cc.h
     lsa_queue_cc.h
     autoCorr_cc.h
-    correlate_extract_cc.h DESTINATION include/lsa
+    correlate_extract_cc.h
+    my_access_corr_bb.h DESTINATION include/lsa
 )

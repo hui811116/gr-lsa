@@ -31,6 +31,7 @@ list(APPEND lsa_sources
     lsa_queue_cc_impl.cc
     autoCorr_cc_impl.cc
     correlate_extract_cc_impl.cc
+    my_access_corr_bb_impl.cc
 )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
