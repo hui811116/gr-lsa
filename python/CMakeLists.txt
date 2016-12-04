@@ -47,3 +47,4 @@ GR_ADD_TEST(qa_lsa_queue_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_
 GR_ADD_TEST(qa_autoCorr_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_autoCorr_cc.py)
 GR_ADD_TEST(qa_correlate_extract_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_correlate_extract_cc.py)
 GR_ADD_TEST(qa_my_access_corr_bb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_my_access_corr_bb.py)
+GR_ADD_TEST(qa_header_payload_parser_cb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_header_payload_parser_cb.py)
