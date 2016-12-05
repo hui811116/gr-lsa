@@ -24,6 +24,7 @@
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
+#include <gnuradio/digital/constellation.h>
 
 namespace gr {
   namespace lsa {
@@ -46,7 +47,11 @@ namespace gr {
        * class. lsa::header_payload_parser_cb::make is the public interface for
        * creating new instances.
        */
-      static sptr make();
+      static sptr make(gr::digital::constellation_sptr hdr_constellation,
+                       gr::digital::constellation_sptr pld_constellation,
+                       const std::vector<gr_complex>& symbols,
+                       const std::vector<unsigned char>& accessbits,
+                       double threshold);
     };
 
   } // namespace lsa

@@ -23,6 +23,8 @@
 #endif
 
 #include <gnuradio/io_signature.h>
+#include <gnuradio/blocks/pdu.h>
+#include <gnuradio/digital/constellation.h>
 #include "header_payload_parser_cb_impl.h"
 
 #include <cmath>
@@ -31,26 +33,32 @@ namespace gr {
   namespace lsa {
 
     header_payload_parser_cb::sptr
-    header_payload_parser_cb::make(constellation_sptr hdr_constellation,
-                                   constellation_sptr pld_constellation,
+    header_payload_parser_cb::make(gr::digital::constellation_sptr hdr_constellation,
+                                   gr::digital::constellation_sptr pld_constellation,
                                    const std::vector<gr_complex>& symbols,
-                                   const std::vector<unsigned char>& accessbytes
+                                   const std::vector<unsigned char>& accessbits,
+                                   double threshold
                                    )
     {
       return gnuradio::get_initial_sptr
         (new header_payload_parser_cb_impl(hdr_constellation,
                                            pld_constellation,
                                            symbols,
-                                           accessbytes));
+                                           accessbits,
+                                           threshold));
     }
 
     /*
      * The private constructor
      */
-    header_payload_parser_cb_impl::header_payload_parser_cb_impl(constellation_str hdr_constellation,
-                                                                 constellation_str pld_constellation,
+    enum HeaderType{DEFAULT,
+                    COUNTER,
+                    DEV};
+
+    header_payload_parser_cb_impl::header_payload_parser_cb_impl(gr::digital::constellation_sptr hdr_constellation,
+                                                                 gr::digital::constellation_sptr pld_constellation,
                                                                  const std::vector<gr_complex>& symbols,
-                                                                 const std::vector<unsigned char>& accessbytes,
+                                                                 const std::vector<unsigned char>& accessbits,
                                                                  double threshold
                                                                  )
             : gr::block("header_payload_parser_cb",
@@ -59,11 +67,14 @@ namespace gr {
               d_hdr_const(hdr_constellation),
               d_pld_const(pld_constellation),
               d_threshold(threshold),
-              d_symbols(symbols)
+              d_symbols(symbols),
+              d_accessbits(accessbits)
     {
       symbol_norm=0.0;
       for(int i=0;i<symbols.size();++i)
         symbol_norm+=norm(symbols[i]);
+      d_msg_port=pmt::mp("payload");
+      message_port_register_out(d_msg_port);
     }
 
     /*
@@ -94,7 +105,7 @@ namespace gr {
           tmp_norm+=norm(in[i+j]);
         }
         if(abs(corr[i])>1e-16){
-          corr[i]=corr[i]/std::sqrt(symbol_norm)/std::sqrt(tmp_norm);
+          corr[i]/=(std::sqrt(symbol_norm)/std::sqrt(tmp_norm));
         }
         else
           corr[i]=1e-16;
@@ -122,23 +133,23 @@ namespace gr {
     }
 
     void
-    header_payload_parser_cb_impl::sync_accessbytes(std::vector<int>& pos,unsigned char* in, int i_size)
+    header_payload_parser_cb_impl::sync_accessbits(std::vector<int>& pos,const unsigned char* in, int i_size)
     {
-      int niter=i_size-d_accessbytes.size()+1;
+      int niter=i_size-d_accessbits.size()+1;
       int count;
       for(int i=0;i<niter;++i)
       {
         count=0;
-        for(int j=0;j<d_accessbytes.size();++j)
+        for(int j=0;j<d_accessbits.size();++j)
         {
-          if(in[i+j]==d_accessbytes[j])
+          if(in[i+j]==d_accessbits[j])
             count++;
         }
-        if(count==d_accessbytes.size())
+        if(count==d_accessbits.size())
             pos.push_back(i);
       }
     }
-
+/*
     bool
     header_payload_parser_cb_impl::hdr_demux(std::vector<int>& positions,const gr_complex * in, int i_size)
     {
@@ -152,24 +163,37 @@ namespace gr {
         for(int i=0;i<i_size;++i){
           tmp_bits[i]=d_hdr_const->decision_maker(&(in[i]));
         }
-        //std::vector<int> positions;
-        sync_accesscode(positions, tmp_bytes, i_size);
+        std::vector<int> positions;
+        sync_accessbits(positions, tmp_bytes, i_size);
         return !positions.empty();
       }
       return false;
     }
+*/
+    //void
+    //header_payload_parser_cb_impl::parse_packet_length()
+    //{
+    //}
+
+    void
+    header_payload_parser_cb_impl::repack_bits_lsb(unsigned char* out, unsigned char* in, unsigned int len, unsigned int bps)
+    {
+      int total_len=len*bps;
+      for(int i=0;i<total_len;++i)
+        out[i]=(0x01 & (in[i/bps] >> (i%bps)));        
+    }
 
 
     std::vector<unsigned char>
-    header_payload_parser_cb_impl::accessbytes() const
+    header_payload_parser_cb_impl::accessbits() const
     {
-      return d_accessbytes;
+      return d_accessbits;
     }
 
     void
-    header_payload_parser_cb_impl::set_accessbytes(const std::vector<unsigned char>& accessbytes)
+    header_payload_parser_cb_impl::set_accessbits(const std::vector<unsigned char>& accessbits)
     {
-      d_accessbytes=accessbytes;
+      d_accessbits=accessbits;
     }
 
     double
@@ -204,21 +228,60 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       //const gr_complex *corr= (const gr_complex *) input_items[1];
-      unsigned char *out = (unsigned char *) output_items[0];
-
+      gr_complex *out = (gr_complex *) output_items[0];
+      memcpy(out,in,sizeof(gr_complex)*noutput_items);
       // Do <+signal processing+>
-      std::vector<int> positions;
-      if(!hdr_demux(positions,in,ninput_items[0])){
-        //how to parse the infomation in the header field
-      }
-      else{
-
-      }
       
+      unsigned char tmp[ninput_items[0]];
+      for(int i=0;i<ninput_items[0];++i){
+        tmp[i]=d_hdr_const->decision_maker(&(in[i]));
+      } 
+      //unpacking to k bits
+      int total_len=ninput_items[0]*d_hdr_const->bits_per_symbol();
+      unsigned char repack_bits[total_len];
+      repack_bits_lsb(repack_bits,tmp,ninput_items[0],d_hdr_const->bits_per_symbol());
+      std::vector<int> positions;
+      sync_accessbits(positions, repack_bits, total_len);
+      //parse_packet_length()
+      /*
+       this version meant for default header type, for other implementation,
+       reuse the enum type defined in the begin of this file.
+      */
+      unsigned short first,second;
+      int pos_reg;
+      int consume_idx=ninput_items[0];
+      pmt::pmt_t pdu_out;
+      gr::blocks::pdu::vector_type d_type = gr::blocks::pdu::byte_t;
+      //pmt::pmt_t info;
+      for(int i=0;i<positions.size();++i){
+        //default packet length in header 16+16
+        if(positions[i]+d_accessbits.size()+32<total_len){
+          first=0x0000;
+          second=0x0000;
+          pos_reg=positions[i]+d_accessbits.size();
+          for(int j=0;j<16;++j){
+            first |= (repack_bits[pos_reg+j] & 0x01)<<j;
+            second |=(repack_bits[pos_reg+16+j] & 0x01)<<j;
+          }
+          if(first==second){
+            //finding payload symbols
+            if((pos_reg+32)/d_hdr_const->bits_per_symbol()+first*8/d_pld_const->bits_per_symbol()<ninput_items[0]){
+              consume_idx=(pos_reg+32)/d_hdr_const->bits_per_symbol()+first*8/d_pld_const->bits_per_symbol();
+              for(int j=0;j<first;++j){
+                tmp[j]=d_pld_const->decision_maker(&(in[(pos_reg+32)/d_hdr_const->bits_per_symbol()+j]));
+              }
+              pdu_out=pmt::make_dict();
+              pdu_out=pmt::dict_add(pdu_out, pmt::intern("payload"), pmt::from_long((long)first));
+              pdu_out=gr::blocks::pdu::make_pdu_vector(d_type, tmp, first);
+              message_port_pub(d_msg_port,pdu_out);
+            }//matched payload
+          }//packet length match (deault header setup)
+        }//total len matched
+      }
 
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      consume_each (noutput_items);
+      consume_each (consume_idx);
 
       // Tell runtime system how many output items we produced.
       return noutput_items;

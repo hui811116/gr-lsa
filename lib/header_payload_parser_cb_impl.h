@@ -22,6 +22,7 @@
 #define INCLUDED_LSA_HEADER_PAYLOAD_PARSER_CB_IMPL_H
 
 #include <lsa/header_payload_parser_cb.h>
+#include <gnuradio/digital/constellation.h>
 
 namespace gr {
   namespace lsa {
@@ -30,35 +31,44 @@ namespace gr {
     {
      private:
       // Nothing to declare in this block.
+      // message port
+      pmt::pmt_t d_msg_port;
+
+      // private members
       std::vector<gr_complex> d_buffer;
       std::vector<gr_complex> d_symbols;
       float symbol_norm;
-      std::vector<unsigned char> d_accessbytes;
-      constellation_sptr d_hdr_const;
-      constellation_sptr d_pld_const;
+      std::vector<unsigned char> d_accessbits;
+      gr::digital::constellation_sptr d_hdr_const;
+      gr::digital::constellation_sptr d_pld_const;
       double d_threshold;
 
       void cal_correlation(std::vector<gr_complex>& corr, const gr_complex * in, int i_size);
       bool corr_thres_locate_pkt(std::vector<int>& indices, const std::vector<gr_complex>& corr);
-      void sync_accessbytes();
-      bool hdr_demux();
-      void parse_packet_length();
+      void sync_accessbits(std::vector<int>& pos, const unsigned char* in, int i_size);
+      //bool hdr_demux();
+      //void parse_packet_length();
+      void repack_bits_lsb(unsigned char* out, unsigned char* in,unsigned int len,unsigned int bps);
 
 
      public:
-      header_payload_parser_cb_impl();
+      header_payload_parser_cb_impl(gr::digital::constellation_sptr hdr_constellation,
+                                    gr::digital::constellation_sptr pld_constellation,
+                                    const std::vector<gr_complex>& symbols,
+                                    const std::vector<unsigned char>& accessbits,
+                                    double threshold);
       ~header_payload_parser_cb_impl();
 
       // Where all the action really happens
       //void forecast (int noutput_items, gr_vector_int &ninput_items_required);
-      std::vector<unsigned char> accessbytes() const;
-      void set_accessbytes(const std::vector<unsigned char>& accessbytes);
+      std::vector<unsigned char> accessbits() const;
+      void set_accessbits(const std::vector<unsigned char>& accessbytes);
 
       double threshold() const;
       void set_threshold(double threshold);
 
       std::vector<gr_complex> symbols() const;
-      voild set_symbols(const std::vector<gr_complex>& symbols);
+      void set_symbols(const std::vector<gr_complex>& symbols);
 
 
       int general_work(int noutput_items,
