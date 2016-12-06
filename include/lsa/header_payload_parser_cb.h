@@ -47,11 +47,24 @@ namespace gr {
        * class. lsa::header_payload_parser_cb::make is the public interface for
        * creating new instances.
        */
+      
       static sptr make(gr::digital::constellation_sptr hdr_constellation,
                        gr::digital::constellation_sptr pld_constellation,
                        const std::vector<gr_complex>& symbols,
                        const std::vector<unsigned char>& accessbits,
                        double threshold);
+                       
+      /*static sptr make(std::vector<gr_complex> hdr_constell,
+        std::vector<int> hdr_pre_diff_code,
+        unsigned int hdr_rotational_symmetry,
+        unsigned int hdr_dimensionality,
+        std::vector<gr_complex> pld_constell,
+        std::vector<int> pld_pre_diff_code,
+        unsigned int pld_rotational_symmetry,
+        unsigned int pld_dimensionality,
+        const std::vector<gr_complex>& symbols,
+        const std::vector<unsigned char>& accessbits,
+        double threshold);*/
     };
 
   } // namespace lsa

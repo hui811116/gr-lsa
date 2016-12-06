@@ -35,13 +35,20 @@ namespace gr {
       pmt::pmt_t d_msg_port;
 
       // private members
-      std::vector<gr_complex> d_buffer;
+      double d_threshold;
+      //std::vector<gr_complex> d_buffer;
       std::vector<gr_complex> d_symbols;
       float symbol_norm;
       std::vector<unsigned char> d_accessbits;
-      gr::digital::constellation_sptr d_hdr_const;
-      gr::digital::constellation_sptr d_pld_const;
-      double d_threshold;
+      // find out how to use it in GRC
+      //gr::digital::constellation_sptr d_hdr_const;
+      //gr::digital::constellation_sptr d_pld_const;
+      // try
+      //gr::digital::constellation_sptr d_test_const;
+      gr::digital::constellation_sptr d_hdr_const_ptr;
+      gr::digital::constellation_sptr d_pld_const_ptr;
+      //
+      
 
       void cal_correlation(std::vector<gr_complex>& corr, const gr_complex * in, int i_size);
       bool corr_thres_locate_pkt(std::vector<int>& indices, const std::vector<gr_complex>& corr);
@@ -52,11 +59,25 @@ namespace gr {
 
 
      public:
+      
       header_payload_parser_cb_impl(gr::digital::constellation_sptr hdr_constellation,
                                     gr::digital::constellation_sptr pld_constellation,
                                     const std::vector<gr_complex>& symbols,
                                     const std::vector<unsigned char>& accessbits,
                                     double threshold);
+                                    
+      /*header_payload_parser_cb_impl(std::vector<gr_complex> hdr_constell,
+        std::vector<int> hdr_pre_diff_code,
+        unsigned int hdr_rotational_symmetry,
+        unsigned int hdr_dimensionality,
+        std::vector<gr_complex> pld_constell,
+        std::vector<int> pld_pre_diff_code,
+        unsigned int pld_rotational_symmetry,
+        unsigned int pld_dimensionality,
+        const std::vector<gr_complex>& symbols,
+        const std::vector<unsigned char>& accessbits,
+        double threshold);*/
+
       ~header_payload_parser_cb_impl();
 
       // Where all the action really happens

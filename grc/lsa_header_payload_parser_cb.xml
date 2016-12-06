@@ -3,7 +3,7 @@
   <name>Header Payload Parser</name>
   <key>lsa_header_payload_parser_cb</key>
   <category>[lsa]</category>
-  <import>import lsa</import>
+  <import>import lsa</import>  
   <make>lsa.header_payload_parser_cb($hdr_const,$pld_const,$symbols,$accessbits,$threshold)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
@@ -28,7 +28,7 @@
   <param>
     <name>Accesssbits(ub)</name>
     <key>accessbits</key>
-    <type>byte_vector</type>
+    <type>int_vector</type>
   </param>
     <param>
     <name>Correlation Threshold</name>
@@ -54,5 +54,10 @@
   <source>
     <name>out</name>
     <type>complex</type>
+  </source>
+  <source>
+    <name>payload</name>
+    <type>message</type>
+    <optional>1</optional>
   </source>
 </block>
