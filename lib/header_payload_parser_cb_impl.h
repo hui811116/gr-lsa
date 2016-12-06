@@ -35,7 +35,7 @@ namespace gr {
       pmt::pmt_t d_msg_port;
 
       // private members
-      double d_threshold;
+      float d_threshold;
       //std::vector<gr_complex> d_buffer;
       std::vector<gr_complex> d_symbols;
       float symbol_norm;
@@ -64,7 +64,7 @@ namespace gr {
                                     gr::digital::constellation_sptr pld_constellation,
                                     const std::vector<gr_complex>& symbols,
                                     const std::vector<unsigned char>& accessbits,
-                                    double threshold);
+                                    float threshold);
                                     
       /*header_payload_parser_cb_impl(std::vector<gr_complex> hdr_constell,
         std::vector<int> hdr_pre_diff_code,
@@ -85,8 +85,8 @@ namespace gr {
       std::vector<unsigned char> accessbits() const;
       void set_accessbits(const std::vector<unsigned char>& accessbytes);
 
-      double threshold() const;
-      void set_threshold(double threshold);
+      float threshold() const;
+      void set_threshold(float threshold);
 
       std::vector<gr_complex> symbols() const;
       void set_symbols(const std::vector<gr_complex>& symbols);

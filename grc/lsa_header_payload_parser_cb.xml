@@ -4,7 +4,8 @@
   <key>lsa_header_payload_parser_cb</key>
   <category>[lsa]</category>
   <import>import lsa</import>  
-  <make>lsa.header_payload_parser_cb($hdr_const,$pld_const,$symbols,$accessbits,$threshold)</make>
+  <import>from gnuradio import digital</import>
+  <make>lsa.header_payload_parser_cb($hdr_constellation,$pld_constellation,$symbols,$accessbits,$threshold)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -12,12 +13,12 @@
        * type -->
   <param>
     <name>Header Constellation</name>
-    <key>hdr_const</key>
+    <key>hdr_constellation</key>
     <type>raw</type>
   </param>
   <param>
     <name>Payload Constellation</name>
-    <key>pld_const</key>
+    <key>pld_constellation</key>
     <type>raw</type>
   </param>
   <param>

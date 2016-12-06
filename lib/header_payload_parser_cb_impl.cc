@@ -37,11 +37,11 @@ namespace gr {
 
     header_payload_parser_cb::sptr
     
-    header_payload_parser_cb::make(constellation_sptr hdr_constellation,
-                                   constellation_sptr pld_constellation,
+    header_payload_parser_cb::make(gr::digital::constellation_sptr hdr_constellation,
+                                   gr::digital::constellation_sptr pld_constellation,
                                    const std::vector<gr_complex>& symbols,
                                    const std::vector<unsigned char>& accessbits,
-                                   double threshold
+                                   float threshold
                                    )
     /*
     header_payload_parser_cb::make(std::vector<gr_complex> hdr_constell,
@@ -83,11 +83,11 @@ namespace gr {
                     COUNTER,
                     DEV};
 
-    header_payload_parser_cb_impl::header_payload_parser_cb_impl(constellation_sptr hdr_constellation,
-                                                                 constellation_sptr pld_constellation,
+    header_payload_parser_cb_impl::header_payload_parser_cb_impl(gr::digital::constellation_sptr hdr_constellation,
+                                                                 gr::digital::constellation_sptr pld_constellation,
                                                                  const std::vector<gr_complex>& symbols,
                                                                  const std::vector<unsigned char>& accessbits,
-                                                                 double threshold
+                                                                 float threshold
                                                                  )
       /*header_payload_parser_cb_impl::header_payload_parser_cb_impl(std::vector<gr_complex> hdr_constell,
         std::vector<int> hdr_pre_diff_code,
@@ -102,7 +102,7 @@ namespace gr {
         double threshold)*/
             : gr::block("header_payload_parser_cb",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(1, 1, sizeof(unsigned char))),
+              gr::io_signature::make(1, 1, sizeof(gr_complex))),
               d_hdr_const_ptr(hdr_constellation),
               d_pld_const_ptr(pld_constellation),
               d_threshold(threshold),
@@ -149,7 +149,7 @@ namespace gr {
       int iter=n_size-d_symbols.size()+1;
       //gr_complex corr_sum;
       corr.resize(iter);
-      double tmp_norm;
+      float tmp_norm;
       for(int i=0;i<iter;++i){
         corr[i]=gr_complex(0,0);
         tmp_norm=0;
@@ -249,14 +249,14 @@ namespace gr {
       d_accessbits=accessbits;
     }
 
-    double
+    float
     header_payload_parser_cb_impl::threshold() const
     {
       return d_threshold;
     }
 
     void
-    header_payload_parser_cb_impl::set_threshold(double threshold)
+    header_payload_parser_cb_impl::set_threshold(float threshold)
     {
       d_threshold=threshold;
     }

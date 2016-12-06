@@ -1,11 +1,14 @@
 /* -*- c++ -*- */
 
 #define LSA_API
+#define DIGITAL_API
 
 %include "gnuradio.i"			// the common stuff
 
 //load generated python docstrings
 %include "lsa_swig_doc.i"
+
+%include "gnuradio/digital/constellation.h"
 
 %{
 #include "lsa/square_cc.h"

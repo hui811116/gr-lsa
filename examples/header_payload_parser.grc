@@ -105,7 +105,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>[0x01,0x01,0x00,0x01,0x00,0x01,0x00,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x00,0x01]</value>
+      <value>[1,1,0,1,0,1,0,0,1,0,1,0,1,0,0,1]</value>
     </param>
   </block>
   <block>
@@ -743,7 +743,7 @@
     </param>
     <param>
       <key>tags</key>
-      <value>"v_src"</value>
+      <value>""</value>
     </param>
     <param>
       <key>vlen</key>
@@ -985,7 +985,7 @@
       <value>0</value>
     </param>
     <param>
-      <key>hdr_const</key>
+      <key>hdr_constellation</key>
       <value>hdr_const</value>
     </param>
     <param>
@@ -1001,7 +1001,7 @@
       <value>0</value>
     </param>
     <param>
-      <key>pld_const</key>
+      <key>pld_constellation</key>
       <value>pld_const</value>
     </param>
     <param>
