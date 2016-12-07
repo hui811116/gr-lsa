@@ -51,7 +51,7 @@ namespace gr {
       static sptr make(gr::digital::constellation_sptr hdr_constellation,
                        gr::digital::constellation_sptr pld_constellation,
                        const std::vector<gr_complex>& symbols,
-                       const std::vector<unsigned char>& accessbits,
+                       const std::string & accesscode,
                        float threshold);
                        
       /*static sptr make(std::vector<gr_complex> hdr_constell,

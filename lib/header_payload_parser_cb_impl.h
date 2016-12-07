@@ -63,7 +63,7 @@ namespace gr {
       header_payload_parser_cb_impl(gr::digital::constellation_sptr hdr_constellation,
                                     gr::digital::constellation_sptr pld_constellation,
                                     const std::vector<gr_complex>& symbols,
-                                    const std::vector<unsigned char>& accessbits,
+                                    const std::string& accessbits,
                                     float threshold);
                                     
       /*header_payload_parser_cb_impl(std::vector<gr_complex> hdr_constell,
@@ -82,8 +82,8 @@ namespace gr {
 
       // Where all the action really happens
       //void forecast (int noutput_items, gr_vector_int &ninput_items_required);
-      std::vector<unsigned char> accessbits() const;
-      void set_accessbits(const std::vector<unsigned char>& accessbytes);
+      std::string accessbits() const;
+      void set_accessbits(const std::string & accesscode);
 
       float threshold() const;
       void set_threshold(float threshold);

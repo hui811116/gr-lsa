@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<block>
+  <name>Su Header Prefix</name>
+  <key>lsa_su_header_prefix</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.su_header_prefix($accesscode, $lengthtagname)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Access code</name>
+    <key>accesscode</key>
+    <value>1111010010100001</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Length Tag Name</name>
+    <key>lengthtagname</key>
+    <value>"packet_len"</value>
+    <type>string</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>byte</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>byte</type>
+  </source>
+</block>

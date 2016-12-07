@@ -40,7 +40,7 @@ namespace gr {
     header_payload_parser_cb::make(gr::digital::constellation_sptr hdr_constellation,
                                    gr::digital::constellation_sptr pld_constellation,
                                    const std::vector<gr_complex>& symbols,
-                                   const std::vector<unsigned char>& accessbits,
+                                   const std::string & accesscode,
                                    float threshold
                                    )
     /*
@@ -60,7 +60,7 @@ namespace gr {
         (new header_payload_parser_cb_impl(hdr_constellation,
                                            pld_constellation,
                                            symbols,
-                                           accessbits,
+                                           accesscode,
                                            threshold));
       /*
       (new header_payload_parser_cb_impl(hdr_constell,
@@ -86,7 +86,7 @@ namespace gr {
     header_payload_parser_cb_impl::header_payload_parser_cb_impl(gr::digital::constellation_sptr hdr_constellation,
                                                                  gr::digital::constellation_sptr pld_constellation,
                                                                  const std::vector<gr_complex>& symbols,
-                                                                 const std::vector<unsigned char>& accessbits,
+                                                                 const std::string & accesscode,
                                                                  float threshold
                                                                  )
       /*header_payload_parser_cb_impl::header_payload_parser_cb_impl(std::vector<gr_complex> hdr_constell,
@@ -106,8 +106,8 @@ namespace gr {
               d_hdr_const_ptr(hdr_constellation),
               d_pld_const_ptr(pld_constellation),
               d_threshold(threshold),
-              d_symbols(symbols),
-              d_accessbits(accessbits)
+              d_symbols(symbols)
+              //d_accessbits(accessbits)
     {
       /*
       d_hdr_const_ptr=new gr::digital::constellation(hdr_constell,
@@ -121,6 +121,7 @@ namespace gr {
                                                      pld_rotational_symmetry,
                                                      pld_dimensionality);
                                                      */
+      set_accessbits(accesscode);
       symbol_norm=0.0;
       for(int i=0;i<symbols.size();++i)
         symbol_norm+=norm(symbols[i]);
@@ -237,16 +238,26 @@ namespace gr {
     }
 
 
-    std::vector<unsigned char>
+    std::string
     header_payload_parser_cb_impl::accessbits() const
     {
-      return d_accessbits;
+      //return d_accessbits;
+      std::string str;
+      std::string _one("1");
+      std::string _zero("0");
+      for(int i=0;i<d_accessbits.size();++i)
+        str+=(d_accessbits[i]==0x01) ? _one : _zero;
+      return str;
     }
 
     void
-    header_payload_parser_cb_impl::set_accessbits(const std::vector<unsigned char>& accessbits)
+    header_payload_parser_cb_impl::set_accessbits(const std::string & accesscode)
     {
-      d_accessbits=accessbits;
+      d_accessbits.clear();
+      for(int i=0;i<accesscode.length();++i){
+        d_accessbits.push_back((accesscode[i]!='0')? 0x01 : 0x00);
+      }
+      //d_accessbits=accessbits;
     }
 
     float
@@ -302,12 +313,14 @@ namespace gr {
       */
       unsigned short first,second;
       int pos_reg;
+      int offset;
       int consume_idx=ninput_items[0];
       pmt::pmt_t pdu_out;
+      //tag_t tag;
       gr::blocks::pdu::vector_type d_type = gr::blocks::pdu::byte_t;
       //pmt::pmt_t info;
       for(int i=0;i<positions.size();++i){
-        //default packet length in header 16+16
+        //default packet length in header 16+16 (4bytes)
         if(positions[i]+d_accessbits.size()+32<total_len){
           first=0x0000;
           second=0x0000;
@@ -327,6 +340,7 @@ namespace gr {
               pdu_out=pmt::dict_add(pdu_out, pmt::intern("payload"), pmt::from_long((long)first));
               pdu_out=gr::blocks::pdu::make_pdu_vector(d_type, tmp, first);
               message_port_pub(d_msg_port,pdu_out);
+              add_item_tag(0,nitems_written(0)+consume_idx,pmt::intern("payload"),pmt::from_long(first),pmt::intern(alias()));
             }//matched payload
           }//packet length match (deault header setup)
         }//total len matched

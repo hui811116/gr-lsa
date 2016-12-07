@@ -33,6 +33,7 @@ list(APPEND lsa_sources
     correlate_extract_cc_impl.cc
     my_access_corr_bb_impl.cc
     header_payload_parser_cb_impl.cc
+    su_header_prefix_impl.cc
 )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
