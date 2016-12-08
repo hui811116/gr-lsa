@@ -256,14 +256,17 @@ namespace gr {
       //pmt::pmt_t info;
       for(int i=0;i<positions.size();++i){
         //default packet length in header 16+16 (4bytes)
+        //add_item_tag(0,nitems_written(0)+positions[i],pmt::intern("index:"),pmt::from_long(positions[i]),pmt::intern(alias()));
         if(positions[i]+d_accessbits.size()+32<total_len){
           first=0x0000;
           second=0x0000;
           pos_reg=positions[i]+d_accessbits.size();
           for(int j=0;j<16;++j){
-            first |= (repack_bits[pos_reg+j] & 0x01)<<j;
-            second |=(repack_bits[pos_reg+16+j] & 0x01)<<j;
+            first |= (repack_bits[pos_reg+j] & 0x01)<<15-j;
+            second |=(repack_bits[pos_reg+16+j] & 0x01)<<15-j;
           }
+          add_item_tag(0,nitems_written(0)+pos_reg,pmt::intern("length1"),pmt::from_long(first),pmt::intern(alias()));
+          add_item_tag(0,nitems_written(0)+pos_reg,pmt::intern("length2"),pmt::from_long(second),pmt::intern(alias()));
           if(first==second){
             //finding payload symbols
             if((pos_reg+32)/d_hdr_const_ptr->bits_per_symbol()+first*8/d_pld_const_ptr->bits_per_symbol()<ninput_items[0]){
