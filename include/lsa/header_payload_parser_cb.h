@@ -54,17 +54,6 @@ namespace gr {
                        const std::string & accesscode,
                        float threshold);
                        
-      /*static sptr make(std::vector<gr_complex> hdr_constell,
-        std::vector<int> hdr_pre_diff_code,
-        unsigned int hdr_rotational_symmetry,
-        unsigned int hdr_dimensionality,
-        std::vector<gr_complex> pld_constell,
-        std::vector<int> pld_pre_diff_code,
-        unsigned int pld_rotational_symmetry,
-        unsigned int pld_dimensionality,
-        const std::vector<gr_complex>& symbols,
-        const std::vector<unsigned char>& accessbits,
-        double threshold);*/
     };
 
   } // namespace lsa

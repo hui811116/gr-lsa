@@ -5,7 +5,7 @@
   <category>[lsa]</category>
   <import>import lsa</import>  
   <import>from gnuradio import digital</import>
-  <make>lsa.header_payload_parser_cb($hdr_constellation,$pld_constellation,$symbols,$accessbits,$threshold)</make>
+  <make>lsa.header_payload_parser_cb($hdr_constellation,$pld_constellation,$symbols,$accesscode,$threshold)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -28,8 +28,8 @@
   </param>
   <param>
     <name>Accesssbits(ub)</name>
-    <key>accessbits</key>
-    <type>int_vector</type>
+    <key>accesscode</key>
+    <type>string</type>
   </param>
     <param>
     <name>Correlation Threshold</name>
@@ -59,6 +59,11 @@
   <source>
     <name>payload</name>
     <type>message</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>header bytes</name>
+    <type>byte</type>
     <optional>1</optional>
   </source>
 </block>

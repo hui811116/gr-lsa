@@ -43,18 +43,6 @@ namespace gr {
                                    const std::string & accesscode,
                                    float threshold
                                    )
-    /*
-    header_payload_parser_cb::make(std::vector<gr_complex> hdr_constell,
-        std::vector<int> hdr_pre_diff_code,
-        unsigned int hdr_rotational_symmetry,
-        unsigned int hdr_dimensionality,
-        std::vector<gr_complex> pld_constell,
-        std::vector<int> pld_pre_diff_code,
-        unsigned int pld_rotational_symmetry,
-        unsigned int pld_dimensionality,
-        const std::vector<gr_complex>& symbols,
-        const std::vector<unsigned char>& accessbits,
-        double threshold)*/
     {
       return gnuradio::get_initial_sptr
         (new header_payload_parser_cb_impl(hdr_constellation,
@@ -62,18 +50,6 @@ namespace gr {
                                            symbols,
                                            accesscode,
                                            threshold));
-      /*
-      (new header_payload_parser_cb_impl(hdr_constell,
-                                         hdr_pre_diff_code,
-                                         hdr_rotational_symmetry,
-                                         hdr_dimensionality,
-                                         pld_constell,
-                                         pld_pre_diff_code,
-                                         pld_rotational_symmetry,
-                                         pld_dimensionality,
-                                         symbols,
-                                         accessbits,
-                                         threshold));*/
     }
 
     /*
@@ -89,44 +65,21 @@ namespace gr {
                                                                  const std::string & accesscode,
                                                                  float threshold
                                                                  )
-      /*header_payload_parser_cb_impl::header_payload_parser_cb_impl(std::vector<gr_complex> hdr_constell,
-        std::vector<int> hdr_pre_diff_code,
-        unsigned int hdr_rotational_symmetry,
-        unsigned int hdr_dimensionality,
-        std::vector<gr_complex> pld_constell,
-        std::vector<int> pld_pre_diff_code,
-        unsigned int pld_rotational_symmetry,
-        unsigned int pld_dimensionality,
-        const std::vector<gr_complex>& symbols,
-        const std::vector<unsigned char>& accessbits,
-        double threshold)*/
             : gr::block("header_payload_parser_cb",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(1, 1, sizeof(gr_complex))),
+              gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(char))),
               d_hdr_const_ptr(hdr_constellation),
               d_pld_const_ptr(pld_constellation),
               d_threshold(threshold),
               d_symbols(symbols)
-              //d_accessbits(accessbits)
     {
-      /*
-      d_hdr_const_ptr=new gr::digital::constellation(hdr_constell,
-                                                     hdr_pre_diff_code,
-                                                     hdr_rotational_symmetry,
-                                                     hdr_dimensionality);
-                                                     */
-      /*
-      d_pld_const_ptr=new gr::digital::constellation(pld_constell,
-                                                     pld_pre_diff_code,
-                                                     pld_rotational_symmetry,
-                                                     pld_dimensionality);
-                                                     */
       set_accessbits(accesscode);
       symbol_norm=0.0;
       for(int i=0;i<symbols.size();++i)
         symbol_norm+=norm(symbols[i]);
       d_msg_port=pmt::mp("payload");
       message_port_register_out(d_msg_port);
+      set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -203,31 +156,6 @@ namespace gr {
             pos.push_back(i);
       }
     }
-/*
-    bool
-    header_payload_parser_cb_impl::hdr_demux(std::vector<int>& positions,const gr_complex * in, int i_size)
-    {
-      //int hdr_dim=d_hdr_const->dimensionality();
-      unsigned char tmp_bytes[i_size];
-      std::vector<gr_complex> corr;
-      cal_coorelation(corr,in,i_size);
-      std::vector<int> indices;
-      if(corr_thres_locate_pkt(indices,corr))
-      {
-        for(int i=0;i<i_size;++i){
-          tmp_bits[i]=d_hdr_const->decision_maker(&(in[i]));
-        }
-        std::vector<int> positions;
-        sync_accessbits(positions, tmp_bytes, i_size);
-        return !positions.empty();
-      }
-      return false;
-    }
-*/
-    //void
-    //header_payload_parser_cb_impl::parse_packet_length()
-    //{
-    //}
 
     void
     header_payload_parser_cb_impl::repack_bits_lsb(unsigned char* out, unsigned char* in, unsigned int len, unsigned int bps)
@@ -293,13 +221,20 @@ namespace gr {
       const gr_complex *in = (const gr_complex *) input_items[0];
       //const gr_complex *corr= (const gr_complex *) input_items[1];
       gr_complex *out = (gr_complex *) output_items[0];
-      memcpy(out,in,sizeof(gr_complex)*noutput_items);
+      unsigned char* out_port1;
+      if(output_items.size()>1)
+       out_port1 = (unsigned char*) output_items[1];
+
+      memcpy(out,in,sizeof(gr_complex)*ninput_items[0]);
       // Do <+signal processing+>
       
       unsigned char tmp[ninput_items[0]];
       for(int i=0;i<ninput_items[0];++i){
         tmp[i]=d_hdr_const_ptr->decision_maker(&(in[i]));
       } 
+
+      if(output_items.size()>1)
+        memcpy(out_port1,tmp,sizeof(unsigned char)*ninput_items[0]);
       //unpacking to k bits
       int total_len=ninput_items[0]*d_hdr_const_ptr->bits_per_symbol();
       unsigned char repack_bits[total_len];
@@ -313,7 +248,7 @@ namespace gr {
       */
       unsigned short first,second;
       int pos_reg;
-      int offset;
+      //int offset;
       int consume_idx=ninput_items[0];
       pmt::pmt_t pdu_out;
       //tag_t tag;
@@ -344,14 +279,30 @@ namespace gr {
             }//matched payload
           }//packet length match (deault header setup)
         }//total len matched
+
+        if(output_items.size()>1){
+          add_item_tag(1,nitems_written(1)+positions[i],pmt::intern("debug"),pmt::string_to_symbol(accessbits()),pmt::intern(alias()));
+        }
       }
+
+      //FIXME for debugging purpose
+      /*
+      for(int i=0;i<ninput_items[0];++i)
+      {
+        if(i%d_accessbits.size()==0){
+          add_item_tag(0,nitems_written(0)+i,pmt::intern("debug"),pmt::string_to_symbol(accessbits()),pmt::intern(alias()));
+        }
+      }*/
 
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (consume_idx);
-
+      produce(0,ninput_items[0]); // for output port 0
+      if(output_items.size()>1)
+        produce(1,ninput_items[0]); // for output port 1
       // Tell runtime system how many output items we produced.
-      return noutput_items;
+      return WORK_CALLED_PRODUCE;
+      //return ninput_items[0];
       
     }
 
