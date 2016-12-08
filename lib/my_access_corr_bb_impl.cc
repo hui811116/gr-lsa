@@ -45,6 +45,7 @@ namespace gr {
     {
       set_access_code(access_code);
       set_threshold(threshold);
+      set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -59,7 +60,7 @@ namespace gr {
     {
       d_access_code.clear();
       for(int i=0;i<access_code.length();++i){
-          d_access_code.push_back((unsigned char)(access_code[i]!='0'));
+          d_access_code.push_back((access_code[i]!='0')? 0x01:0x00);
       }
     }
 
@@ -96,33 +97,41 @@ namespace gr {
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
+      int nin = ninput_items[0];
+      int ns= d_access_code.size();
       const unsigned char *in = (const unsigned char *) input_items[0];
       unsigned char *out = (unsigned char *) output_items[0];
-      unsigned char *corr= (unsigned char *) output_items[1];
+      unsigned char *corr;
+      unsigned char corr_mem[nin-ns+1];
+      if(output_items.size()>1)
+        corr=(unsigned char *) output_items[1];
 
-      memcpy(out,in,sizeof(unsigned char)*noutput_items);
-      int nin = ninput_items[0];
-
-      int ns= d_access_code.size();
+      memcpy(out,in,sizeof(unsigned char)*nin);
+      
       int count;
       for(int i=0;i<nin-ns+1;++i){
         count=0;
         for(int j=0;j<ns;++j){
           count+= (in[i+j]==d_access_code[j])? 1:0;
         }
-        corr[i]=count;
+        corr_mem[i]=count;
+        if(output_items.size()>1)
+          corr[i]=count;
         if(count>=d_threshold){
-          add_item_tag(0, nitems_written(0) + i, pmt::intern("access_code"),
+          add_item_tag(0, nitems_written(0) + i, pmt::intern("count"),
                        pmt::from_long(count), pmt::intern(alias()));
+          if(output_items.size()>1)
+            add_item_tag(1,nitems_written(1) + i, pmt::intern("count"),pmt::from_long(count),pmt::intern(alias()));
         }
       }
       // Do <+signal processing+>
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (nin);
-
+      produce(0,ninput_items[0]);
+      produce(1,nin-ns+1);
       // Tell runtime system how many output items we produced.
-      return noutput_items;
+      return WORK_CALLED_PRODUCE;
     }
 
   } /* namespace lsa */
