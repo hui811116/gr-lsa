@@ -35,6 +35,7 @@ namespace gr {
 
       int d_index;
       bool d_sensing;
+      unsigned long d_pkt_counter;
             
       pmt::pmt_t d_rx_sensing_tag;
       pmt::pmt_t d_rx_index_tag;
@@ -44,9 +45,10 @@ namespace gr {
 
       // sensing information 
       std::vector< std::vector<unsigned char> >* d_buffer_ptr;
-      std::vector<unsigned int> d_index_buffer;
-      std::vector<unsigned int> d_sensing_queue;
+      std::vector<unsigned long> d_index_buffer;
+      std::vector<unsigned long> d_sensing_queue;
       int d_sensing_count;
+      unsigned char d_sensing_iter;
 
 
       std::vector<unsigned char> d_accesscode;
@@ -56,9 +58,12 @@ namespace gr {
 
       //gr::digital::constellation_sptr d_hdr_const;
       //gr::digital::constellation_sptr d_pld_const;
+      void generate_hdr(unsigned char* out, unsigned long size);
+      std::vector<unsigned char> copy_input_bytes(const unsigned char* in, int size);
 
      public:
       su_queued_transmitter_cc_impl(
+        int max_queue_size,
         const std::string & sensing_tag,
         const std::string & index_tag,
         const std::string & accesscode);

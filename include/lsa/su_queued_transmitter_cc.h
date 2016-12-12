@@ -46,7 +46,11 @@ namespace gr {
        * class. lsa::su_queued_transmitter_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make();
+      static sptr make(
+        int max_queue_size=65535,
+        const std::string & sensing_tag="sensing_info",
+        const std::string & index_tag="packet_index",
+        const std::string & accesscode="1101100011000111");
     };
 
   } // namespace lsa

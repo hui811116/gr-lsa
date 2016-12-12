@@ -1,19 +1,38 @@
 <?xml version="1.0"?>
 <block>
-  <name>su_queued_transmitter_cc</name>
+  <name>SU Queued Transmitter</name>
   <key>lsa_su_queued_transmitter_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_queued_transmitter_cc()</make>
+  <make>lsa.su_queued_transmitter_cc($max_size, $sense_tag,$sense_idx,$accesscode)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <param>
-    <name>...</name>
-    <key>...</key>
-    <type>...</type>
+    <name>Maximum Queue Size</name>
+    <key>$max_size</key>
+    <value>65535</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Sensing Info Tag</name>
+    <key>$sense_tag</key>
+    <value>"sensing_info"</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Sensing Index Tag</name>
+    <key>$sense_idx</key>
+    <value>"packet_index"</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Accesscode</name>
+    <key>$accesscode</key>
+    <value>1101101101001110</value>
+    <type>string</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -23,7 +42,7 @@
        * optional (set to 1 for optional inputs) -->
   <sink>
     <name>in</name>
-    <type><!-- e.g. int, float, complex, byte, short, xxx_vector, ...--></type>
+    <type>byte</type>
   </sink>
 
   <!-- Make one 'source' node per output. Sub-nodes:
@@ -32,7 +51,12 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>out</name>
-    <type><!-- e.g. int, float, complex, byte, short, xxx_vector, ...--></type>
+    <name>packet</name>
+    <type>byte</type>
   </source>
+    <source>
+    <name>hdr</name>
+    <type>byte</type>
+  </source>
+
 </block>

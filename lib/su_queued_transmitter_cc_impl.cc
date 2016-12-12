@@ -30,8 +30,8 @@ namespace gr {
 
     enum su_tx_state_t{
       CLEAR_TO_SEND,
-      PROU_PRESENT,
-      ERROR_AND_RESET
+      PROU_PRESENT
+      //ERROR_AND_RESET
     };
 
     su_queued_transmitter_cc::sptr
@@ -64,7 +64,8 @@ namespace gr {
       d_max_queue_size(max_queue_size),
       d_rx_sensing_tag(pmt::string_to_symbol(sensing_tag)),
       d_rx_index_tag(pmt::string_to_symbol(index_tag)),
-      d_state(CLEAR_TO_SEND)
+      d_state(CLEAR_TO_SEND),
+      d_pkt_counter(0)
     {
       if (d_max_queue_size < 1) {
         throw std::invalid_argument("Queue size must be greater than 0.");
@@ -73,7 +74,7 @@ namespace gr {
       set_accesscode(accesscode);
       set_tag_propagation_policy(TPP_DONT);
       message_port_register_in(pmt::mp("rx_info"));
-      set_msg_handler(pmt::mp("rx_info"), boost::bind(&su_queued_transmitter_cc_impl::msg_handler, this, _1));
+      set_msg_handler(pmt::mp("rx_info"), boost::bind(&su_queued_transmitter_cc_impl::receiver_msg_handler, this, _1));
 
     }
 
@@ -94,7 +95,7 @@ namespace gr {
       int tmp_sensing=-1,tmp_index=-1;
 
 
-      pmt::pmt_t dict_item(pmt::dict_items(rx_msg));
+      pmt::pmt_t dict_items(pmt::dict_items(rx_msg));
       while(!pmt::is_null(dict_items)) {
         pmt::pmt_t this_item(pmt::car(dict_items));
         d_rx_tag_keys.push_back(pmt::car(this_item));
@@ -120,6 +121,7 @@ namespace gr {
           //lock queue;
           d_sensing_queue=d_index_buffer;
           d_sensing_count=0;
+          d_sensing_iter=0;
           d_state = PROU_PRESENT;
         }
       }//sensing proU
@@ -132,39 +134,30 @@ namespace gr {
         }
         else if(d_state == PROU_PRESENT){
             check_sensing_queue(index_in_queue);  
-          if(d_count==d_sensing_queue.size()){
+          if(d_sensing_count==d_sensing_queue.size()){
             d_sensing_queue.clear();
             d_index_buffer.clear();
             d_buffer_ptr->clear();
             d_sensing_count=0;
+            //d_sensing_iter=0;
             d_state == CLEAR_TO_SEND;
           }//all clear
         }
       }//sensing no prou
-
-      /*
-        if(check_queue(index_in_queue,d_index)){
-          if(d_state == CLEAR_TO_SEND){
-
-          }
-          else if(d_state == PROU_PRESENT){
-            if(!d_sensing){
-
-            }
-          }
-        }
-        else{
-          GR_LOG_CRIT(d_logger, "SU RX Message index not found, may already been removed or from wrong decoding.");
-        }*/
       
-      
-
     }//end of rx msg handler
 
     void
     su_queued_transmitter_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
+      int ninput_reqd=0;
+      if(d_state == CLEAR_TO_SEND){
+        ninput_reqd = noutput_items;
+      }
+      for(int i=0;i<ninput_items_required.size();++i){
+        ninput_items_required[i]=ninput_reqd;
+      }
     }
 
     int
@@ -176,19 +169,41 @@ namespace gr {
       const unsigned char *in = (const unsigned char *) input_items[0];
       unsigned char *out_pkt = (unsigned char *) output_items[0];
       unsigned char *out_hdr = (unsigned char *) output_items[1];
+      int n_consume=1;
+      int tmp_hold_size=0;
 
       // Do <+signal processing+>
+      unsigned long pkt_size=(unsigned long)ninput_items[0];
+      unsigned char hdr[d_accesscode.size()+6];
+      generate_hdr(hdr,pkt_size);
+      int nout_port0=0,nout_port1=0;
       switch (d_state) {
         case CLEAR_TO_SEND:
+          n_consume=ninput_items[0];
+          pkt_size=ninput_items[0]+d_accesscode.size()+4+2+2;
+          d_buffer_ptr->push_back(copy_input_bytes(in,ninput_items[0]));
+          d_index_buffer.push_back(d_pkt_counter);
+          d_pkt_counter++;
+          memcpy(out_pkt+8,in,sizeof(char)*ninput_items[0]);
         break;
         case PROU_PRESENT:
+          tmp_hold_size=(d_buffer_ptr->at(d_sensing_iter)).size();
+          pkt_size=tmp_hold_size+d_accesscode.size()+8;
+          d_sensing_iter++;
+          d_sensing_iter %= d_sensing_queue.size();
+          memcpy(out_pkt+8,(d_buffer_ptr->at(d_sensing_iter)).data(),sizeof(char)*tmp_hold_size);
         break;
         default:
+          throw std::runtime_error("invalid state");
         break;
       }
+      memcpy(out_pkt,hdr,sizeof(char)*8);
+      memcpy(out_hdr,hdr,sizeof(char)*8);
+      produce(0,pkt_size);
+      produce(1,d_accesscode.size()+8);
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      consume_each (noutput_items);
+      consume_each (n_consume);
 
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;
@@ -198,8 +213,16 @@ namespace gr {
     su_queued_transmitter_cc_impl::set_accesscode(const std::string& accesscode)
     {
       d_accesscode.clear();
-      for(int i=0;i<accesscode.length();++i){
-        d_accesscode.push_back( ((accesscode[i]=='0')? 0x00:0x01) );
+      int s_len=accesscode.length();
+      //automatic append to multiple of 8
+      int new_size=((s_len%8) == 0)? s_len/8 : s_len/8+1;
+      unsigned char tmp=0x00;
+      for(int i=0;i<s_len;++i){
+        tmp |= ((accesscode[i]=='0') ? 0x00 : 0x01) << 7-(i%8);
+        if((i+1)%8==0){
+          d_accesscode.push_back(tmp);
+          tmp=0x00;
+        }
       }
     }
 
@@ -233,6 +256,46 @@ namespace gr {
         }
       }
       return false;
+    }
+    void
+    su_queued_transmitter_cc_impl::generate_hdr(unsigned char* out, unsigned long size)
+    {
+      unsigned char* pkt_len= (unsigned char*)& size;
+      unsigned char* pkt_counter= (unsigned char*)& d_pkt_counter;
+      //if(d_state == CLEAR_TO_SEND){
+      //  d_pkt_counter++;
+      //}
+      unsigned char retx_index=0x00,retx_size=0x00;
+      int ac_len=d_accesscode.size();
+      for(int i=0;i<d_accesscode.size();++i){
+        out[i]=d_accesscode[i];
+      }
+        out[ac_len]=pkt_len[0];
+        out[ac_len+1]=pkt_len[1];
+        out[ac_len+2]=pkt_len[0];
+        out[ac_len+3]=pkt_len[1];
+        if(d_state == PROU_PRESENT){
+          assert(d_sensing_queue.size()!=0);
+          retx_index=d_sensing_iter;
+          pkt_counter = (unsigned char*)& d_index_buffer[d_sensing_iter];
+          retx_size=(unsigned char) d_sensing_queue.size();
+          //d_sensing_iter++;
+          //d_sensing_iter%=d_sensing_queue.size();
+        }
+        out[ac_len+4]=retx_size;
+        out[ac_len+5]=retx_index;
+        out[ac_len+6]=pkt_counter[0];
+        out[ac_len+7]=pkt_counter[1];
+      //memcpy(out+d_accesscode.size()+4+2,in,sizeof(unsigned char));      
+    }
+    std::vector<unsigned char>
+    su_queued_transmitter_cc_impl::copy_input_bytes(const unsigned char* in, int size)
+    {
+      std::vector<unsigned char> tmp;
+      for(int i=0;i<size;++i){
+        tmp.push_back(in[i]);
+      }
+      return tmp;
     }
 
   } /* namespace lsa */
