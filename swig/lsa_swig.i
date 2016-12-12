@@ -19,6 +19,7 @@
 #include "lsa/my_access_corr_bb.h"
 #include "lsa/header_payload_parser_cb.h"
 #include "lsa/su_header_prefix.h"
+#include "lsa/su_queued_transmitter_cc.h"
 %}
 
 
@@ -38,3 +39,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, my_access_corr_bb);
 GR_SWIG_BLOCK_MAGIC2(lsa, header_payload_parser_cb);
 %include "lsa/su_header_prefix.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, su_header_prefix);
+%include "lsa/su_queued_transmitter_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, su_queued_transmitter_cc);

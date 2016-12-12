@@ -25,5 +25,6 @@ install(FILES
     lsa_correlate_extract_cc.xml
     lsa_my_access_corr_bb.xml
     lsa_header_payload_parser_cb.xml
-    lsa_su_header_prefix.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_su_header_prefix.xml
+    lsa_su_queued_transmitter_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

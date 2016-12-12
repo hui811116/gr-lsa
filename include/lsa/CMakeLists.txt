@@ -29,5 +29,6 @@ install(FILES
     correlate_extract_cc.h
     my_access_corr_bb.h
     header_payload_parser_cb.h
-    su_header_prefix.h DESTINATION include/lsa
+    su_header_prefix.h
+    su_queued_transmitter_cc.h DESTINATION include/lsa
 )
