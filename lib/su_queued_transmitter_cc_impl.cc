@@ -175,7 +175,10 @@ namespace gr {
       // Do <+signal processing+>
       unsigned long pkt_size=(unsigned long)ninput_items[0];
       unsigned char hdr[d_accesscode.size()+6];
-      generate_hdr(hdr,pkt_size);
+
+      unsigned char tmp_q_size,tmp_q_idx;
+      generate_hdr(hdr,pkt_size,tmp_q_size,tmp_q_idx);
+
       int nout_port0=0,nout_port1=0;
       switch (d_state) {
         case CLEAR_TO_SEND:
@@ -199,6 +202,10 @@ namespace gr {
       }
       memcpy(out_pkt,hdr,sizeof(char)*8);
       memcpy(out_hdr,hdr,sizeof(char)*8);
+      add_item_tag(0,nitems_written(0),pmt::intern("sfd_len"),pmt::from_long(d_accesscode.size()),pmt::intern(alias()));
+      add_item_tag(0,nitems_written(0)+d_accesscode.size(),pmt::intern("packet_len"),pmt::from_long(pkt_size),pmt::intern(alias()));
+      add_item_tag(1,nitems_written(0)+d_accesscode.size()+4,pmt::intern("queue_size"),pmt::from_long(tmp_q_size),pmt::intern(alias()));
+      add_item_tag(1,nitems_written(0)+d_accesscode.size()+4,pmt::intern("queue_idx"),pmt::from_long(tmp_q_idx),pmt::intern(alias()));
       produce(0,pkt_size);
       produce(1,d_accesscode.size()+8);
       // Tell runtime system how many input items we consumed on
@@ -248,23 +255,26 @@ namespace gr {
     su_queued_transmitter_cc_impl::check_sensing_queue(int check_index)
     {
       if(!d_sensing_queue.empty()){
-        if(check_index<0){return -1;}
-        if(check_index >= d_sensing_queue.size()){return -1;}
+        if(check_index<0){return false;}
+        if(check_index >= d_sensing_queue.size()){return false;}
         if(d_sensing_queue[check_index]>=0){
           d_sensing_queue[check_index]=-1;
           d_sensing_count++;
+          return true;
         }
       }
       return false;
     }
     void
-    su_queued_transmitter_cc_impl::generate_hdr(unsigned char* out, unsigned long size)
+    su_queued_transmitter_cc_impl::generate_hdr(unsigned char* out, unsigned long size, unsigned char &q_size, unsigned char &q_idx)
     {
       unsigned char* pkt_len= (unsigned char*)& size;
       unsigned char* pkt_counter= (unsigned char*)& d_pkt_counter;
-      //if(d_state == CLEAR_TO_SEND){
-      //  d_pkt_counter++;
-      //}
+      /*
+        HEADER FORMAT
+        | n bits accesscode ||  16 bits length || 16 bits length || 8 bits queue size || 8 bits queue index || 16 bits index counter||
+      */
+
       unsigned char retx_index=0x00,retx_size=0x00;
       int ac_len=d_accesscode.size();
       for(int i=0;i<d_accesscode.size();++i){
@@ -287,6 +297,8 @@ namespace gr {
         out[ac_len+6]=pkt_counter[0];
         out[ac_len+7]=pkt_counter[1];
       //memcpy(out+d_accesscode.size()+4+2,in,sizeof(unsigned char));      
+        q_size=retx_size;
+        q_idx=retx_index;
     }
     std::vector<unsigned char>
     su_queued_transmitter_cc_impl::copy_input_bytes(const unsigned char* in, int size)

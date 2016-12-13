@@ -58,7 +58,7 @@ namespace gr {
 
       //gr::digital::constellation_sptr d_hdr_const;
       //gr::digital::constellation_sptr d_pld_const;
-      void generate_hdr(unsigned char* out, unsigned long size);
+      void generate_hdr(unsigned char* out, unsigned long size, unsigned char & q_size,unsigned char & q_idx);
       std::vector<unsigned char> copy_input_bytes(const unsigned char* in, int size);
 
      public:
