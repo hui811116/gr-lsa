@@ -309,6 +309,16 @@ namespace gr {
       }
       return tmp;
     }
+    /*
+    bool 
+    su_queued_transmitter_cc_impl::check_buffer(int output_items_reqd, int noutput_items, int input_items_reqd, gr_vector_int &ninput_items)
+    {
+      if(noutput_items < output_items_reqd)
+        return false;
+
+      return true;
+    }
+    */
 
   } /* namespace lsa */
 } /* namespace gr */

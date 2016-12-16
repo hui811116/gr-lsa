@@ -54,12 +54,20 @@ namespace gr {
       std::vector<unsigned char> d_accesscode;
 
       int check_queue(int check_index);
+  
       bool check_sensing_queue(int check_index);
 
-      //gr::digital::constellation_sptr d_hdr_const;
-      //gr::digital::constellation_sptr d_pld_const;
+      
       void generate_hdr(unsigned char* out, unsigned long size, unsigned char & q_size,unsigned char & q_idx);
+
       std::vector<unsigned char> copy_input_bytes(const unsigned char* in, int size);
+  
+      // Where all the action really happens
+      void receiver_msg_handler(pmt::pmt_t rx_msg);
+
+      //bool check_buffer(int output_items_reqd, int noutput_items, int input_items_reqd, gr_vector_int &ninput_items);
+
+
 
      public:
       su_queued_transmitter_cc_impl(
@@ -70,8 +78,7 @@ namespace gr {
 
       ~su_queued_transmitter_cc_impl();
 
-      // Where all the action really happens
-      void receiver_msg_handler(pmt::pmt_t rx_msg);
+      
 
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 
