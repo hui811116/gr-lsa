@@ -30,22 +30,47 @@ namespace gr {
     {
      private:
       // Nothing to declare in this block.
-      std::vector<unsigned char> d_access_code;
+      pmt::pmt_t d_out_port;
+      pmt::pmt_t d_info;
+      //std::vector<unsigned char> d_access_code;
       unsigned int d_threshold;
+      // new header accesscode bits
+      uint64_t d_accesscode;
+      size_t d_accesscode_len;
+
+      unsigned long long d_data_reg;
+      unsigned long long d_mask;
+
+      int d_state;
+      std::vector<bool> d_input;
+
+      bool parse_bits(int n_nits_in, const unsigned char* in, std::vector<pmt::pmt_t>& info, int& count);
+
+      void insert_bits(unsigned char);
+
+      bool payload_matched(int& payload_len);
+
+      void extract_header(std::vector<pmt::pmt_t>& info);
+      //
 
      public:
       my_access_corr_bb_impl(const std::string& access_code, unsigned int threshold);
       ~my_access_corr_bb_impl();
 
-      void set_access_code(const std::string& access_code);
+      bool set_access_code(const std::string& access_code);
+
+      unsigned long long access_code() const;
 
       void set_threshold(unsigned int threshold);
 
       unsigned int get_threshold() const;
 
-      std::string get_access_code() const;
+      size_t header_nbits() const;
+
+      //std::string get_access_code() const;
+      
       // Where all the action really happens
-      //void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 
       int general_work(int noutput_items,
            gr_vector_int &ninput_items,
