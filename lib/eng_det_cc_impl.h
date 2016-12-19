@@ -22,6 +22,7 @@
 #define INCLUDED_LSA_ENG_DET_CC_IMPL_H
 
 #include <lsa/eng_det_cc.h>
+#include <pmt/pmt.h>
 
 namespace gr {
   namespace lsa {
@@ -32,6 +33,8 @@ namespace gr {
       // Nothing to declare in this block.
       float d_threshold_db;
       int   d_bin;
+      pmt::pmt_t d_src_id;
+      bool d_state_reg;
 
      public:
       eng_det_cc_impl(float threshold,int bin);
@@ -45,11 +48,14 @@ namespace gr {
            gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
 
-      void set_thres(float thes_db);
-      void set_bin(int bin);
+      void set_threshold(float thes_db);
+      float threshold() const;
 
-      float get_thres() const;
-      int   get_bin()   const;
+      void set_bin_size(int bin);
+      int bin_size() const;
+
+      //float get_thres() const;
+      //int   get_bin()   const;
     };
 
   } // namespace lsa

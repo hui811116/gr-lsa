@@ -57,7 +57,7 @@ namespace gr {
   
       bool check_sensing_queue(int check_index);
 
-      
+      void queue_size_adapt();
       void generate_hdr(unsigned char* out, unsigned long size, unsigned char & q_size,unsigned char & q_idx);
 
       std::vector<unsigned char> copy_input_bytes(const unsigned char* in, int size);

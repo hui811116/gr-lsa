@@ -11,9 +11,9 @@
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <param>
-    <name>Threshold</name>
+    <name>Threshold(dB)</name>
     <key>threshold</key>
-    <value>1e-3</value>
+    <value>-3</value>
     <type>float</type>
   </param>
   <param>

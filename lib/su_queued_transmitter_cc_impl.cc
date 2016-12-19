@@ -148,11 +148,23 @@ namespace gr {
     }//end of rx msg handler
 
     void
+    su_queued_transmitter_cc_impl::queue_size_adapt()
+    {
+      if ((d_buffer_ptr->size()>=d_max_queue_size) && (d_state==PROU_PRESENT))
+      {
+        int erase_size = d_max_queue_size/2;
+        GR_LOG_CRIT(d_logger, "SU Queued Transmitter: Reaching maximum capacity, removing contents.")
+        d_buffer_ptr->erase(d_buffer_ptr->begin(), d_buffer_ptr->begin()+erase_size);
+      }
+    }
+
+    void
     su_queued_transmitter_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
       int ninput_reqd=0;
       if(d_state == CLEAR_TO_SEND){
+        queue_size_adapt();
         ninput_reqd = noutput_items;
       }
       for(int i=0;i<ninput_items_required.size();++i){
