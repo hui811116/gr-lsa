@@ -153,7 +153,7 @@ namespace gr {
       if ((d_buffer_ptr->size()>=d_max_queue_size) && (d_state==PROU_PRESENT))
       {
         int erase_size = d_max_queue_size/2;
-        GR_LOG_CRIT(d_logger, "SU Queued Transmitter: Reaching maximum capacity, removing contents.")
+        GR_LOG_CRIT(d_logger, "SU Queued Transmitter: Reaching maximum capacity, removing contents.");
         d_buffer_ptr->erase(d_buffer_ptr->begin(), d_buffer_ptr->begin()+erase_size);
       }
     }
