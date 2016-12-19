@@ -10,19 +10,19 @@
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
+
+  <param>
+    <name>Access Code</name>
+    <key>access_code</key>
+    <value>1011101101110011</value>
+    <type>string</type>
+  </param>
+
   <param>
     <name>Threshold</name>
     <key>threshold</key>
     <type>int</type>
   </param>
-
-  <param>
-    <name>Access Code</name>
-    <key>access_code</key>
-    <value>101110110</value>
-    <type>string</type>
-  </param>
-
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type

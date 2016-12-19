@@ -4,7 +4,7 @@
   <key>lsa_su_header_prefix</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_header_prefix($accesscode, $lengthtagname)</make>
+  <make>lsa.su_header_prefix($accesscode, $lengthtagname, $mode)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -21,6 +21,20 @@
     <key>lengthtagname</key>
     <value>"packet_len"</value>
     <type>string</type>
+  </param>
+  <param>
+    <name>Retransmission Mode</name>
+    <key>mode</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
