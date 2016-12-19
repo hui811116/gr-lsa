@@ -25,6 +25,7 @@
 #include <gnuradio/io_signature.h>
 #include "my_access_corr_bb_impl.h"
 
+
 namespace gr {
   namespace lsa {
 
@@ -46,7 +47,7 @@ namespace gr {
     my_access_corr_bb_impl::my_access_corr_bb_impl(const std::string& access_code, unsigned int threshold)
       : gr::block("my_access_corr_bb",
               gr::io_signature::make(1, 1, sizeof(char)),
-              gr::io_signature::make(0, 1, sizeof(char)))
+              gr::io_signature::make(1, 1, sizeof(char)))
     {
       if(set_access_code(access_code)) {
         throw std::runtime_error("my_access_corr: Setting access code failed");
@@ -166,6 +167,12 @@ namespace gr {
       else{
 
       }*/
+    }
+
+    void
+    my_access_corr_bb_impl::insert_bits (unsigned char in_b)
+    {
+      d_input.push_back( ((in_b & 0x01)!= 0)? true:false );
     }
 
     bool

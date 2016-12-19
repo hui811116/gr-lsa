@@ -41,7 +41,6 @@
   <source>
     <name>out</name>
     <type>byte</type>
-    <optional>1</optional>
   </source>
   <source>
     <name>info</name>

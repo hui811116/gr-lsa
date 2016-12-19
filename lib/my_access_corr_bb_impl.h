@@ -22,6 +22,9 @@
 #define INCLUDED_LSA_MY_ACCESS_CORR_BB_IMPL_H
 
 #include <lsa/my_access_corr_bb.h>
+#include <pmt/pmt.h>
+#include <iostream>
+#include <string>
 
 namespace gr {
   namespace lsa {
