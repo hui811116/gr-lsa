@@ -49,7 +49,7 @@ namespace gr {
 
       bool parse_bits(int n_nits_in, const unsigned char* in, std::vector<pmt::pmt_t>& info, int& count);
 
-      void insert_bits(unsigned char);
+      void insert_bits(unsigned char in_b);
 
       bool payload_matched(int& payload_len);
 
