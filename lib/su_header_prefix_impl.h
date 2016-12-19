@@ -30,16 +30,25 @@ namespace gr {
     {
      private:
       // Nothing to declare in this block.
-      int d_prefix_bytes;
-      unsigned char* d_accessbytes;
+      bool d_mode;
+      uint64_t d_accesscode;
+      unsigned long long d_mask;
+      size_t d_accesscode_len;
 
-      void init_accesscode(const std::string & accesscode);
+      void gen_header(unsigned char* out, uint16_t payload_size);
 
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
-      su_header_prefix_impl(const std::string& accesscode, const std::string& lengthtagname);
+
+      bool set_accesscode(const std::string& accesscode);
+      unsigned long long accesscode()const;
+      size_t header_nbytes() const;
+
+      size_t header_nbits() const;
+
+      su_header_prefix_impl(const std::string& accesscode, const std::string& lengthtagname, bool mode);
       ~su_header_prefix_impl();
 
       // Where all the action really happens

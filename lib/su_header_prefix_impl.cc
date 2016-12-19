@@ -30,25 +30,25 @@ namespace gr {
   namespace lsa {
 
     su_header_prefix::sptr
-    su_header_prefix::make(const std::string& accesscode, const std::string & lengthtagname)
+    su_header_prefix::make(const std::string& accesscode, const std::string & lengthtagname, bool mode)
     {
       return gnuradio::get_initial_sptr
-        (new su_header_prefix_impl(accesscode,lengthtagname));
+        (new su_header_prefix_impl(accesscode,lengthtagname,mode));
     }
 
     /*
      * The private constructor
      */
-    su_header_prefix_impl::su_header_prefix_impl(const std::string & accesscode, const std::string& lengthtagname)
+    su_header_prefix_impl::su_header_prefix_impl(const std::string & accesscode, const std::string& lengthtagname,bool mode)
       : gr::tagged_stream_block("su_header_prefix",
               gr::io_signature::make(1, 1, sizeof(unsigned char)),
-              gr::io_signature::make(1, 1, sizeof(unsigned char)), lengthtagname)
+              gr::io_signature::make(1, 1, sizeof(unsigned char)), lengthtagname),
+      d_mode(mode)
     {
-      d_prefix_bytes=accesscode.length()/8;
-      d_accessbytes= new unsigned char[accesscode.length()/8];
-      init_accesscode(accesscode);
+      if(!set_accesscode(accesscode)){
+        throw std::runtime_error("SU header prefix:setting accesscode failed");
+      }
       set_tag_propagation_policy(TPP_DONT);
-      //std::cout << "prefix bits" << d_prefix_bytes<<std::endl;
     }
 
     /*
@@ -56,31 +56,75 @@ namespace gr {
      */
     su_header_prefix_impl::~su_header_prefix_impl()
     {
-      delete [] d_accessbytes;
+    
     }
 
     int
     su_header_prefix_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
-      int noutput_items = ninput_items[0]+d_prefix_bytes;/* <+set this+> */;
-      //int noutput_items = ninput_items[0];
+      int noutput_items = ninput_items[0]+header_nbytes();/* <+set this+> */; 
       return noutput_items ;
     }
 
-    void
-    su_header_prefix_impl::init_accesscode(const std::string & accesscode)
+    bool
+    su_header_prefix_impl::set_accesscode(const std::string & accesscode)
     {
       //note that this version only implement reading string from index '0'
-      //for(int i=0;i<accesscode.length()/8;++i)
-        //accessbytes[i]=0xff;
-      //unsigned char tmp;
-      for(int i=0;i<d_prefix_bytes*8;++i){
-        if(i%8==0)
-          d_accessbytes[i/8]=0x00;
-        d_accessbytes[i/8] |= ((accesscode[i]!='0')?0x01:0x00) << (7- i%8);
+      d_accesscode_len=accesscode.length();
+      if(d_accesscode_len >64){
+        return false;
       }
+      d_mask = ((~0ULL) >> (64- d_accesscode_len) );
+      d_accesscode=0;
+      for(unsigned i=0;i<d_accesscode_len;++i){
+        d_accesscode = (d_accesscode << 1) | (accesscode[i] & 1);
+      }
+      return true;   
+    }
+    unsigned long long
+    su_header_prefix_impl::accesscode() const
+    {
+      return d_accesscode;
     }
 
+    size_t 
+    su_header_prefix_impl::header_nbits() const
+    {
+      return d_accesscode_len + 16*2 + 8*2 + 16;
+    }
+
+    size_t 
+    su_header_prefix_impl::header_nbytes() const
+    {
+      return (size_t)(ceil(d_accesscode_len/(float)8.0)+8);
+    }
+
+    void
+    su_header_prefix_impl::gen_header(unsigned char* out, uint16_t payload_size)
+    {
+      int acc_bytes=ceil(d_accesscode_len/(float)8.0);
+      unsigned char* acc=(unsigned char*)&d_accesscode;
+      for(int i=0;i<acc_bytes;++i){
+        out[i]=acc[acc_bytes-1-i];
+      }
+      unsigned char* pay_size=(unsigned char*)&payload_size;
+      for(int i=0;i<2;++i){
+        out[acc_bytes+i]=pay_size[i];
+        out[acc_bytes+2+i]=pay_size[i];
+      }
+      unsigned char re_size=0x00;
+      unsigned char re_indx=0x00;
+      uint16_t count=0xffff;
+      if(d_mode){
+        re_size=0xff;
+        re_indx=0x11;
+      }
+      out[acc_bytes+4]=re_size;
+      out[acc_bytes+5]=re_indx;
+      unsigned char * count_u8=(unsigned char*)&count;
+      out[acc_bytes+6]=count_u8[0];
+      out[acc_bytes+7]=count_u8[1];
+    }
 
     int
     su_header_prefix_impl::work (int noutput_items,
@@ -92,26 +136,21 @@ namespace gr {
       unsigned char*out = (unsigned char *) output_items[0];
 
       // Do <+signal processing+>
-      //memcpy(out,in,sizeof(unsigned char)*ninput_items[0]);
-      memcpy(out,d_accessbytes,sizeof(unsigned char)*d_prefix_bytes);
-      memcpy(out+d_prefix_bytes,in,sizeof(unsigned char)*ninput_items[0]);
+      //memcpy(out,d_accessbytes,sizeof(unsigned char)*d_prefix_bytes);
+      //memcpy(out+d_prefix_bytes,in,sizeof(unsigned char)*ninput_items[0]);
+      gen_header(out, (uint16_t)ninput_items[0]);
+      memcpy(out+header_nbytes(),in,sizeof(char)*ninput_items[0]);
 
       std::vector<tag_t> tags;
       get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+ninput_items[0]);
-      for(int i=0;i<tags.size();++i){
-        //std::cerr << "****************DEBUG******************" << std::endl;
-        //std::cerr << "offset: "<<tags[i].offset<<std::endl;
-        //std::cerr << "key   : "<<pmt::symbol_to_string(tags[i].key)<<std::endl;
-        //std::cerr << "value : "<<pmt::to_long(tags[i].value)<<std::endl;
-        //std::cerr << "***************************************" << std::endl;
-        //add_item_tag(0, nitems_written(0)+tags[i].offset,tags[i].key, tags[i].value ,pmt::intern(alias()));
-        //add_item_tag(0, nitems_written(0)+tags[i].offset,pmt::intern("hdr_bytes"),pmt::from_long((long)d_prefix_bytes),pmt::intern(alias()));
+      for(int i=0;i<tags.size();++i){        
         tags[i].offset -= nitems_read(0);
         add_item_tag(0, nitems_written(0)+tags[i].offset, tags[i].key, tags[i].value);
+        add_item_tag(0, nitems_written(0)+tags[i].offset, pmt::intern("mode"),pmt::from_bool(d_mode));
       }
       // Tell runtime system how many output items we produced.
       //return noutput_items;
-      return ninput_items[0] + d_prefix_bytes;
+      return ninput_items[0] + header_nbytes();
     }
 
   } /* namespace lsa */
