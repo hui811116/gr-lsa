@@ -47,9 +47,9 @@ namespace gr {
     my_access_corr_bb_impl::my_access_corr_bb_impl(const std::string& access_code, unsigned int threshold)
       : gr::block("my_access_corr_bb",
               gr::io_signature::make(1, 1, sizeof(char)),
-              gr::io_signature::make(1, 1, sizeof(char)))
+              gr::io_signature::make(0, 0, 0))
     {
-      if(set_access_code(access_code)) {
+      if(!set_access_code(access_code)) {
         throw std::runtime_error("my_access_corr: Setting access code failed");
       }
       
@@ -101,16 +101,7 @@ namespace gr {
       return d_threshold;
     }
 
-/*
-    std::string
-    my_access_corr_bb_impl::get_access_code()const
-    {
-      std::string temp;
-      for(int i=0;i<d_access_code.size();++i){
-        temp+=d_access_code[i];
-      }
-    }
-*/
+
     void
     my_access_corr_bb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
@@ -132,8 +123,8 @@ namespace gr {
       uint16_t len1=0;
       // order in d_input: MSB 
       for(int i=0;i<16;++i){
-        len0 |= (d_input[i])? 0x0001 : 0x0000 << 15-i;
-        len1 |= (d_input[i+16])? 0x0001 : 0x0000 << 15-i;
+        len0 |= ( (d_input[i])? 0x0001 : 0x0000 )<< (15-i);
+        len1 |= ( (d_input[i+16])? 0x0001 : 0x0000 ) << (15-i);
       }
       if(len0==len1){
         payload_len = static_cast<int>(len0);
@@ -155,18 +146,12 @@ namespace gr {
         counter |= ((d_input[48+j])? 0x0001 : 0x00) << 15-j;
       }
       d_info = pmt::dict_add(d_info, pmt::intern("queue_index"), pmt::from_long(q_index));
-      info.push_back(d_info);
+      
       d_info = pmt::dict_add(d_info, pmt::intern("queue_size"), pmt::from_long(q_size));
-      info.push_back(d_info);
+      
       d_info = pmt::dict_add(d_info, pmt::intern("packet_counter"), pmt::from_long(counter));
       info.push_back(d_info);
-      /*
-      if( ((q_index ^ 0x00)==0) && ((q_size ^ 0x00)==0) ){
-
-      }
-      else{
-
-      }*/
+      
     }
 
     void
@@ -184,7 +169,7 @@ namespace gr {
           case CODE_SEARCH:
             while(count < n_bits_in){
               d_data_reg = (d_data_reg << 1) | ((in[count++]) & 0x1);
-              uint64_t check_bits =0;
+              uint64_t check_bits =(~0ULL);
               check_bits = (d_data_reg ^ d_accesscode) & d_mask;
               if(check_bits == 0){
                 d_state = CODE_SYNC;
@@ -195,22 +180,21 @@ namespace gr {
             }
           break;
           case CODE_SYNC:
-            while(count < n_bits_in){
+            while(count <= n_bits_in){
               insert_bits(in[count++]);
               if(d_input.size() == (header_nbits()- d_accesscode_len)){
                 int payload_len=0; 
                 if(payload_matched(payload_len)){
-                  d_state = CODE_SEARCH;
                   d_info = pmt::make_dict();
                   d_info = pmt::dict_add(d_info, pmt::intern("payload"), pmt::from_long(payload_len));
-                  info.push_back(d_info);
+                  //info.push_back(d_info);
                   extract_header(info);
                   return true;
                 }
                 else{
-                  d_state = CODE_SEARCH;
                   return false;
                 }
+                d_state=CODE_SEARCH;
                 break;
               }
             }
@@ -231,7 +215,7 @@ namespace gr {
     {
       int count=0;
       const unsigned char *in = (const unsigned char *) input_items[0];
-      unsigned char* out = (unsigned char*) output_items[0];
+      //unsigned char* out = (unsigned char*) output_items[0];
       std::vector<pmt::pmt_t> info;
       if(parse_bits(ninput_items[0],in,info,count)){
         for(int i=0;i<info.size();++i){
@@ -239,46 +223,11 @@ namespace gr {
         }
       }
       else{
-        message_port_pub(d_out_port, pmt::PMT_F);
+        // Comment off the following line to avoid unwanted info
+        //message_port_pub(d_out_port, pmt::PMT_F);
       }
-      if(output_items.size()>0){
-        memcpy(out, in, sizeof(char)* ninput_items[0]);
-      }
-      return count;
-      /*
-      unsigned char *out = (unsigned char *) output_items[0];
-      unsigned char *corr;
-      unsigned char corr_mem[nin-ns+1];
-      if(output_items.size()>1)
-        corr=(unsigned char *) output_items[1];
-
-      memcpy(out,in,sizeof(unsigned char)*nin);
       
-      int count;
-      for(int i=0;i<nin-ns+1;++i){
-        count=0;
-        for(int j=0;j<ns;++j){
-          count+= (in[i+j]==d_access_code[j])? 1:0;
-        }
-        corr_mem[i]=count;
-        if(output_items.size()>1)
-          corr[i]=count;
-        if(count>=d_threshold){
-          add_item_tag(0, nitems_written(0) + i, pmt::intern("count"),
-                       pmt::from_long(count), pmt::intern(alias()));
-          if(output_items.size()>1)
-            add_item_tag(1,nitems_written(1) + i, pmt::intern("count"),pmt::from_long(count),pmt::intern(alias()));
-        }
-      }
-      // Do <+signal processing+>
-      // Tell runtime system how many input items we consumed on
-      // each input stream.
-      consume_each (nin);
-      produce(0,ninput_items[0]);
-      produce(1,nin-ns+1);
-      // Tell runtime system how many output items we produced.
-      return WORK_CALLED_PRODUCE;
-      */
+      return 0;
     }
 
   } /* namespace lsa */

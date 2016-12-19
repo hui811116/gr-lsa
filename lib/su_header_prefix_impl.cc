@@ -109,8 +109,8 @@ namespace gr {
       }
       unsigned char* pay_size=(unsigned char*)&payload_size;
       for(int i=0;i<2;++i){
-        out[acc_bytes+i]=pay_size[i];
-        out[acc_bytes+2+i]=pay_size[i];
+        out[acc_bytes+i]=pay_size[1-i];
+        out[acc_bytes+2+i]=pay_size[1-i];
       }
       unsigned char re_size=0x00;
       unsigned char re_indx=0x00;
@@ -122,8 +122,8 @@ namespace gr {
       out[acc_bytes+4]=re_size;
       out[acc_bytes+5]=re_indx;
       unsigned char * count_u8=(unsigned char*)&count;
-      out[acc_bytes+6]=count_u8[0];
-      out[acc_bytes+7]=count_u8[1];
+      out[acc_bytes+6]=count_u8[1];
+      out[acc_bytes+7]=count_u8[0];
     }
 
     int
@@ -146,7 +146,7 @@ namespace gr {
       for(int i=0;i<tags.size();++i){        
         tags[i].offset -= nitems_read(0);
         add_item_tag(0, nitems_written(0)+tags[i].offset, tags[i].key, tags[i].value);
-        add_item_tag(0, nitems_written(0)+tags[i].offset, pmt::intern("mode"),pmt::from_bool(d_mode));
+        //add_item_tag(0, nitems_written(0)+tags[i].offset, pmt::intern("mode"),pmt::from_bool(d_mode));
       }
       // Tell runtime system how many output items we produced.
       //return noutput_items;

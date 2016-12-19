@@ -38,10 +38,7 @@
        * type
        * vlen
        * optional (set to 1 for optional inputs) -->
-  <source>
-    <name>out</name>
-    <type>byte</type>
-  </source>
+  
   <source>
     <name>info</name>
     <type>message</type>

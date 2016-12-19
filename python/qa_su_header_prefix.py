@@ -45,10 +45,13 @@ class qa_su_header_prefix (gr_unittest.TestCase):
         #tag.value=pmt.from_long(len(src_data))
         #tag.offset=0
         
-        expected = (0xf5,0xf0,0x00,0xff,0x0f)
+        expected = (0xf5,0xf0,0x00,0x03,0x00,0x03,0x00,0x00,0xff,0xff,0x00,0xff,0x0f)
+        expected2= (0xf5,0xf0,0x00,0x03,0x00,0x03,0xff,0x11,0xff,0xff,0x00,0xff,0x0f)
         src = blocks.vector_source_b(src_data)
         prefix =  lsa.su_header_prefix(accesscode,self.tsb_key,False)
+        prefix2 = lsa.su_header_prefix(accesscode, self.tsb_key,True)
         dst = blocks.tsb_vector_sink_b(tsb_key=self.tsb_key)
+        dst2= blocks.tsb_vector_sink_b(tsb_key=self.tsb_key)
         #self.tb.connect(src,prefix)
         #self.tb.connect(prefix,dst)
         self.tb.connect(
@@ -57,13 +60,22 @@ class qa_su_header_prefix (gr_unittest.TestCase):
         	prefix,
         	dst
         	)
+        self.tb.connect(
+            src,
+            blocks.stream_to_tagged_stream(gr.sizeof_char,1,len(src_data), self.tsb_key),
+            prefix2,
+            dst2
+            )
 
         self.tb.run ()
         result_data=dst.data()[0];
+        result_data2=dst2.data()[0];
         #print(expected)
-        print(result_data)
+        #print(result_data)
+        #print(result_data2)
         
-        #self.assertEqual(result_data,expected)
+        self.assertEqual(result_data,expected)
+        self.assertEqual(result_data2,expected2)
         # check data
 
 
