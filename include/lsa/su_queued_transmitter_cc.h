@@ -47,7 +47,7 @@ namespace gr {
        * creating new instances.
        */
       static sptr make(
-        int max_queue_size=65535,
+        int max_queue_size=1024,
         const std::string & sensing_tag="sensing_info",
         const std::string & index_tag="packet_index",
         const std::string & accesscode="1101100011000111");

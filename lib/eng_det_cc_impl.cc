@@ -93,7 +93,7 @@ namespace gr {
       for(int i=0;i<noutput_items_calc;++i)
       {
           float_test=std::accumulate(temp+i,temp+i+d_bin,0.0);
-          out[i]=(float_test==0.0)? FLT_MIN_10_EXP : std::log10(float_test);
+          out[i]=(float_test==0.0)? 10*FLT_MIN_10_EXP : 10*std::log10(float_test);
           if((out[i]>=d_threshold_db) && (!d_state_reg))
           {
             add_item_tag(0,nitems_written(0)+i, pmt::intern("sensing"), pmt::from_float(float_test), d_src_id);

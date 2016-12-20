@@ -22,6 +22,7 @@
 #define INCLUDED_LSA_SU_QUEUED_TRANSMITTER_CC_IMPL_H
 
 #include <lsa/su_queued_transmitter_cc.h>
+#include <pmt/pmt.h>
 
 namespace gr {
   namespace lsa {
@@ -60,7 +61,7 @@ namespace gr {
       void queue_size_adapt();
       void generate_hdr(unsigned char* out, unsigned long size, unsigned char & q_size,unsigned char & q_idx);
 
-      std::vector<unsigned char> copy_input_bytes(const unsigned char* in, int size);
+      bool copy_input_bytes(std::vector<unsigned char>& out,const unsigned char* in, int size);
   
       // Where all the action really happens
       void receiver_msg_handler(pmt::pmt_t rx_msg);
