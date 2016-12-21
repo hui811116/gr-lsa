@@ -40,6 +40,11 @@
        * optional (set to 1 for optional inputs) -->
   <source>
     <name>out</name>
+    <type>complex</type>
+  </source>
+  <source>
+    <name>ed</name>
     <type>float</type>
+    <optional>1</optional>
   </source>
 </block>

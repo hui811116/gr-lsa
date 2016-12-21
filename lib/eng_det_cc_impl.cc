@@ -49,7 +49,7 @@ namespace gr {
     eng_det_cc_impl::eng_det_cc_impl(float threshold, int bin)
       : gr::block("eng_det_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(1, 1, sizeof(float))),
+              gr::io_signature::make2(1, 2, sizeof(gr_complex),sizeof(float))),
       d_src_id(pmt::intern(alias())),
       d_state_reg(false)
     {
@@ -69,7 +69,7 @@ namespace gr {
     eng_det_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      ninput_items_required[0] =noutput_items;
+      ninput_items_required[0] =noutput_items + d_bin -1;
     }
 
     int
@@ -80,17 +80,20 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       // NOTE: ninput_items is fixed, but noutput_items is not.
-      int nin = ninput_items[0];  
-      float *out = (float *) output_items[0];
-      float temp[nin];
-      for(int it=0;it<nin;++it){
+      //int nin = ninput_items[0];
+      //int noutput_items_calc=nin-d_bin+1;
+      gr_complex * out_wave= (gr_complex*) output_items[0];
+
+      float ed_val[noutput_items];
+      float *out ;
+      out = (output_items.size()>1)? ((float *) output_items[1]) : ed_val;
+      float temp[ninput_items[0]];
+      for(int it=0;it<ninput_items[0];++it){
         temp[it]=norm(in[it]);
       }
       // fixed bin, may be a parameter in future implementation
-      int noutput_items_calc=nin-d_bin+1;
       float float_test;
-      //bool state_reg=false;
-      for(int i=0;i<noutput_items_calc;++i)
+      for(int i=0;i<noutput_items;++i)
       {
           float_test=std::accumulate(temp+i,temp+i+d_bin,0.0);
           out[i]=(float_test==0.0)? 10*FLT_MIN_10_EXP : 10*std::log10(float_test);
@@ -98,22 +101,36 @@ namespace gr {
           {
             add_item_tag(0,nitems_written(0)+i, pmt::intern("sensing"), pmt::from_float(float_test), d_src_id);
             add_item_tag(0,nitems_written(0)+i, pmt::intern("state"), pmt::PMT_T, d_src_id);
+
+            if(output_items.size()>1){
+              add_item_tag(1,nitems_written(1)+i, pmt::intern("sensing"), pmt::from_float(float_test), d_src_id);
+              add_item_tag(1,nitems_written(1)+i, pmt::intern("state"), pmt::PMT_T, d_src_id);
+            }
             d_state_reg=true;
           }// not yet found 
           else if((out[i]<d_threshold_db)&& d_state_reg)
           {
             add_item_tag(0,nitems_written(0)+i, pmt::intern("sensing"), pmt::from_float(float_test), d_src_id);
             add_item_tag(0,nitems_written(0)+i, pmt::intern("state"), pmt::PMT_F, d_src_id);
+            if(output_items.size()>1){
+              add_item_tag(1,nitems_written(1)+i, pmt::intern("sensing"), pmt::from_float(float_test), d_src_id);
+              add_item_tag(1,nitems_written(1)+i, pmt::intern("state"), pmt::PMT_F, d_src_id);
+            }
             d_state_reg=false;
           }
       }
       
       // Do <+signal processing+>
+      memcpy(out_wave,in,sizeof(gr_complex)*noutput_items);
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      consume_each (nin);
+      consume_each (noutput_items);
+      // output buffer maybe not enough?
+      //produce(0,noutput_items);
+      //produce(0,ninput_items[0]);
+      //produce(1,noutput_items_calc);
       // Tell runtime system how many output items we produced.
-      return noutput_items_calc;
+      return noutput_items;
     }
 //**************************
 //    SET functions
