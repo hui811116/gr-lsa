@@ -87,15 +87,15 @@ namespace gr {
      */
     header_payload_parser_cb_impl::~header_payload_parser_cb_impl()
     {
-      //delete d_hdr_const_ptr;
-      //delete d_pld_const_ptr;
     }
 
-    //void
-    //header_payload_parser_cb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
-    //{
+    void
+    header_payload_parser_cb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
+    {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-    //}
+      for(int i=0;i<ninput_items_required.size();++i)
+        ninput_items_required[i]=noutput_items;
+    }
     void
     header_payload_parser_cb_impl::cal_correlation(std::vector<gr_complex>& corr,const gr_complex* in,int n_size)
     {      
@@ -219,41 +219,36 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      //const gr_complex *corr= (const gr_complex *) input_items[1];
       gr_complex *out = (gr_complex *) output_items[0];
       unsigned char* out_port1;
       if(output_items.size()>1)
        out_port1 = (unsigned char*) output_items[1];
 
-      memcpy(out,in,sizeof(gr_complex)*ninput_items[0]);
+      memcpy(out,in,sizeof(gr_complex)*noutput_items);
       // Do <+signal processing+>
       
-      unsigned char tmp[ninput_items[0]];
-      for(int i=0;i<ninput_items[0];++i){
+      unsigned char tmp[noutput_items];
+      for(int i=0;i<noutput_items;++i){
         tmp[i]=d_hdr_const_ptr->decision_maker(&(in[i]));
       } 
 
       if(output_items.size()>1)
-        memcpy(out_port1,tmp,sizeof(unsigned char)*ninput_items[0]);
+        memcpy(out_port1,tmp,sizeof(unsigned char)*noutput_items);
       //unpacking to k bits
-      int total_len=ninput_items[0]*d_hdr_const_ptr->bits_per_symbol();
+      int total_len=noutput_items*d_hdr_const_ptr->bits_per_symbol();
       unsigned char repack_bits[total_len];
       repack_bits_lsb(repack_bits,tmp,ninput_items[0],d_hdr_const_ptr->bits_per_symbol());
       std::vector<int> positions;
       sync_accessbits(positions, repack_bits, total_len);
-      //parse_packet_length()
       /*
        this version meant for default header type, for other implementation,
        reuse the enum type defined in the begin of this file.
       */
       unsigned short first,second;
       int pos_reg;
-      //int offset;
-      int consume_idx=ninput_items[0];
+      int consume_idx=noutput_items;
       pmt::pmt_t pdu_out;
-      //tag_t tag;
       gr::blocks::pdu::vector_type d_type = gr::blocks::pdu::byte_t;
-      //pmt::pmt_t info;
       for(int i=0;i<positions.size();++i){
         //default packet length in header 16+16 (4bytes)
         //add_item_tag(0,nitems_written(0)+positions[i],pmt::intern("index:"),pmt::from_long(positions[i]),pmt::intern(alias()));
@@ -288,21 +283,12 @@ namespace gr {
         }
       }
 
-      //FIXME for debugging purpose
-      /*
-      for(int i=0;i<ninput_items[0];++i)
-      {
-        if(i%d_accessbits.size()==0){
-          add_item_tag(0,nitems_written(0)+i,pmt::intern("debug"),pmt::string_to_symbol(accessbits()),pmt::intern(alias()));
-        }
-      }*/
-
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (consume_idx);
-      produce(0,ninput_items[0]); // for output port 0
+      produce(0,noutput_items); // for output port 0
       if(output_items.size()>1)
-        produce(1,ninput_items[0]); // for output port 1
+        produce(1,noutput_items); // for output port 1
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;
       //return ninput_items[0];

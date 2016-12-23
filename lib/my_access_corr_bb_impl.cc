@@ -217,7 +217,7 @@ namespace gr {
       const unsigned char *in = (const unsigned char *) input_items[0];
       //unsigned char* out = (unsigned char*) output_items[0];
       std::vector<pmt::pmt_t> info;
-      if(parse_bits(ninput_items[0],in,info,count)){
+      if(parse_bits(noutput_items,in,info,count)){
         for(int i=0;i<info.size();++i){
           message_port_pub(d_out_port, info[i]);
         }
@@ -227,7 +227,8 @@ namespace gr {
         //message_port_pub(d_out_port, pmt::PMT_F);
       }
       
-      return 0;
+      consume_each(noutput_items);
+      return count;
     }
 
   } /* namespace lsa */

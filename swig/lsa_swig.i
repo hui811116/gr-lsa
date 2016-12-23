@@ -20,6 +20,7 @@
 #include "lsa/header_payload_parser_cb.h"
 #include "lsa/su_header_prefix.h"
 #include "lsa/su_queued_transmitter_cc.h"
+#include "lsa/su_sample_receiver_cb.h"
 %}
 
 
@@ -41,3 +42,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, header_payload_parser_cb);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_header_prefix);
 %include "lsa/su_queued_transmitter_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, su_queued_transmitter_cc);
+%include "lsa/su_sample_receiver_cb.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, su_sample_receiver_cb);

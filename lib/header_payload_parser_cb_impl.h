@@ -36,21 +36,17 @@ namespace gr {
 
       // private members
       float d_threshold;
-      //std::vector<gr_complex> d_buffer;
+      
       std::vector<gr_complex> d_symbols;
       float symbol_norm;
       std::vector<unsigned char> d_accessbits;
       // find out how to use it in GRC
       gr::digital::constellation_sptr d_hdr_const_ptr;
       gr::digital::constellation_sptr d_pld_const_ptr;
-      //
-      
 
       void cal_correlation(std::vector<gr_complex>& corr, const gr_complex * in, int i_size);
       bool corr_thres_locate_pkt(std::vector<int>& indices, const std::vector<gr_complex>& corr);
       void sync_accessbits(std::vector<int>& pos, const unsigned char* in, int i_size);
-      //bool hdr_demux();
-      //void parse_packet_length();
       void repack_bits_lsb(unsigned char* out, unsigned char* in,unsigned int len,unsigned int bps);
 
 
@@ -66,7 +62,7 @@ namespace gr {
       ~header_payload_parser_cb_impl();
 
       // Where all the action really happens
-      //void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
       std::string accessbits() const;
       void set_accessbits(const std::string & accesscode);
 
