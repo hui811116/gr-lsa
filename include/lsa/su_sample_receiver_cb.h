@@ -24,7 +24,7 @@
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
-#include <gnuradio/filter/fir_filter.h>
+//#include <gnuradio/filter/fir_filter.h>
 #include <gnuradio/digital/constellation.h>
 #include <pmt/pmt.h>
 
@@ -49,7 +49,10 @@ namespace gr {
        * class. lsa::su_sample_receiver_cb::make is the public interface for
        * creating new instances.
        */
-      static sptr make();
+      static sptr make(
+        const std::string& sensing_tag_id,
+        const std::string& accesscode,
+        const gr::digital::constellation_sptr& hdr_const);
     };
 
   } // namespace lsa

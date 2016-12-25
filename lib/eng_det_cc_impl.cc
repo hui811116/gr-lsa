@@ -56,6 +56,8 @@ namespace gr {
       d_threshold_db=threshold;
       d_bin=bin;
       set_tag_propagation_policy(TPP_DONT);
+      d_cap = 24 * 1024;
+      d_sample_reg = new gr_complex[d_cap];
     }
 
     /*
@@ -63,6 +65,7 @@ namespace gr {
      */
     eng_det_cc_impl::~eng_det_cc_impl()
     {
+      delete [] d_sample_reg;
     }
 
     void
@@ -84,6 +87,8 @@ namespace gr {
       //int noutput_items_calc=nin-d_bin+1;
       gr_complex * out_wave= (gr_complex*) output_items[0];
 
+      int out_count = 0;
+
       float ed_val[noutput_items];
       float *out ;
       out = (output_items.size()>1)? ((float *) output_items[1]) : ed_val;
@@ -99,29 +104,33 @@ namespace gr {
           out[i]=(float_test==0.0)? 10*FLT_MIN_10_EXP : 10*std::log10(float_test);
           if((out[i]>=d_threshold_db) && (!d_state_reg))
           {
-            add_item_tag(0,nitems_written(0)+i, pmt::intern("sensing"), pmt::from_float(float_test), d_src_id);
-            add_item_tag(0,nitems_written(0)+i, pmt::intern("state"), pmt::PMT_T, d_src_id);
+
+            add_item_tag(0,nitems_written(0)+out_count, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
+            add_item_tag(0,nitems_written(0)+out_count, pmt::intern("begin"), pmt::PMT_T, d_src_id);
+            d_sample_reg[out_count++] = in[i];
 
             if(output_items.size()>1){
-              add_item_tag(1,nitems_written(1)+i, pmt::intern("sensing"), pmt::from_float(float_test), d_src_id);
-              add_item_tag(1,nitems_written(1)+i, pmt::intern("state"), pmt::PMT_T, d_src_id);
+              add_item_tag(1,nitems_written(1)+i, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
+              add_item_tag(1,nitems_written(1)+i, pmt::intern("begin"), pmt::PMT_T, d_src_id);
             }
             d_state_reg=true;
           }// not yet found 
           else if((out[i]<d_threshold_db)&& d_state_reg)
           {
-            add_item_tag(0,nitems_written(0)+i, pmt::intern("sensing"), pmt::from_float(float_test), d_src_id);
-            add_item_tag(0,nitems_written(0)+i, pmt::intern("state"), pmt::PMT_F, d_src_id);
+            //add_item_tag(0,nitems_written(0)+i, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
+            //add_item_tag(0,nitems_written(0)+i, pmt::intern("state"), pmt::PMT_F, d_src_id);
             if(output_items.size()>1){
-              add_item_tag(1,nitems_written(1)+i, pmt::intern("sensing"), pmt::from_float(float_test), d_src_id);
-              add_item_tag(1,nitems_written(1)+i, pmt::intern("state"), pmt::PMT_F, d_src_id);
+              add_item_tag(1,nitems_written(1)+i, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
+              add_item_tag(1,nitems_written(1)+i, pmt::intern("begin"), pmt::PMT_F, d_src_id);
             }
             d_state_reg=false;
           }
       }
       
       // Do <+signal processing+>
-      memcpy(out_wave,in,sizeof(gr_complex)*noutput_items);
+      //memcpy(out_wave,in,sizeof(gr_complex)*noutput_items);
+      produce(0,out_count);
+      produce(1,noutput_items);
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (noutput_items);
@@ -130,7 +139,7 @@ namespace gr {
       //produce(0,ninput_items[0]);
       //produce(1,noutput_items_calc);
       // Tell runtime system how many output items we produced.
-      return noutput_items;
+      return WORK_CALLED_PRODUCE;
     }
 //**************************
 //    SET functions

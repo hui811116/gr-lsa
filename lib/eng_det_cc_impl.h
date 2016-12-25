@@ -36,6 +36,9 @@ namespace gr {
       pmt::pmt_t d_src_id;
       bool d_state_reg;
 
+      gr_complex* d_sample_reg;
+      size_t d_cap;
+
      public:
       eng_det_cc_impl(float threshold,int bin);
       ~eng_det_cc_impl();

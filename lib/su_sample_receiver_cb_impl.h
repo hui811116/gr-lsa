@@ -22,8 +22,8 @@
 #define INCLUDED_LSA_SU_SAMPLE_RECEIVER_CB_IMPL_H
 
 #include <lsa/su_sample_receiver_cb.h>
-#include <gnuradio/filter/fir_filter.h>
-#include <gnuradio/digital/contellation.h>
+//#include <gnuradio/filter/fir_filter.h>
+#include <gnuradio/digital/constellation.h>
 #include <pmt/pmt.h>
 
 namespace gr {
@@ -34,14 +34,15 @@ namespace gr {
      private:
       // Nothing to declare in this block.
 
+/*
       int d_nfilters;
       std::vector<gr::filter::kernel::fir_filter_ccf*> d_filters;
       //std::vector<gr::filter::kernel::fir_filter_ccf*> 
       std::vector< std::vector<float> > d_taps;
       //std::vector< std::vector<float> > d_dtaps;
       std::vector<float> d_updated_taps;
-
-      pmt::pmt_t d_scr_id;
+*/
+      pmt::pmt_t d_src_id;
       pmt::pmt_t d_sensing_tag_id;
       pmt::pmt_t d_msg_port;
       pmt::pmt_t d_debug_port;
@@ -50,13 +51,49 @@ namespace gr {
 
       int d_state;
 
-      unsigned char * d_bytes_reg;
+      unsigned char * d_byte_reg;
+      size_t d_cap;
+      size_t d_byte_count;
 
 
-      bool symbol_segment(std::vector<tag_t>& tags);
+      // used for accesscode sync
+      std::vector<bool> d_input;
+      unsigned long long d_data_reg;
+      unsigned long long d_mask;
+
+      uint64_t d_accesscode;
+      size_t d_accesscode_len;
+
+      int d_bit_state;
+      uint16_t d_payload_len;
+      uint16_t d_counter;
+      uint8_t d_qidx;
+      uint8_t d_qsize;
+
+
+      
+      bool parse_header();
+      uint16_t _get_bit16(int begin_idx);
+      uint8_t _get_bit8(int begin_idx);
+
+
+
+      bool pub_byte_pkt(std::vector<unsigned char>& pub);
+
+
+      bool symbol_segment(std::vector<tag_t>& intf_idx, const std::vector<tag_t>& tags, int nsamples);
+
+      void feedback_info(bool type);
+      void data_reg_reset();
+
+      void insert_parse_byte(std::vector<unsigned char>& out);
+
 
      public:
-      su_sample_receiver_cb_impl(gr::digital::constellation_sptr hdr_sptr);
+      su_sample_receiver_cb_impl(
+        const std::string& sensing_tag_id,
+        const std::string& accesscode,
+        const gr::digital::constellation_sptr& hdr_const);
       ~su_sample_receiver_cb_impl();
 
       // Where all the action really happens
@@ -66,6 +103,13 @@ namespace gr {
            gr_vector_int &ninput_items,
            gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
+
+      size_t header_nbits() const;
+
+      bool set_accesscode(const std::string& accesscode);
+
+      uint64_t accesscode() const;
+
     };
 
   } // namespace lsa
