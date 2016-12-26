@@ -45,8 +45,13 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>out</name>
-    <type>byte</type>
+    <name>packet</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+    <source>
+    <name>sensing</name>
+    <type>message</type>
     <optional>1</optional>
   </source>
 </block>

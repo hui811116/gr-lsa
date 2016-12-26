@@ -24,6 +24,7 @@
 
 #include <gnuradio/io_signature.h>
 #include "su_sample_receiver_cb_impl.h"
+#include <gnuradio/blocks/pdu.h>
 //#include <pmt/pmt.h>
 
 namespace gr {
@@ -33,10 +34,11 @@ namespace gr {
     su_sample_receiver_cb::make(
       const std::string& sensing_tag_id,
       const std::string& accesscode,
-      const gr::digital::constellation_sptr& hdr_const)
+      const gr::digital::constellation_sptr& hdr_const,
+      const gr::digital::constellation_sptr& pld_const)
     {
       return gnuradio::get_initial_sptr
-        (new su_sample_receiver_cb_impl(sensing_tag_id,accesscode,hdr_const));
+        (new su_sample_receiver_cb_impl(sensing_tag_id,accesscode,hdr_const,pld_const));
     }
 
     enum SuRxState{
@@ -55,18 +57,23 @@ namespace gr {
     su_sample_receiver_cb_impl::su_sample_receiver_cb_impl(
       const std::string& sensing_tag_id,
       const std::string& accesscode, 
-      const gr::digital::constellation_sptr& hdr_const)
+      const gr::digital::constellation_sptr& hdr_const,
+      const gr::digital::constellation_sptr& pld_const)
       : gr::block("su_sample_receiver_cb",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(0, 1, sizeof(char))),
+              gr::io_signature::make(0, 0, 0)),
         d_src_id(pmt::intern(alias()))
     {
       d_hdr_sptr = hdr_const->base();
+      d_pld_sptr = pld_const->base();
       d_state = SU_ONLY;
       d_bit_state = SEARCH_SYNC_CODE;
 
-      d_msg_port = pmt::mp("sensing_info");
-      d_debug_port = pmt::mp("debug");
+      //d_type = pdu::byte_t;
+
+      d_msg_port = pmt::mp("sensing");
+      d_pkt_port = pmt::mp("packet");
+      //d_debug_port = pmt::mp("debug");
       d_sensing_tag_id = pmt::string_to_symbol(sensing_tag_id);
 
       d_cap = 16*1024;
@@ -77,6 +84,8 @@ namespace gr {
         throw std::runtime_error("SU Receiver: Setting access code failed");
       }
       d_byte_reg = (unsigned char*) malloc(sizeof(char)*d_cap);
+      d_symbol_to_bytes = (unsigned char*) malloc(sizeof(char)*d_cap);
+
       // d_name = (gr_complex*) volk_malloc(sizeof(gr_complex)*nitems, volk_get_alignment());
       //int nsamples
       //set_output_multiple(nsamples);
@@ -84,7 +93,7 @@ namespace gr {
       //declare_sample_delay(port, delay);
 
       message_port_register_out(d_msg_port);
-      message_port_register_out(d_debug_port);
+      //message_port_register_out(d_debug_port);
       set_tag_propagation_policy(TPP_DONT);
     }
 
@@ -94,26 +103,13 @@ namespace gr {
     su_sample_receiver_cb_impl::~su_sample_receiver_cb_impl()
     {
       free(d_byte_reg);
+      free(d_symbol_to_bytes);
     }
 
     void
     su_sample_receiver_cb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
-      /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      ninput_items_required[0]=noutput_items;
-      /*
-      int hdr_symbol_len=(header_nbits()+d_accesscode_len)/d_hdr_sptr->bits_per_symbol();
-      switch(d_bit_state)
-      {
-        case SEARCH_SYNC_CODE:
-        case SYNC_WAIT_HEADER:
-        case WAIT_PAYLOAD:
-          ninput_items_required[0] = noutput_items;
-        break;
-        default:
-        break;
-      }
-      */
+      ninput_items_required[0]=noutput_items; 
     }
 
     bool
@@ -136,16 +132,38 @@ namespace gr {
     }
 
     bool
-    su_sample_receiver_cb_impl::pub_byte_pkt(std::vector<unsigned char>& pub)
+    su_sample_receiver_cb_impl::pub_byte_pkt()
     {
-      if(d_byte_count ==0){
+      unsigned char* symbol_to_bytes;
+      if( (d_byte_count ==0) || (d_payload_len > d_cap) ){
+        d_byte_count = 0;
         return false;
       }
       else{
-        for(int i=0;i<d_byte_count;++i){
-          pub.push_back(d_byte_reg[i]);
+        int k_bits = d_pld_sptr->bits_per_symbol();
+        int bits_count = k_bits * d_byte_count;
+        int byte_count = (bits_count%8==0)? bits_count /8 : bits_count/8+1;
+        unsigned char tmp;
+        
+        
+        for(int i=0;i<bits_count;++i){
+          if(i%8==0){
+            d_symbol_to_bytes[i/8]=0x00;
+          }
+          tmp = (d_byte_reg[i/k_bits] >> (k_bits-1-i%k_bits)) & 0x01;
+          d_symbol_to_bytes[i/8] =  ((d_symbol_to_bytes[i/8] >> (7-i%8)) | tmp ) << 7-i%8;
         }
+
+        pmt::pmt_t pdu_meta = pmt::make_dict();
+        pdu_meta = pmt::dict_add(pdu_meta, pmt::intern("payload_len"), pmt::from_long(d_payload_len));
+        pdu_meta = pmt::dict_add(pdu_meta, pmt::intern("counter"), pmt::from_long(d_counter));
+        
+        d_pdu_vector = gr::blocks::pdu::make_pdu_vector(gr::blocks::pdu::byte_t,d_symbol_to_bytes,byte_count);
+        pmt::pmt_t msg = pmt::cons(pdu_meta, d_pdu_vector);
+        message_port_pub(d_pkt_port, msg);
+        //reset
         d_byte_count = 0;
+        
         return true;
       }
       
@@ -178,7 +196,9 @@ namespace gr {
     void
     su_sample_receiver_cb_impl::data_reg_reset()
     {
+      //d_samp_count=0;
       d_byte_count=0;
+      d_bit_state = SEARCH_SYNC_CODE;
     }
 
     size_t
@@ -246,54 +266,61 @@ namespace gr {
     void
     su_sample_receiver_cb_impl::insert_parse_byte(std::vector<unsigned char>& out)
     {
-      unsigned char byte_hold = d_byte_reg[d_byte_count-1];
-      //MSB parsing
-      int k_bits = d_hdr_sptr->bits_per_symbol();
-      
-      unsigned char bitstream[k_bits];
-      for(int i=0;i < k_bits;++i){
-        bitstream[i] = 0x01 & (byte_hold >> (k_bits-1-i));
-      }
-      for(int i=0;i<k_bits;++i){
-        uint64_t check_bits = (~0ULL);
-        switch(d_bit_state)
-        {
-          case SEARCH_SYNC_CODE:
-            d_data_reg = (d_data_reg << 1) | (bitstream[i]);  
+      //gr_complex samp_hold = d_samp_reg[d_samp_count-1];
+      unsigned char byte_hold;
+      int k_bits;
+
+      switch(d_bit_state)
+      {
+        case SEARCH_SYNC_CODE:
+          byte_hold = d_hdr_sptr->decision_maker(&d_samp_reg);
+          k_bits = d_hdr_sptr->bits_per_symbol();
+          for(int i=0;i<k_bits;++i)
+          {
+            uint64_t check_bits = (~0ULL);
+            d_data_reg = (d_data_reg << 1) | ((byte_hold >> (k_bits-1-i) )& 0x01 );
             check_bits = (d_data_reg ^ d_accesscode) & d_mask;
             if(check_bits == 0){
               d_bit_state = SYNC_WAIT_HEADER;
               d_input.clear();
-              d_byte_count = 0;
-            }      
-          break;
-          case SYNC_WAIT_HEADER:
-            d_input.push_back( (bitstream[i]==0x00)? false : true);
-            if(d_input.size() == (header_nbits()-d_accesscode_len) )
-            {
-              //int payload_len=0; // can construct a class variable
-              if(parse_header()){
-                d_bit_state = WAIT_PAYLOAD;
-              }
-              else{
-                d_bit_state = SEARCH_SYNC_CODE;
-              }
+              //d_samp_count = 0;
             }
-          break;
-          case WAIT_PAYLOAD:
-            d_input.push_back( (bitstream[i]==0x00)? false : true);
-            if(d_input.size() == (header_nbits() + d_payload_len*8)){
+          }
+        break;
+        case SYNC_WAIT_HEADER:
+          byte_hold = d_hdr_sptr->decision_maker(&d_samp_reg);
+          k_bits = d_hdr_sptr->bits_per_symbol();
+          for(int i=0;i<k_bits;++i){
+            d_input.push_back( (((byte_hold >> (k_bits-1-i)) & 0x01)==0x00 )? false : true);
+          }
+          if(d_input.size() >= (header_nbits()-d_accesscode_len) )
+          {
+            if(parse_header()){
+              d_bit_state = WAIT_PAYLOAD;
+            }
+            else{
               d_bit_state = SEARCH_SYNC_CODE;
-              for(int i=0;i<d_input.size();++i){
-                out.push_back((d_input[i])? 0x01:0x00);
-              }
             }
-          break;
-          default:
-            std::runtime_error("SU Receiver: Entering wrong state");
-          break;
-        }
+          }
+        break;
+        case WAIT_PAYLOAD:
+          d_byte_reg[d_byte_count++] = d_pld_sptr->decision_maker(&d_samp_reg);
+          if(d_payload_len*8 == (d_byte_count * d_pld_sptr->bits_per_symbol()))
+          {
+            for(int i=0;i<d_byte_count;++i){
+              out.push_back(d_byte_reg[i]);        
+            }
+            d_bit_state = SEARCH_SYNC_CODE;
+            d_byte_count = 0;
+          }
+        break;
+        default:
+          std::runtime_error("SU Receiver: Entering wrong bit processing state");
+        break;
       }
+
+      //MSB parsing
+      
     }
     int
     su_sample_receiver_cb_impl::general_work (int noutput_items,
@@ -304,9 +331,7 @@ namespace gr {
       const gr_complex *in = (const gr_complex *) input_items[0];
       unsigned char out_bytes[noutput_items];
       unsigned char *out = out_bytes;
-      if(!output_items.empty()){
-        out = (unsigned char *) output_items[0];  
-      }
+      
       // assume input is complex symbols, with tags of sensing info to be feedback
       int out_count=0;
       
@@ -318,12 +343,8 @@ namespace gr {
         //this case represent no state info found
         if(d_state == SU_ONLY){
             for(int i=0;i<noutput_items;++i){
-              d_byte_reg[d_byte_count] = d_hdr_sptr->decision_maker(&in[i]);
+              d_samp_reg = in[i];
               
-              if(!output_items.empty()){
-                out[out_count++]=d_byte_reg[d_byte_count];
-              }
-              d_byte_count++;
               insert_parse_byte(hold_bits);
               if(d_byte_count == d_cap){
                 GR_LOG_CRIT(d_logger, "SU Receiver: Reaching maximum capacity, reset to initial.");
@@ -359,11 +380,8 @@ namespace gr {
           }
           switch(d_state){
             case SU_ONLY:
-              d_byte_reg[d_byte_count] = d_hdr_sptr->decision_maker(&in[i]);
-              if(!output_items.empty()){
-                out[out_count++] = d_byte_reg[d_byte_count];
-              }
-              d_byte_count++;
+              d_samp_reg = in[i];
+              
               insert_parse_byte(hold_bits);
               if(!hold_bits.empty()){
                 //publish message
@@ -387,7 +405,7 @@ namespace gr {
       consume_each (noutput_items);
 
       // Tell runtime system how many output items we produced.
-      return out_count;
+      return noutput_items;
     }
 
   } /* namespace lsa */

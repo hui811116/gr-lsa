@@ -102,18 +102,18 @@ namespace gr {
       {
           float_test=std::accumulate(temp+i,temp+i+d_bin,0.0);
           out[i]=(float_test==0.0)? 10*FLT_MIN_10_EXP : 10*std::log10(float_test);
-          if((out[i]>=d_threshold_db) && (!d_state_reg))
+          if((out[i]>=d_threshold_db))
           {
-
-            add_item_tag(0,nitems_written(0)+out_count, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
-            add_item_tag(0,nitems_written(0)+out_count, pmt::intern("begin"), pmt::PMT_T, d_src_id);
-            d_sample_reg[out_count++] = in[i];
-
-            if(output_items.size()>1){
-              add_item_tag(1,nitems_written(1)+i, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
-              add_item_tag(1,nitems_written(1)+i, pmt::intern("begin"), pmt::PMT_T, d_src_id);
+            if(!d_state_reg){
+              add_item_tag(0,nitems_written(0)+out_count, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
+              add_item_tag(0,nitems_written(0)+out_count, pmt::intern("begin"), pmt::PMT_T, d_src_id);
+              if(output_items.size()>1){
+                add_item_tag(1,nitems_written(1)+i, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
+                add_item_tag(1,nitems_written(1)+i, pmt::intern("begin"), pmt::PMT_T, d_src_id);
+                }
+              d_state_reg=true;
             }
-            d_state_reg=true;
+            out_wave[out_count++]= in[i];
           }// not yet found 
           else if((out[i]<d_threshold_db)&& d_state_reg)
           {

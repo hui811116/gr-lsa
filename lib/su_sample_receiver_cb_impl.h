@@ -45,15 +45,21 @@ namespace gr {
       pmt::pmt_t d_src_id;
       pmt::pmt_t d_sensing_tag_id;
       pmt::pmt_t d_msg_port;
-      pmt::pmt_t d_debug_port;
+      pmt::pmt_t d_pkt_port;
+      
+      pmt::pmt_t d_pdu_vector;
 
       gr::digital::constellation_sptr d_hdr_sptr;
+      gr::digital::constellation_sptr d_pld_sptr;
 
       int d_state;
 
-      unsigned char * d_byte_reg;
+      unsigned char* d_byte_reg;
+      unsigned char* d_symbol_to_bytes;
+      gr_complex  d_samp_reg;
       size_t d_cap;
       size_t d_byte_count;
+      //size_t d_samp_count;
 
 
       // used for accesscode sync
@@ -78,7 +84,7 @@ namespace gr {
 
 
 
-      bool pub_byte_pkt(std::vector<unsigned char>& pub);
+      bool pub_byte_pkt();
 
 
       bool symbol_segment(std::vector<tag_t>& intf_idx, const std::vector<tag_t>& tags, int nsamples);
@@ -93,7 +99,8 @@ namespace gr {
       su_sample_receiver_cb_impl(
         const std::string& sensing_tag_id,
         const std::string& accesscode,
-        const gr::digital::constellation_sptr& hdr_const);
+        const gr::digital::constellation_sptr& hdr_const,
+        const gr::digital::constellation_sptr& pld_const);
       ~su_sample_receiver_cb_impl();
 
       // Where all the action really happens
