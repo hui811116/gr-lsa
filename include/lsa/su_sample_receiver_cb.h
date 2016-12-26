@@ -53,7 +53,8 @@ namespace gr {
         const std::string& sensing_tag_id,
         const std::string& accesscode,
         const gr::digital::constellation_sptr& hdr_const,
-        const gr::digital::constellation_sptr& pld_const);
+        const gr::digital::constellation_sptr& pld_const,
+        bool debug);
     };
 
   } // namespace lsa

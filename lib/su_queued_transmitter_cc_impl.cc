@@ -308,10 +308,10 @@ namespace gr {
           pkt_counter = (unsigned char*)& d_index_buffer[d_sensing_iter];
           retx_size=(unsigned char) d_sensing_queue.size();
         }
-        out[ac_len+4] = retx_size;
-        out[ac_len+5] = retx_index;
-        out[ac_len+6] = pkt_counter[1];
-        out[ac_len+7] = pkt_counter[0];
+        out[ac_len+7] = retx_size;
+        out[ac_len+6] = retx_index;
+        out[ac_len+4] = pkt_counter[1];
+        out[ac_len+5] = pkt_counter[0];
         q_size = retx_size;
         q_idx = retx_index;
     }

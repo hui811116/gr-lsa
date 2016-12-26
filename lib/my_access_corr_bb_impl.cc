@@ -139,11 +139,11 @@ namespace gr {
       uint8_t q_size=0x00;
       uint16_t counter=0x0000;
       for(int i=0;i<8;++i){
-        q_index |= ((d_input[32+i])? 0x01 : 0x00) << 7-i;
-        q_size  |= ((d_input[40+i])? 0x01 : 0x00) << 7-i;
+        q_index |= ((d_input[48+i])? 0x01 : 0x00) << 7-i;
+        q_size  |= ((d_input[56+i])? 0x01 : 0x00) << 7-i;
       }
       for(int j=0;j<16;++j){
-        counter |= ((d_input[48+j])? 0x0001 : 0x00) << 15-j;
+        counter |= ((d_input[32+j])? 0x0001 : 0x00) << 15-j;
       }
       d_info = pmt::dict_add(d_info, pmt::intern("queue_index"), pmt::from_long(q_index));
       

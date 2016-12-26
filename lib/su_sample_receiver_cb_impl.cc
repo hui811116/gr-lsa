@@ -35,10 +35,11 @@ namespace gr {
       const std::string& sensing_tag_id,
       const std::string& accesscode,
       const gr::digital::constellation_sptr& hdr_const,
-      const gr::digital::constellation_sptr& pld_const)
+      const gr::digital::constellation_sptr& pld_const,
+      bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new su_sample_receiver_cb_impl(sensing_tag_id,accesscode,hdr_const,pld_const));
+        (new su_sample_receiver_cb_impl(sensing_tag_id,accesscode,hdr_const,pld_const,debug));
     }
 
     enum SuRxState{
@@ -58,7 +59,8 @@ namespace gr {
       const std::string& sensing_tag_id,
       const std::string& accesscode, 
       const gr::digital::constellation_sptr& hdr_const,
-      const gr::digital::constellation_sptr& pld_const)
+      const gr::digital::constellation_sptr& pld_const,
+      bool debug)
       : gr::block("su_sample_receiver_cb",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(0, 0, 0)),
@@ -71,9 +73,9 @@ namespace gr {
 
       //d_type = pdu::byte_t;
 
-      d_msg_port = pmt::mp("sensing");
+      d_msg_port = pmt::mp("info");
       d_pkt_port = pmt::mp("packet");
-      //d_debug_port = pmt::mp("debug");
+      d_debug_port = pmt::mp("debug");  //debug
       d_sensing_tag_id = pmt::string_to_symbol(sensing_tag_id);
 
       d_cap = 16*1024;
@@ -91,10 +93,13 @@ namespace gr {
       //set_output_multiple(nsamples);
       //set_history(1);
       //declare_sample_delay(port, delay);
+      d_debug = debug;
 
       message_port_register_out(d_msg_port);
-      //message_port_register_out(d_debug_port);
+      message_port_register_out(d_pkt_port);
+      message_port_register_out(d_debug_port); //debug
       set_tag_propagation_policy(TPP_DONT);
+      //throw std::runtime_error("SU Receiver: STOP TEST");
     }
 
     /*
@@ -128,18 +133,14 @@ namespace gr {
             intf_idx.push_back(tags[i]);
         }
       }
-      return intf_idx.empty();
+      return !intf_idx.empty();
     }
 
-    bool
+    void
     su_sample_receiver_cb_impl::pub_byte_pkt()
     {
       unsigned char* symbol_to_bytes;
-      if( (d_byte_count ==0) || (d_payload_len > d_cap) ){
-        d_byte_count = 0;
-        return false;
-      }
-      else{
+      
         int k_bits = d_pld_sptr->bits_per_symbol();
         int bits_count = k_bits * d_byte_count;
         int byte_count = (bits_count%8==0)? bits_count /8 : bits_count/8+1;
@@ -162,32 +163,22 @@ namespace gr {
         pmt::pmt_t msg = pmt::cons(pdu_meta, d_pdu_vector);
         message_port_pub(d_pkt_port, msg);
         //reset
-        d_byte_count = 0;
-        
-        return true;
-      }
-      
+        data_reg_reset();
     }
 
 
     void
     su_sample_receiver_cb_impl::feedback_info(bool type)
     {
-      pmt::pmt_t sen_back;
+      pmt::pmt_t sen_back = pmt::make_dict();
       //interfering case
-      if(type)
+      sen_back = pmt::dict_add(sen_back,d_sensing_tag_id,pmt::from_bool(type));
+      if(!type)
       {
-        sen_back = pmt::make_dict();
-        sen_back =  pmt::dict_add(sen_back,pmt::intern("sense"),pmt::from_bool(true));
-      }
-      //su packet received
-      else
-      {
-        sen_back = pmt::make_dict();
-        sen_back = pmt::dict_add(sen_back,pmt::intern("sense"),pmt::from_bool(false));
+        //su pkt received
         sen_back = pmt::dict_add(sen_back,pmt::intern("payload"),pmt::from_long(d_payload_len));
         sen_back = pmt::dict_add(sen_back,pmt::intern("queue_index"),pmt::from_long(d_qidx));
-        sen_back = pmt::dict_add(sen_back,pmt::intern("queue_index"),pmt::from_long(d_qsize));
+        sen_back = pmt::dict_add(sen_back,pmt::intern("queue_size"),pmt::from_long(d_qsize));
         sen_back = pmt::dict_add(sen_back,pmt::intern("counter"),pmt::from_long(d_counter));
       }
       message_port_pub(d_msg_port,sen_back);
@@ -233,7 +224,7 @@ namespace gr {
     {
       unsigned long tmp=0UL;
       for(int i=0;i<16;++i){
-        tmp |= ((d_input[begin_idx+i])? 1 : 0) << i;
+        tmp |= ((d_input[begin_idx+i])? 1 : 0) << (15-i);  // NOTE: this is how bits arrangement should be like
       }
       return tmp;
     }
@@ -242,7 +233,7 @@ namespace gr {
     {
       unsigned char tmp=0;
       for(int i=0;i<8;++i){
-        tmp |= ((d_input[begin_idx+i])? 1:0 ) << i;
+        tmp |= ((d_input[begin_idx+i])? 1:0 ) << (7-i);
       }
       return tmp;
     }
@@ -263,13 +254,16 @@ namespace gr {
       return false;
     }
 
-    void
-    su_sample_receiver_cb_impl::insert_parse_byte(std::vector<unsigned char>& out)
+    bool
+    su_sample_receiver_cb_impl::insert_parse_byte()
     {
-      //gr_complex samp_hold = d_samp_reg[d_samp_count-1];
+      pmt::pmt_t debug_insert;
       unsigned char byte_hold;
       int k_bits;
-
+      if(d_byte_count == d_cap){
+        d_byte_count =0;
+        GR_LOG_CRIT(d_logger, "SU Receiver: Reaching maximum capacity, reset to initial.");
+      }
       switch(d_bit_state)
       {
         case SEARCH_SYNC_CODE:
@@ -283,9 +277,8 @@ namespace gr {
             if(check_bits == 0){
               d_bit_state = SYNC_WAIT_HEADER;
               d_input.clear();
-              //d_samp_count = 0;
             }
-          }
+          } 
         break;
         case SYNC_WAIT_HEADER:
           byte_hold = d_hdr_sptr->decision_maker(&d_samp_reg);
@@ -305,21 +298,21 @@ namespace gr {
         break;
         case WAIT_PAYLOAD:
           d_byte_reg[d_byte_count++] = d_pld_sptr->decision_maker(&d_samp_reg);
-          if(d_payload_len*8 == (d_byte_count * d_pld_sptr->bits_per_symbol()))
+          if(d_payload_len*8 <= (d_byte_count * d_pld_sptr->bits_per_symbol()))
           {
-            for(int i=0;i<d_byte_count;++i){
-              out.push_back(d_byte_reg[i]);        
-            }
-            d_bit_state = SEARCH_SYNC_CODE;
-            d_byte_count = 0;
+            pub_byte_pkt();            
+            return true;
           }
         break;
         default:
           std::runtime_error("SU Receiver: Entering wrong bit processing state");
         break;
       }
-
+      if(d_debug){
+        message_port_pub(d_debug_port, debug_insert);
+      }
       //MSB parsing
+      return false;
       
     }
     int
@@ -337,23 +330,15 @@ namespace gr {
       
       std::vector<tag_t> intf_idx;
       std::vector<tag_t> tags;
-      std::vector<unsigned char> hold_bits;
+      //std::vector<unsigned char> hold_bits;
       get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items);
       if(!symbol_segment(intf_idx,tags,noutput_items)){
         //this case represent no state info found
         if(d_state == SU_ONLY){
             for(int i=0;i<noutput_items;++i){
               d_samp_reg = in[i];
-              
-              insert_parse_byte(hold_bits);
-              if(d_byte_count == d_cap){
-                GR_LOG_CRIT(d_logger, "SU Receiver: Reaching maximum capacity, reset to initial.");
-                d_byte_count = 0;
-              }
-              if(!hold_bits.empty()){
-                //publish message
+              if(insert_parse_byte()){
                 feedback_info(false);
-                hold_bits.clear();
               }
             }
         }
@@ -374,23 +359,19 @@ namespace gr {
             if((d_state == INTERFERING) && (d_byte_count != 0) ){
               // process current bytes
                 feedback_info(true);
-                //TODO a reset function to initialize data register
                 data_reg_reset();
             }
           }
           switch(d_state){
             case SU_ONLY:
               d_samp_reg = in[i];
-              
-              insert_parse_byte(hold_bits);
-              if(!hold_bits.empty()){
-                //publish message
+              if(insert_parse_byte()){
                 feedback_info(false);
-                hold_bits.clear();
               }
               //input to data register and run searching code alg.
             break;
             case INTERFERING:
+            break;
             default:
               std::runtime_error("SU Receiver: sensing info into wrong state");
             break;

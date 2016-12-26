@@ -46,6 +46,7 @@ namespace gr {
       pmt::pmt_t d_sensing_tag_id;
       pmt::pmt_t d_msg_port;
       pmt::pmt_t d_pkt_port;
+      pmt::pmt_t d_debug_port;  //debug
       
       pmt::pmt_t d_pdu_vector;
 
@@ -76,6 +77,8 @@ namespace gr {
       uint8_t d_qidx;
       uint8_t d_qsize;
 
+      //debug
+      bool d_debug;
 
       
       bool parse_header();
@@ -84,7 +87,7 @@ namespace gr {
 
 
 
-      bool pub_byte_pkt();
+      void pub_byte_pkt();
 
 
       bool symbol_segment(std::vector<tag_t>& intf_idx, const std::vector<tag_t>& tags, int nsamples);
@@ -92,7 +95,7 @@ namespace gr {
       void feedback_info(bool type);
       void data_reg_reset();
 
-      void insert_parse_byte(std::vector<unsigned char>& out);
+      bool insert_parse_byte();
 
 
      public:
@@ -100,7 +103,8 @@ namespace gr {
         const std::string& sensing_tag_id,
         const std::string& accesscode,
         const gr::digital::constellation_sptr& hdr_const,
-        const gr::digital::constellation_sptr& pld_const);
+        const gr::digital::constellation_sptr& pld_const,
+        bool debug);
       ~su_sample_receiver_cb_impl();
 
       // Where all the action really happens

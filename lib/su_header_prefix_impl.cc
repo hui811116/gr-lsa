@@ -119,11 +119,12 @@ namespace gr {
         re_size=0xff;
         re_indx=0x11;
       }
-      out[acc_bytes+4]=re_size;
-      out[acc_bytes+5]=re_indx;
+
       unsigned char * count_u8=(unsigned char*)&count;
-      out[acc_bytes+6]=count_u8[1];
-      out[acc_bytes+7]=count_u8[0];
+      out[acc_bytes+4]=count_u8[1];
+      out[acc_bytes+5]=count_u8[0];
+      out[acc_bytes+7]=re_size;
+      out[acc_bytes+6]=re_indx;
     }
 
     int
