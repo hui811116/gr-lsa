@@ -33,62 +33,82 @@ namespace gr {
       // Nothing to declare in this block.
       int d_state;
       int d_max_queue_size;
+      
+      // for header
+      uint16_t d_payload_len;
+      uint16_t d_pkt_counter;  //iterator
+      uint8_t d_qiter;                //iterator
 
-      int d_index;
-      bool d_sensing;
-      unsigned long d_pkt_counter;
+      //uint16_t d_counter;
+      //uint8_t d_qidx;
+      uint8_t d_qsize;
             
+      pmt::pmt_t d_lengthtagname;
       pmt::pmt_t d_rx_sensing_tag;
       pmt::pmt_t d_rx_index_tag;
+      pmt::pmt_t d_rx_info_port;
+      pmt::pmt_t d_src_id;
+      // output message port
+      pmt::pmt_t d_debug_port;
+      pmt::pmt_t d_hdr_port;
+
+
       std::vector<pmt::pmt_t> d_rx_tag_keys;  //temporary buffer for multiple rx message
       std::vector<pmt::pmt_t> d_rx_tag_values;//temporary buffer for multiple rx message value
 
+      std::vector<gr_complex> d_hdr_points;                   //symbol map
+      std::vector<gr_complex> d_pld_points;                   //symbol map
 
       // sensing information 
-      std::vector< std::vector<unsigned char> >* d_buffer_ptr;
-      std::vector<unsigned long> d_index_buffer;
-      std::vector<unsigned long> d_sensing_queue;
-      int d_sensing_count;
-      unsigned char d_sensing_iter;
+      unsigned char* d_hdr_buffer;
+      size_t d_hdr_samp_len;                                  // should be const
+      //size_t d_hdr_buffer_size;
+      std::vector< std::vector<gr_complex> >* d_buffer_ptr;   // queue
+      std::vector<int> d_pld_len_buffer;                      // queue
+      std::vector<int> d_counter_buffer;                      // queue
 
+      std::vector<int> d_retx_counter_buffer;                 // for retransmission purpose
+      //size_t d_retx_count;
 
-      std::vector<unsigned char> d_accesscode;
-
-      int check_queue(int check_index);
-  
-      bool check_sensing_queue(int check_index);
+      std::vector<unsigned char> d_accesscode;                 //store in bytes
 
       void queue_size_adapt();
-      void generate_hdr(unsigned char* out, unsigned long size, unsigned char & q_size,unsigned char & q_idx);
 
-      bool copy_input_bytes(std::vector<unsigned char>& out,const unsigned char* in, int size);
-  
+      void generate_hdr(int pld_len, bool type);
+
       // Where all the action really happens
       void receiver_msg_handler(pmt::pmt_t rx_msg);
 
-      //bool check_buffer(int output_items_reqd, int noutput_items, int input_items_reqd, gr_vector_int &ninput_items);
+      void _repack(unsigned char* out,const unsigned char* in, int size, int const_m);
+      void _map_sample(gr_complex* out, const unsigned char* in, int size, const std::vector<gr_complex>& mapper);
 
+      void store_to_queue(gr_complex* samp, int pld_samp_len, int pld_bytes_len);
 
+     protected:
+        int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
       su_queued_transmitter_cc_impl(
         int max_queue_size,
         const std::string & sensing_tag,
         const std::string & index_tag,
-        const std::string & accesscode);
+        const std::string & accesscode,
+        const std::string & lengthtagname,
+        const std::vector<gr_complex>& hdr_const_points,
+        const std::vector<gr_complex>& pld_const_points);
 
       ~su_queued_transmitter_cc_impl();
 
-      
+      //void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 
-      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 
-      int general_work(int noutput_items,
+      int work(int noutput_items,
            gr_vector_int &ninput_items,
            gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
 
-      void set_accesscode(const std::string & accesscode);
+      bool set_accesscode(const std::string & accesscode);
+      size_t header_nbits() const;
     };
 
   } // namespace lsa

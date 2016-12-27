@@ -4,7 +4,7 @@
   <key>lsa_su_queued_transmitter_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_queued_transmitter_cc($max_queue_size, $sensing_tag,$index_tag,$accesscode)</make>
+  <make>lsa.su_queued_transmitter_cc($max_queue_size, $sensing_tag,$index_tag,$accesscode,$lengthtagname,$hdr_const_points,$pld_const_points)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -19,13 +19,13 @@
   <param>
     <name>Sensing Info Tag</name>
     <key>sensing_tag</key>
-    <value>"sensing_info"</value>
+    <value>"sensing"</value>
     <type>string</type>
   </param>
   <param>
     <name>Sensing Index Tag</name>
     <key>index_tag</key>
-    <value>"packet_index"</value>
+    <value>"counter"</value>
     <type>string</type>
   </param>
   <param>
@@ -33,6 +33,22 @@
     <key>accesscode</key>
     <value>1101101101001110</value>
     <type>string</type>
+  </param>
+  <param>
+    <name>Length Tag Name</name>
+    <key>lengthtagname</key>
+    <value>"packet_len"</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Header Constellation Points</name>
+    <key>hdr_const_points</key>
+    <type>complex_vector</type>
+  </param>
+  <param>
+    <name>Payload Constellation Points</name>
+    <key>pld_const_points</key>
+    <type>complex_vector</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -57,11 +73,17 @@
        * optional (set to 1 for optional inputs) -->
   <source>
     <name>packet</name>
-    <type>byte</type>
+    <type>complex</type>
   </source>
-    <source>
-    <name>hdr</name>
-    <type>byte</type>
+  <source>
+    <name>header</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>debug</name>
+    <type>message</type>
+    <optional>1</optional>
   </source>
 
 </block>

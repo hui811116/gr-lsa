@@ -23,7 +23,7 @@
 #define INCLUDED_LSA_SU_QUEUED_TRANSMITTER_CC_H
 
 #include <lsa/api.h>
-#include <gnuradio/block.h>
+#include <gnuradio/tagged_stream_block.h>
 
 namespace gr {
   namespace lsa {
@@ -33,7 +33,7 @@ namespace gr {
      * \ingroup lsa
      *
      */
-    class LSA_API su_queued_transmitter_cc : virtual public gr::block
+    class LSA_API su_queued_transmitter_cc : virtual public gr::tagged_stream_block
     {
      public:
       typedef boost::shared_ptr<su_queued_transmitter_cc> sptr;
@@ -47,10 +47,13 @@ namespace gr {
        * creating new instances.
        */
       static sptr make(
-        int max_queue_size=1024,
-        const std::string & sensing_tag="sensing_info",
-        const std::string & index_tag="packet_index",
-        const std::string & accesscode="1101100011000111");
+        int max_queue_size,
+        const std::string & sensing_tag,
+        const std::string & index_tag,
+        const std::string & accesscode,
+        const std::string & lengthtagname,
+        const std::vector<gr_complex>& hdr_const_points,
+        const std::vector<gr_complex>& pld_const_points);
     };
 
   } // namespace lsa
