@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<block>
+  <name>Su Transmitter</name>
+  <key>lsa_su_transmitter_bc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.su_transmitter_bc($lengthtagname, $sensing_tag, $accesscode, $hdr_points, $pld_points, $qmax)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Length Tag</name>
+    <key>lengthtagname</key>
+    <value>"packet_len"</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Sensing Info Tag</name>
+    <key>sensing_tag</key>
+    <value>"sensing"</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Access code</name>
+    <key>accesscode</key>
+    <value>1111000011110000</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Header Symbol Map</name>
+    <key>hdr_points</key>
+    <type>complex_vector</type>
+  </param>
+  <param>
+    <name>Payload Symbol Map</name>
+    <key>pld_points</key>
+    <type>complex_vector</type>
+  </param>
+  <param>
+    <name>Queue Capacity</name>
+    <key>qmax</key>
+    <value>1024</value>
+    <type>int</type>
+  </param>
+
+<!--
+  <param>
+    <name></name>
+    <key></key>
+    <value></value>
+    <type></type>
+  </param>
+-->
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>byte</type>
+  </sink>
+  <sink>
+    <name>sensing_info</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+  <source>
+    <name>debug</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>header</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+</block>

@@ -27,5 +27,6 @@ install(FILES
     lsa_header_payload_parser_cb.xml
     lsa_su_header_prefix.xml
     lsa_su_queued_transmitter_cc.xml
-    lsa_su_sample_receiver_cb.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_su_sample_receiver_cb.xml
+    lsa_su_transmitter_bc.xml DESTINATION share/gnuradio/grc/blocks
 )

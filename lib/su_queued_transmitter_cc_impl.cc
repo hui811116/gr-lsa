@@ -128,11 +128,14 @@ namespace gr {
       switch(d_state)
       {
         case CLEAR_TO_SEND:
+          noutput_items=(ninput_items[0] * 8)/ (int)log2(d_hdr_points.size()) + d_hdr_samp_len;
+        break;
+        
+        case PROU_PRESENT:
+          assert(!d_pld_len_buffer.empty());
+          noutput_items = (d_buffer_ptr->at(d_qiter)).size() + d_hdr_samp_len;
         break;
         case BUSY_SENDING:
-        break;
-        case PROU_PRESENT:
-        break;
         default:
         break;
       }

@@ -36,6 +36,7 @@ list(APPEND lsa_sources
     su_header_prefix_impl.cc
     su_queued_transmitter_cc_impl.cc
     su_sample_receiver_cb_impl.cc
+    su_transmitter_bc_impl.cc
 )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)

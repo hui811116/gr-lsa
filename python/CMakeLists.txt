@@ -51,3 +51,4 @@ GR_ADD_TEST(qa_header_payload_parser_cb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOU
 GR_ADD_TEST(qa_su_header_prefix ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_header_prefix.py)
 GR_ADD_TEST(qa_su_queued_transmitter_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_queued_transmitter_cc.py)
 GR_ADD_TEST(qa_su_sample_receiver_cb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_sample_receiver_cb.py)
+GR_ADD_TEST(qa_su_transmitter_bc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_transmitter_bc.py)
