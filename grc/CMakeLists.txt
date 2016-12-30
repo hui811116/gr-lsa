@@ -16,17 +16,14 @@
 # along with GNU Radio; see the file COPYING.  If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
-
 install(FILES
     lsa_square_cc.xml
     lsa_eng_det_cc.xml
-    lsa_lsa_queue_cc.xml
     lsa_autoCorr_cc.xml
     lsa_correlate_extract_cc.xml
     lsa_my_access_corr_bb.xml
     lsa_header_payload_parser_cb.xml
     lsa_su_header_prefix.xml
-    lsa_su_queued_transmitter_cc.xml
     lsa_su_sample_receiver_cb.xml
     lsa_su_transmitter_bc.xml DESTINATION share/gnuradio/grc/blocks
 )
