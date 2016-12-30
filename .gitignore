@@ -6,3 +6,4 @@ log/*.log
 build/
 examples/*.py
 *.dat
+*.out
