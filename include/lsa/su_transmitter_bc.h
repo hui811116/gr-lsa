@@ -52,7 +52,8 @@ namespace gr {
         const std::string& accesscode,
         const std::vector<gr_complex>& hdr_points,
         const std::vector<gr_complex>& pld_points,
-        int qmax);
+        int qmax,
+        bool debug);
     };
 
   } // namespace lsa

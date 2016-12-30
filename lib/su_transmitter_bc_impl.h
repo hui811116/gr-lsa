@@ -30,6 +30,7 @@ namespace gr {
     {
      private:
       // Nothing to declare in this block.
+      bool d_debug;
       int d_state;
       int d_qmax;
 
@@ -51,8 +52,12 @@ namespace gr {
       size_t d_hdr_samp_len;
       std::vector< std::vector<gr_complex> >* d_buffer_ptr;
       std::vector<uint64_t> d_counter_buffer;
+      std::vector<uint16_t> d_pld_len_buffer;
 
       unsigned char* d_hdr_buffer;
+      unsigned char* d_hdr_symbol_buffer;
+      unsigned char* d_pld_symbol_buffer;
+
 
       std::vector<unsigned char> d_accesscode;
 
@@ -61,6 +66,28 @@ namespace gr {
       size_t header_nbits() const;
 
       void generate_hdr(int pld_len, bool type);
+
+      void queue_size_adapt ();
+
+      void _repack(
+        unsigned char* out,
+        const unsigned char* in,
+        int size,
+        int const_m
+        );
+
+      void _map_sample(
+        gr_complex* out,
+        const unsigned char* in,
+        int size,
+        const std::vector<gr_complex>& mapper
+        );
+
+      void store_to_queue (
+        gr_complex* samp, 
+        int pld_samp_len, 
+        int pld_bytes_len
+        );
 
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
@@ -72,7 +99,8 @@ namespace gr {
         const std::string& accesscode,
         const std::vector<gr_complex>& hdr_points,
         const std::vector<gr_complex>& pld_points,
-        int qmax);
+        int qmax,
+        bool debug);
       ~su_transmitter_bc_impl();
 
       // Where all the action really happens

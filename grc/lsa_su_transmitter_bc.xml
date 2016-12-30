@@ -4,7 +4,7 @@
   <key>lsa_su_transmitter_bc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_transmitter_bc($lengthtagname, $sensing_tag, $accesscode, $hdr_points, $pld_points, $qmax)</make>
+  <make>lsa.su_transmitter_bc($lengthtagname, $sensing_tag, $accesscode, $hdr_points, $pld_points, $qmax,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -43,6 +43,20 @@
     <key>qmax</key>
     <value>1024</value>
     <type>int</type>
+  </param>
+  <param>
+    <name>Debug Mode</name>
+    <key>debug</key>
+    <value>False</value>
+    <type>bool</type>
+      <option>
+        <name>Yes</name>
+        <key>True</key>
+      </option>
+      <option>
+        <name>No</name>
+        <key>False</key>
+      </option>
   </param>
 
 <!--

@@ -41,7 +41,8 @@ namespace gr {
       const std::string& accesscode,
       const std::vector<gr_complex>& hdr_points,
       const std::vector<gr_complex>& pld_points,
-      int qmax)
+      int qmax,
+      bool debug)
     {
       return gnuradio::get_initial_sptr
         (new su_transmitter_bc_impl(
@@ -50,8 +51,8 @@ namespace gr {
           accesscode,
           hdr_points,
           pld_points,
-          qmax
-          ));
+          qmax,
+          debug));
     }
 
     /*
@@ -63,7 +64,8 @@ namespace gr {
       const std::string& accesscode,
       const std::vector<gr_complex>& hdr_points,
       const std::vector<gr_complex>& pld_points,
-      int qmax)
+      int qmax,
+      bool debug)
       : gr::tagged_stream_block("su_transmitter_bc",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(1, 1, sizeof(gr_complex)), lengthtagname),
@@ -78,14 +80,20 @@ namespace gr {
         throw std::invalid_argument ("SU TX: Invalid queue size");
       }
       d_qmax = qmax;
+      d_debug = debug;
 
       d_hdr_points = hdr_points;
       d_pld_points = pld_points;
 
+      // NOTE: make sure the length is divisible by any kind of modulation
       d_hdr_samp_len = (accesscode.length()+8*8) / (int) log2(d_hdr_points.size());
 
-      d_buffer_ptr = new std::vector< std::vector<gr_complex> >(d_qmax);
+      d_buffer_ptr = new std::vector< std::vector<gr_complex> >;
       d_hdr_buffer = new unsigned char[d_accesscode.size()+8];
+      d_hdr_symbol_buffer = new unsigned char[d_hdr_samp_len];
+
+      size_t max_pld_symbol_size=65536;
+      d_pld_symbol_buffer = new unsigned char[max_pld_symbol_size];
 
       d_sensing_info_port = pmt::mp("sensing_info");
       d_header_info_port = pmt::mp("header");
@@ -101,6 +109,7 @@ namespace gr {
       d_qiter = 0;
       d_qsize = 0;
       d_pkt_counter = 0;
+      d_state = CLEAR_TO_SEND;
 
     }
 
@@ -112,13 +121,30 @@ namespace gr {
       d_buffer_ptr->clear();
       delete d_buffer_ptr;
       delete [] d_hdr_buffer;
+      delete [] d_hdr_symbol_buffer;
+      delete [] d_pld_symbol_buffer;
     }
 
     int
     su_transmitter_bc_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
+      //TODO
       int noutput_items =  ninput_items[0];
-      return noutput_items ;
+      //return noutput_items ;
+      switch(d_state)
+      {
+        case CLEAR_TO_SEND:
+          noutput_items = (ninput_items[0]*8)/(int)log2(d_hdr_points.size())+d_hdr_samp_len;
+        break;
+        case RETRANSMISSION:
+          assert(!d_pld_len_buffer.empty());
+          noutput_items = (d_buffer_ptr->at(d_qiter)).size() + d_hdr_samp_len;
+        break;
+        default:
+        break;
+
+      }
+      return noutput_items;
     }
 
 
@@ -195,6 +221,51 @@ namespace gr {
         d_hdr_buffer[ac_len+5] = pkt_counter[0];
     }
 
+    void
+    su_transmitter_bc_impl::queue_size_adapt()
+    {
+      int erase_size = d_qmax/2;
+        GR_LOG_CRIT(d_logger, "SU Queued Transmitter: Reaching maximum capacity, removing contents.");
+        d_buffer_ptr->erase(d_buffer_ptr->begin(), d_buffer_ptr->begin()+erase_size);
+        d_counter_buffer.erase(d_counter_buffer.begin(), d_counter_buffer.begin()+erase_size);
+        d_pld_len_buffer.erase(d_pld_len_buffer.begin(), d_pld_len_buffer.begin()+erase_size);
+    }
+
+    void
+    su_transmitter_bc_impl::_repack(unsigned char* out, const unsigned char* in, int size, int const_m)
+    {
+      unsigned char tmp;
+      for(int i=0;i<size *8;++i)
+      {
+        tmp = tmp | (((in[i/8]>>(7-i%8)) & 0x01) << (const_m-1- (i%const_m)) );
+        if( (i+1) % const_m == 0){
+          out[i/const_m] = tmp;
+          tmp = 0x00;
+        }
+      }
+      if( (size*8 % const_m) !=0)
+        out[size*8/const_m] = tmp;
+    }
+
+    void
+    su_transmitter_bc_impl::_map_sample(gr_complex* out, const unsigned char* in, int size, const std::vector<gr_complex>& mapper)
+    {
+      for(int i=0;i<size;++i){
+        out[i] = mapper[in[i]];
+      }
+    }
+
+    void
+    su_transmitter_bc_impl::store_to_queue(gr_complex* samp, int pld_samp_len, int pld_bytes_len)
+    {
+      std::vector<gr_complex> samp_vec;
+      for(int i=0;i<pld_samp_len;++i){
+        samp_vec.push_back(samp[i]);
+      }
+      d_buffer_ptr->push_back(samp_vec);
+      d_counter_buffer.push_back(d_pkt_counter);
+      d_pld_len_buffer.push_back(pld_bytes_len);
+    }
 
     int
     su_transmitter_bc_impl::work (int noutput_items,
@@ -204,22 +275,76 @@ namespace gr {
     {
       const unsigned char *in = (const unsigned char *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-
+/*
       std::vector<tag_t> tags;
       get_tags_in_range(tags, 0, nitems_read(0), nitems_read(0)+ninput_items[0]);
       for(int i=0;i<tags.size();++i){
         tags[i].offset -= nitems_read(0);
         add_item_tag(0,nitems_written(0)+tags[i].offset,tags[i].key,tags[i].value);
       }
+      */
 
-      // Do <+signal processing+>
+      int payload_len = ninput_items[0];
+      int pld_symbol_samp_len;
+      pmt::pmt_t hdr_info = pmt::make_dict();
+      pmt::pmt_t debug_info = pmt::make_dict();
 
-      for(int i=0;i<noutput_items;++i)
+      //gr_complex hdr_symbol[d_hdr_samp_len];
+      switch(d_state)
       {
-        out[i] = gr_complex(in[i],in[i]);
-      }
-      add_item_tag(0, nitems_written(0), pmt::intern("sutx"), pmt::from_long(noutput_items));
+        case CLEAR_TO_SEND:
+          if(d_buffer_ptr->size() == d_qmax){
+            queue_size_adapt();
+          }
+          generate_hdr(ninput_items[0],false);
+          _repack(d_hdr_symbol_buffer, d_hdr_buffer, header_nbits()/8, (int)log2(d_hdr_points.size()));
+          _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points);
+          _repack(d_pld_symbol_buffer, (const unsigned char*)input_items[0], ninput_items[0], (int)log2(d_pld_points.size()));
+          _map_sample(out+d_hdr_samp_len, d_pld_symbol_buffer, pld_symbol_samp_len, d_pld_points);
 
+          pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
+          store_to_queue(out+d_hdr_samp_len, pld_symbol_samp_len, ninput_items[0]);
+          hdr_info = pmt::dict_add(hdr_info, pmt::intern("pkt_counter"), pmt::from_long(d_pkt_counter));
+          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_index"),pmt::from_long(d_qiter));
+          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_size"),pmt::from_long(d_qsize));
+          d_pkt_counter++;
+        break;
+
+        case RETRANSMISSION:
+          assert(d_qiter < d_pld_len_buffer.size());
+          generate_hdr(d_pld_len_buffer[d_qiter],true);
+          _repack(d_hdr_symbol_buffer, d_hdr_buffer,header_nbits()/8,(int)log2(d_hdr_points.size()));
+          _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points);
+
+          pld_symbol_samp_len = (d_buffer_ptr->at(d_qiter)).size();
+          payload_len = d_pld_len_buffer[d_qiter];
+          hdr_info = pmt::dict_add(hdr_info, pmt::intern("pkt_counter"), pmt::from_long((uint16_t)d_counter_buffer[d_qiter]));
+          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_index"),pmt::from_long(0));
+          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_size"),pmt::from_long(0));
+          memcpy(out+d_hdr_samp_len,&(d_buffer_ptr->at(d_qiter)),sizeof(gr_complex)*pld_symbol_samp_len);
+          d_qiter++;
+          d_qiter %= d_qsize;
+        break;
+        default:
+        std::runtime_error("SU TX: Entering wrong state");
+        break;
+      }
+      //number of output processing
+      noutput_items = pld_symbol_samp_len + d_hdr_samp_len;
+
+      add_item_tag(0, nitems_written(0), pmt::intern("sutx_pkt_count"), pmt::from_long(d_pkt_counter));
+      hdr_info = pmt::dict_add(hdr_info, pmt::intern("payload_len"), pmt::from_long(payload_len));
+      hdr_info = pmt::dict_add(hdr_info, pmt::intern("SUTX_state"), pmt::string_to_symbol(((d_state == CLEAR_TO_SEND)? "clear_to_send" : "proU_present")));
+      message_port_pub(d_header_info_port,hdr_info);
+
+//debug
+      if(d_debug){
+        debug_info = pmt::dict_add(debug_info, pmt::intern("header_bits"),pmt::from_long(header_nbits()));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("payload_len"),pmt::from_long(payload_len));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("noutput_items"),pmt::from_long(noutput_items));
+        message_port_pub(d_debug_port, debug_info);
+      }
+//end debug
 
       // Tell runtime system how many output items we produced.
       return noutput_items;
