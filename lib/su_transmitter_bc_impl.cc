@@ -81,6 +81,7 @@ namespace gr {
       }
       d_qmax = qmax;
       d_debug = debug;
+      d_rxindextagname = pmt::intern("pkt_counter");
 
       d_hdr_points = hdr_points;
       d_pld_points = pld_points;
@@ -153,8 +154,10 @@ namespace gr {
     {
       std::vector<pmt::pmt_t> tag_keys;
       std::vector<pmt::pmt_t> tag_vals;
+      int rx_counter = -1;
+      bool rx_sensing_info = false;
       pmt::pmt_t dict_items(pmt::dict_items(msg));
-      pmt::pmt_t debug_tag_found = pmt::make_dict();
+      //pmt::pmt_t debug_tag_found = pmt::make_dict();
       while(!pmt::is_null(dict_items)) {
         pmt::pmt_t this_item(pmt::car(dict_items));
         tag_keys.push_back(pmt::car(this_item));
@@ -162,10 +165,65 @@ namespace gr {
         dict_items = pmt::cdr(dict_items);
       }
       for(int i=0;i<tag_keys.size();++i){
+        /*
         if(pmt::equal(tag_keys[i],d_sensingtagname)){
           debug_tag_found = pmt::dict_add(debug_tag_found, pmt::intern("sutx_debug"), pmt::string_to_symbol("found sensing tag"));
           message_port_pub(d_debug_port,debug_tag_found);
+        }*/
+        if(pmt::equal(tag_keys[i],d_sensingtagname)){
+          rx_sensing_info = pmt::to_bool(tag_vals[i]);
         }
+        if(pmt::equal(tag_keys[i],d_rxindextagname)){
+          rx_counter = (int) pmt::to_long(tag_vals[i]);
+        }
+      }
+      if(rx_counter<0){
+        return;
+      }
+      switch(d_state)
+      {
+        case CLEAR_TO_SEND:
+          if(rx_sensing_info){
+            d_qiter = 0;
+            assert(!d_counter_buffer.empty());
+            d_retx_counter_buffer = d_counter_buffer;
+            d_qsize = d_pld_len_buffer.size();
+            d_state = RETRANSMISSION;
+          }
+          else{
+            assert(!d_counter_buffer.empty());
+            int offset = d_counter_buffer[0];
+            int o_size = rx_counter - offset;
+            if( (rx_counter>=offset) && (o_size < d_counter_buffer.size())){
+              if(d_counter_buffer[o_size] == rx_counter){
+                d_counter_buffer.erase(d_counter_buffer.begin(),d_counter_buffer.begin()+(o_size+1));
+                d_buffer_ptr->erase(d_buffer_ptr->begin(), d_buffer_ptr->begin()+(o_size+1));
+                d_pld_len_buffer.erase(d_pld_len_buffer.begin(),d_pld_len_buffer.begin()+(o_size+1));
+              }
+            }
+          }
+        break;
+        case RETRANSMISSION:
+          if(!rx_sensing_info){
+            for(int i=0;i<d_retx_counter_buffer.size();++i){
+              if(rx_counter == d_retx_counter_buffer[i]){
+                d_retx_counter_buffer.erase(d_retx_counter_buffer.begin()+i);
+                break;
+              }
+            }
+          }
+          if(d_retx_counter_buffer.empty()){
+            d_state = CLEAR_TO_SEND;
+            //d_retx_counter_buffer.clear();
+            d_counter_buffer.clear();
+            d_buffer_ptr->clear();
+            d_pld_len_buffer.clear();
+          }
+        break;
+        default:
+          std::runtime_error("SUTX: Entering wrong state");
+        break;
+
       }
     }
 

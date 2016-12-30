@@ -40,6 +40,7 @@ namespace gr {
 
       pmt::pmt_t d_lengthtagname;
       pmt::pmt_t d_sensingtagname;
+      pmt::pmt_t d_rxindextagname;
 
       pmt::pmt_t d_src_id;
       pmt::pmt_t d_sensing_info_port;
@@ -53,6 +54,9 @@ namespace gr {
       std::vector< std::vector<gr_complex> >* d_buffer_ptr;
       std::vector<uint64_t> d_counter_buffer;
       std::vector<uint16_t> d_pld_len_buffer;
+
+      std::vector<uint64_t> d_retx_counter_buffer;
+      
 
       unsigned char* d_hdr_buffer;
       unsigned char* d_hdr_symbol_buffer;
