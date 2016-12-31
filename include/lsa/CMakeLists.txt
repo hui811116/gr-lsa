@@ -30,5 +30,6 @@ install(FILES
     header_payload_parser_cb.h
     su_header_prefix.h
     su_sample_receiver_cb.h
-    su_transmitter_bc.h DESTINATION include/lsa
+    su_transmitter_bc.h
+    prou_sample_receiver_cb.h DESTINATION include/lsa
 )

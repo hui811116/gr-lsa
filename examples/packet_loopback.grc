@@ -414,73 +414,6 @@
     </param>
   </block>
   <block>
-    <key>lsa_su_queued_transmitter_cc</key>
-    <param>
-      <key>accesscode</key>
-      <value>accesscode</value>
-    </param>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(488, 408)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>hdr_const_points</key>
-      <value>mod.points()</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>lsa_su_queued_transmitter_cc_0</value>
-    </param>
-    <param>
-      <key>lengthtagname</key>
-      <value>"packet_len"</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>max_queue_size</key>
-      <value>1024</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>pld_const_points</key>
-      <value>mod.points()</value>
-    </param>
-    <param>
-      <key>index_tag</key>
-      <value>"counter"</value>
-    </param>
-    <param>
-      <key>sensing_tag</key>
-      <value>sense_tag</value>
-    </param>
-  </block>
-  <block>
     <key>lsa_su_sample_receiver_cb</key>
     <param>
       <key>accesscode</key>
@@ -977,12 +910,6 @@
   </connection>
   <connection>
     <source_block_id>blocks_stream_to_tagged_stream_0</source_block_id>
-    <sink_block_id>lsa_su_queued_transmitter_cc_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>blocks_stream_to_tagged_stream_0</source_block_id>
     <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
@@ -992,18 +919,6 @@
     <sink_block_id>qtgui_time_sink_x_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_su_queued_transmitter_cc_0</source_block_id>
-    <sink_block_id>lsa_su_sample_receiver_cb_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_su_sample_receiver_cb_0</source_block_id>
-    <sink_block_id>lsa_su_queued_transmitter_cc_0</sink_block_id>
-    <source_key>info</source_key>
-    <sink_key>rx_info</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_su_transmitter_bc_0</source_block_id>

@@ -2,6 +2,7 @@
 
 #define LSA_API
 #define DIGITAL_API
+#define FILTER_API
 
 %include "gnuradio.i"			// the common stuff
 
@@ -9,6 +10,7 @@
 %include "lsa_swig_doc.i"
 
 %include "gnuradio/digital/constellation.h"
+%include "gnuradio/filter/fir_filter.h"
 
 %{
 #include "lsa/square_cc.h"
@@ -20,6 +22,7 @@
 #include "lsa/su_header_prefix.h"
 #include "lsa/su_sample_receiver_cb.h"
 #include "lsa/su_transmitter_bc.h"
+#include "lsa/prou_sample_receiver_cb.h"
 %}
 
 
@@ -42,3 +45,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, su_header_prefix);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_sample_receiver_cb);
 %include "lsa/su_transmitter_bc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, su_transmitter_bc);
+%include "lsa/prou_sample_receiver_cb.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, prou_sample_receiver_cb);
