@@ -4,12 +4,23 @@
   <key>lsa_prou_sample_receiver_cb</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.prou_sample_receiver_cb($pu_taps, $su_taps)</make>
+  <make>lsa.prou_sample_receiver_cb($su_hdr_const,$su_pld_bps,$pu_taps, $su_taps,$mode)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
+  <param>
+    <name>Header Constellation (SU)</name>
+    <key>su_hdr_const</key>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Payload bits per symbol (SU)</name>
+    <key>su_pld_bps</key>
+    <value>1</value>
+    <type>int</type>
+  </param>
   <param>
     <name>number of taps (ProU)</name>
     <key>pu_taps</key>
@@ -19,6 +30,20 @@
     <name>number of taps (SU)</name>
     <key>su_taps</key>
     <type>int</type>
+  </param>
+  <param>
+    <name>Mode</name>
+    <key>mode</key>
+    <value>FALSE</value>
+    <type>bool</type>
+    <option>
+      <name>Interference Cancellation</name>
+      <key>TRUE</key>
+    </option>
+    <option>
+      <name>STANDARD</name>
+      <key>FALSE</key>
+    </option>
   </param>
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)

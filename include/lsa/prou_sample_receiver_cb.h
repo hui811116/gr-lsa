@@ -25,6 +25,7 @@
 #include <lsa/api.h>
 #include <gnuradio/block.h>
 #include <gnuradio/filter/fir_filter.h>
+#include <gnuradio/digital/constellation.h>
 
 namespace gr {
   namespace lsa {
@@ -48,8 +49,11 @@ namespace gr {
        * creating new instances.
        */
       static sptr make(
+        const gr::digital::constellation_sptr& su_hdr_const,
+        int su_pld_bps,
         int pu_nfilts,
-        int su_nfilts);
+        int su_nfilts,
+        bool mode);
     };
 
   } // namespace lsa

@@ -22,7 +22,6 @@
 ########################################################################
 install(FILES
     api.h
-    square_cc.h
     eng_det_cc.h
     autoCorr_cc.h
     correlate_extract_cc.h

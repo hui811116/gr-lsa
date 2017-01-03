@@ -13,7 +13,6 @@
 %include "gnuradio/filter/fir_filter.h"
 
 %{
-#include "lsa/square_cc.h"
 #include "lsa/eng_det_cc.h"
 #include "lsa/autoCorr_cc.h"
 #include "lsa/correlate_extract_cc.h"
@@ -25,9 +24,6 @@
 #include "lsa/prou_sample_receiver_cb.h"
 %}
 
-
-%include "lsa/square_cc.h"
-GR_SWIG_BLOCK_MAGIC2(lsa, square_cc);
 %include "lsa/eng_det_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, eng_det_cc);
 %include "lsa/autoCorr_cc.h"

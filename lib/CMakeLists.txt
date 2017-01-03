@@ -25,7 +25,6 @@ include(GrPlatform) #define LIB_SUFFIX
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
 list(APPEND lsa_sources
-    square_cc_impl.cc
     eng_det_cc_impl.cc
     autoCorr_cc_impl.cc
     correlate_extract_cc_impl.cc

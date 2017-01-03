@@ -17,7 +17,6 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 install(FILES
-    lsa_square_cc.xml
     lsa_eng_det_cc.xml
     lsa_autoCorr_cc.xml
     lsa_correlate_extract_cc.xml
