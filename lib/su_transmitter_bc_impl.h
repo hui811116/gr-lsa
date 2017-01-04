@@ -44,7 +44,7 @@ namespace gr {
 
       pmt::pmt_t d_src_id;
       pmt::pmt_t d_sensing_info_port;
-      pmt::pmt_t d_header_info_port;
+      
       pmt::pmt_t d_debug_port;
 
       std::vector<gr_complex> d_hdr_points;

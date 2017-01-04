@@ -138,14 +138,11 @@ namespace gr {
 
     void
     su_sample_receiver_cb_impl::pub_byte_pkt()
-    {
-      unsigned char* symbol_to_bytes;
-      
+    {  
         int k_bits = d_pld_sptr->bits_per_symbol();
         int bits_count = k_bits * d_byte_count;
         int byte_count = (bits_count%8==0)? bits_count /8 : bits_count/8+1;
-        unsigned char tmp;
-        
+        unsigned char tmp;   
         
         for(int i=0;i<bits_count;++i){
           if(i%8==0){
@@ -187,9 +184,7 @@ namespace gr {
     void
     su_sample_receiver_cb_impl::data_reg_reset()
     {
-      //d_samp_count=0;
       d_byte_count=0;
-      d_bit_state = SEARCH_SYNC_CODE;
     }
 
     size_t
@@ -300,9 +295,10 @@ namespace gr {
           d_byte_reg[d_byte_count++] = d_pld_sptr->decision_maker(&d_samp_reg);
           if(d_payload_len*8 <= (d_byte_count * d_pld_sptr->bits_per_symbol()))
           {
-            pub_byte_pkt();            
+            pub_byte_pkt();
             return true;
           }
+          d_bit_state = SEARCH_SYNC_CODE;
         break;
         default:
           std::runtime_error("SU Receiver: Entering wrong bit processing state");

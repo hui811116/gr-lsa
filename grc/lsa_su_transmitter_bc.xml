@@ -97,9 +97,4 @@
     <type>message</type>
     <optional>1</optional>
   </source>
-  <source>
-    <name>header</name>
-    <type>message</type>
-    <optional>1</optional>
-  </source>
 </block>

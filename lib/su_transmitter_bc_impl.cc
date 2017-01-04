@@ -97,10 +97,8 @@ namespace gr {
       d_pld_symbol_buffer = new unsigned char[max_pld_symbol_size];
 
       d_sensing_info_port = pmt::mp("sensing_info");
-      d_header_info_port = pmt::mp("header");
       d_debug_port = pmt::mp("debug");
       message_port_register_in(d_sensing_info_port);
-      message_port_register_out(d_header_info_port);
       message_port_register_out(d_debug_port);
 
       set_tag_propagation_policy(TPP_DONT);
@@ -129,9 +127,7 @@ namespace gr {
     int
     su_transmitter_bc_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
-      //TODO
       int noutput_items =  ninput_items[0];
-      //return noutput_items ;
       switch(d_state)
       {
         case CLEAR_TO_SEND:
@@ -143,8 +139,8 @@ namespace gr {
         break;
         default:
         break;
-
       }
+
       return noutput_items;
     }
 
@@ -157,19 +153,13 @@ namespace gr {
       int rx_counter = -1;
       bool rx_sensing_info = false;
       pmt::pmt_t dict_items(pmt::dict_items(msg));
-      //pmt::pmt_t debug_tag_found = pmt::make_dict();
       while(!pmt::is_null(dict_items)) {
         pmt::pmt_t this_item(pmt::car(dict_items));
         tag_keys.push_back(pmt::car(this_item));
         tag_vals.push_back(pmt::cdr(this_item));
         dict_items = pmt::cdr(dict_items);
       }
-      for(int i=0;i<tag_keys.size();++i){
-        /*
-        if(pmt::equal(tag_keys[i],d_sensingtagname)){
-          debug_tag_found = pmt::dict_add(debug_tag_found, pmt::intern("sutx_debug"), pmt::string_to_symbol("found sensing tag"));
-          message_port_pub(d_debug_port,debug_tag_found);
-        }*/
+      for(int i=0;i<tag_keys.size();++i){        
         if(pmt::equal(tag_keys[i],d_sensingtagname)){
           rx_sensing_info = pmt::to_bool(tag_vals[i]);
         }
@@ -214,7 +204,6 @@ namespace gr {
           }
           if(d_retx_counter_buffer.empty()){
             d_state = CLEAR_TO_SEND;
-            //d_retx_counter_buffer.clear();
             d_counter_buffer.clear();
             d_buffer_ptr->clear();
             d_pld_len_buffer.clear();
@@ -269,9 +258,7 @@ namespace gr {
         d_hdr_buffer[ac_len+3]=pkt_len[0];
         if(type){
           assert(d_pld_len_buffer.size()!=0);
-          //d_qidx=d_qiter;
           pkt_counter = (unsigned char*)& d_counter_buffer[d_qiter];
-          //d_qsize=(unsigned char) d_pld_len_buffer.size();
         }
         d_hdr_buffer[ac_len+7] = d_qsize;
         d_hdr_buffer[ac_len+6] = d_qiter;
@@ -333,21 +320,11 @@ namespace gr {
     {
       const unsigned char *in = (const unsigned char *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-/*
-      std::vector<tag_t> tags;
-      get_tags_in_range(tags, 0, nitems_read(0), nitems_read(0)+ninput_items[0]);
-      for(int i=0;i<tags.size();++i){
-        tags[i].offset -= nitems_read(0);
-        add_item_tag(0,nitems_written(0)+tags[i].offset,tags[i].key,tags[i].value);
-      }
-      */
 
       int payload_len = ninput_items[0];
       int pld_symbol_samp_len;
       pmt::pmt_t hdr_info = pmt::make_dict();
-      pmt::pmt_t debug_info = pmt::make_dict();
 
-      //gr_complex hdr_symbol[d_hdr_samp_len];
       switch(d_state)
       {
         case CLEAR_TO_SEND:
@@ -362,9 +339,12 @@ namespace gr {
 
           pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
           store_to_queue(out+d_hdr_samp_len, pld_symbol_samp_len, ninput_items[0]);
+          if(d_debug){
           hdr_info = pmt::dict_add(hdr_info, pmt::intern("pkt_counter"), pmt::from_long(d_pkt_counter));
           hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_index"),pmt::from_long(d_qiter));
-          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_size"),pmt::from_long(d_qsize));
+          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_size"),pmt::from_long(d_qsize));  
+          }
+          
           d_pkt_counter++;
         break;
 
@@ -376,33 +356,27 @@ namespace gr {
 
           pld_symbol_samp_len = (d_buffer_ptr->at(d_qiter)).size();
           payload_len = d_pld_len_buffer[d_qiter];
+          if(d_debug){
           hdr_info = pmt::dict_add(hdr_info, pmt::intern("pkt_counter"), pmt::from_long((uint16_t)d_counter_buffer[d_qiter]));
           hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_index"),pmt::from_long(0));
-          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_size"),pmt::from_long(0));
+          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_size"),pmt::from_long(0));  
+          }
           memcpy(out+d_hdr_samp_len,&(d_buffer_ptr->at(d_qiter)),sizeof(gr_complex)*pld_symbol_samp_len);
           d_qiter++;
           d_qiter %= d_qsize;
         break;
         default:
-        std::runtime_error("SU TX: Entering wrong state");
+          std::runtime_error("SU TX: Entering wrong state");
         break;
       }
       //number of output processing
       noutput_items = pld_symbol_samp_len + d_hdr_samp_len;
-
       add_item_tag(0, nitems_written(0), pmt::intern("sutx_pkt_count"), pmt::from_long(d_pkt_counter));
-      hdr_info = pmt::dict_add(hdr_info, pmt::intern("payload_len"), pmt::from_long(payload_len));
-      hdr_info = pmt::dict_add(hdr_info, pmt::intern("SUTX_state"), pmt::string_to_symbol(((d_state == CLEAR_TO_SEND)? "clear_to_send" : "proU_present")));
-      message_port_pub(d_header_info_port,hdr_info);
-
-//debug
       if(d_debug){
-        debug_info = pmt::dict_add(debug_info, pmt::intern("header_bits"),pmt::from_long(header_nbits()));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("payload_len"),pmt::from_long(payload_len));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("noutput_items"),pmt::from_long(noutput_items));
-        message_port_pub(d_debug_port, debug_info);
+      hdr_info = pmt::dict_add(hdr_info, pmt::intern("payload_len"), pmt::from_long(payload_len));
+      hdr_info = pmt::dict_add(hdr_info, pmt::intern("SUTX_state"), pmt::string_to_symbol(((d_state == CLEAR_TO_SEND)? "clear_to_send" : "proU_present")));  
+      message_port_pub(d_debug_port,hdr_info);
       }
-//end debug
 
       // Tell runtime system how many output items we produced.
       return noutput_items;

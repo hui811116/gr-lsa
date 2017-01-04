@@ -63,6 +63,7 @@ namespace gr {
       INTF_HEADER,
       INTF_PAYLOAD_WAIT
     };
+    
     /*
      * The private constructor
      */
@@ -95,12 +96,21 @@ namespace gr {
       d_mode = STANDARD;
       d_state = SEARCH_ACCESSCODE;
       d_intf_state = CLEAR;
+      //d_output_buffer_state = IDLE;
 
       d_su_hdr_const = su_hdr_const->base();
       d_su_bps = su_hdr_const->bits_per_symbol();
       d_su_pld_bps = su_pld_bps;
       d_su_hdr_bits_len = (4+2+2)*8;
 
+      //output sample buffer initialization
+      d_output_buffer_cap = 1024*1024;
+      d_output_buffer = new gr_complex[d_output_buffer_cap];
+      d_output_buffer_size = 0;
+      d_output_buffer_idx = 0;
+
+      message_port_register_out(d_debug_port);
+      set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -115,91 +125,7 @@ namespace gr {
       d_sig_buffer->clear();
       delete d_sig_buffer;
       delete [] d_process_buffer;
-    }
-
-    bool
-    prou_sample_receiver_cb_impl::append_samples(const gr_complex* in, int size)
-    {
-      // forecast should handle the input sample length carefully
-      switch(d_intf_state)
-      {
-        case CLEAR:
-          if(d_process_size > 0.5* d_process_cap){
-            //still clear but sample length greater than half of capacity
-            reduce_sample(d_process_cap/3);
-          }
-          memcpy(d_process_buffer + d_process_size, in, sizeof(gr_complex)*size);
-          d_process_size += size;
-        break;
-        case RETRANSMISSION:
-          if(d_process_size > 2*d_process_cap/3){
-            double_cap();
-            if(d_process_cap > 16*d_cap_init){
-              //failed force reset
-              return false;
-            }
-          }
-          memcpy(d_process_buffer + d_process_size, in, sizeof(gr_complex)*size);
-          d_process_size += size;
-        break;
-        default:
-          std::runtime_error("ProU RX: Func<append_samples>: Entering wrong state");
-        break;
-      }
-      return true;
-    }
-
-    bool
-    prou_sample_receiver_cb_impl::process_symbols()
-    {
-      int count = 0;
-      unsigned char symbol;
-      uint64_t check_bits;
-      while(d_process_idx + count < d_process_size){
-        symbol = d_su_hdr_const->decision_maker(&d_process_buffer[ d_process_idx + count]);
-        switch(d_state)
-        {
-          case SEARCH_ACCESSCODE:
-            for(int i=0;i<d_su_bps;++i){
-              d_su_sync_reg = (d_su_sync_reg << 1) | ((symbol >> (d_su_bps-1-i) ) & 0x01);
-            }
-            check_bits = (d_su_sync_reg ^ d_su_accesscode) & d_su_code_mask;
-            if(check_bits == 0){
-              d_state = HEADER_WAIT;
-              d_su_bit_input.clear();
-              d_su_pkt_begin = (d_process_idx + count) - (d_su_code_len)/d_su_bps;
-            }
-          break;
-          case HEADER_WAIT:
-            for(int i=0;i<d_su_bps;++i){
-              d_su_bit_input.push_back( ((symbol >> (d_su_bps-1-i)) & 0x01) );
-            }
-            if(d_su_bit_input.size() == d_su_hdr_bits_len){
-              //uint16_t pld_len;
-              if(parse_su_header(d_qidx,d_qsize,d_pld_len, d_su_bit_input)){
-                d_state = PAYLOAD_WAIT;
-                d_su_pld_counter = ( d_pld_len*8)/d_su_pld_bps + d_su_hdr_bits_len/d_su_bps;
-              }
-            }
-          break;
-          case PAYLOAD_WAIT:
-          assert(d_su_pld_counter>=0);
-            if(d_su_pld_counter==0){
-              d_state = SEARCH_ACCESSCODE;
-              if(intf_decision_maker()){
-
-              }
-              
-            }
-            d_su_pld_counter--;
-          break;
-          default:
-          break;
-        }
-        count++;
-      }
-      //update
-      d_process_idx = d_process_size;
+      delete [] d_output_buffer;
     }
 
     bool
@@ -299,49 +225,7 @@ namespace gr {
     }
 
     //INTERFERENCE CANCELLER FUNCTIONS
-    bool
-    prou_sample_receiver_cb_impl::intf_decision_maker()
-    {
-      //cei will be kept until this function ends
-      int pkt_symbol_len = d_pld_len*8/d_su_pld_bps + d_su_hdr_bits_len/d_su_bps;
-      bool test_voe = calc_var_energy(d_process_buffer + d_su_pkt_begin, pkt_symbol_len,-40,5);
-      switch(d_intf_state)
-      {
-        case CLEAR:
-          if(d_qsize!=0x00){
-            d_intf_state = RETRANSMISSION;
-            reset_intf_reg();
-            d_retx_buf_idx.resize(d_qsize);
-            d_retx_pkt_len.resize(d_qsize,0);
-            d_retx_count = 0;
-            d_cei_pkt_len.clear();
-            d_cei_buf_idx.clear();
-            //calc all cancellation enabling information
-            calc_cei_all();            
-          }
-        break;
-        case RETRANSMISSION:
-          if( (d_qsize == 0x00)|| (d_qsize != d_retx_buf_idx.size()) ){
-            //new pkt transmitting, retransmission ends
-            if(d_retx_count != d_retx_buf_idx.size()){
-              //fail to receive all retransmission, but still have chances to cancel interference
-            }
-            d_intf_state = CLEAR;
-          }
 
-        break;
-        default:
-          std::runtime_error("ProU RX: function<intf_decision_maker> Entering wrong state");
-        break;
-      }
-      update_retx_info(test_voe);
-      if((d_retx_count!=0) && (d_retx_count == d_retx_pkt_len.size()) ){
-        do_interference_cancellation();
-        d_retx_count=0;
-        return true;
-      }
-      return false;
-    }
 
     void
     prou_sample_receiver_cb_impl::update_retx_info(bool test_voe)
@@ -371,6 +255,8 @@ namespace gr {
       d_retx_count=0;
       d_retx_pkt_len.clear();
       d_retx_buf_idx.clear();
+      d_cei_buf_idx.clear();
+      d_cei_pkt_len.clear();
     }
 
     bool
@@ -416,6 +302,9 @@ namespace gr {
                 pkt_len = pld_count + (d_su_hdr_bits_len + d_su_code_len)/d_su_bps;
                 state = INTF_PAYLOAD_WAIT;
               }
+              else{
+                state = INTF_SEARCH;
+              }
             }
           break;
           case INTF_PAYLOAD_WAIT:
@@ -423,6 +312,7 @@ namespace gr {
               //TODO
               d_cei_buf_idx.push_back(i-pkt_len+1);
               d_cei_pkt_len.push_back(pkt_len);
+              state = INTF_SEARCH;
             }
             pld_count--;
           break;
@@ -443,6 +333,67 @@ namespace gr {
       // d_cei_buf_idx, d_cei_pkt_len
     }
 
+    //OUTPUT BUFFER FUNCTIONS
+    int
+    prou_sample_receiver_cb_impl::output_samples(gr_complex* out, int noutput_items)
+    {
+      int true_noutput_items;
+      if(noutput_items > d_output_buffer_size){
+        memcpy(out, d_output_buffer + d_output_buffer_idx, sizeof(gr_complex)*d_output_buffer_size);
+        true_noutput_items = d_output_buffer_size;
+        d_output_buffer_size = 0;
+        d_output_buffer_idx = 0;
+        _out_buffer_reset_cap();
+      }
+      else{
+        memcpy(out, d_output_buffer + d_output_buffer_idx, sizeof(gr_complex)*noutput_items);
+        true_noutput_items = noutput_items;
+        d_output_buffer_idx += noutput_items;
+        d_output_buffer_size -= noutput_items;
+      }
+      return true_noutput_items;
+    }
+
+    void 
+    prou_sample_receiver_cb_impl::extract_samples_ed(std::vector<gr_complex>& out, double ed_db)
+    {
+      //NOTE: this may lose some transition sample which are parts of a symbol
+      double ed_tmp;
+      for(int i=0;i<d_process_size;++i){
+        ed_tmp = 10* log10(norm(d_process_buffer[i]));
+        if(ed_tmp > ed_db){
+          out.push_back(d_process_buffer[i]);
+        }
+      }
+    }
+
+    void 
+    prou_sample_receiver_cb_impl::_out_buffer_double_cap()
+    {
+      gr_complex tmp[d_output_buffer_size];
+      memcpy(tmp, d_output_buffer, sizeof(gr_complex)*d_output_buffer_size);
+      delete [] d_output_buffer;
+      d_output_buffer_cap *= 2;
+      d_output_buffer = new gr_complex[d_output_buffer_cap];
+      memcpy(d_output_buffer, tmp, sizeof(gr_complex)*d_output_buffer_size);
+    }
+
+    void 
+    prou_sample_receiver_cb_impl::_out_buffer_reset_cap()
+    {
+      if(d_output_buffer_cap == d_cap_init){
+        return;
+      }
+      assert(d_output_buffer_size < d_cap_init);
+      gr_complex tmp[d_output_buffer_size];
+      memcpy(tmp, d_output_buffer,sizeof(gr_complex)*d_output_buffer_size);
+      d_output_buffer_cap = d_cap_init;
+      delete [] d_output_buffer;
+      d_output_buffer = new gr_complex[d_output_buffer_cap];
+      memcpy(d_output_buffer, tmp, sizeof(gr_complex)* d_output_buffer_size);
+      
+    }
+
     //FLOW CONTROL FUNCTIONS
 
     void
@@ -450,6 +401,147 @@ namespace gr {
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
     }
+
+
+    // MAIN FLOW
+    bool
+    prou_sample_receiver_cb_impl::intf_decision_maker()
+    {
+      //cei will be kept until this function ends
+      int pkt_symbol_len = d_pld_len*8/d_su_pld_bps + d_su_hdr_bits_len/d_su_bps;
+      bool test_voe = calc_var_energy(d_process_buffer + d_su_pkt_begin, pkt_symbol_len,-40,5);
+      switch(d_intf_state)
+      {
+        case CLEAR:
+          if(d_qsize!=0x00){
+            d_intf_state = RETRANSMISSION;
+            reset_intf_reg();
+            d_retx_buf_idx.resize(d_qsize);
+            d_retx_pkt_len.resize(d_qsize,0);
+            //calc all cancellation enabling information
+            calc_cei_all();            
+          }
+        break;
+        case RETRANSMISSION:
+          if( (d_qsize == 0x00)|| (d_qsize != d_retx_buf_idx.size()) ){
+            //new pkt transmitting, retransmission ends
+            if(d_retx_count != d_retx_buf_idx.size()){
+              //fail to receive all retransmission, but still have chances to cancel interference
+            }
+            d_intf_state = CLEAR;
+          }
+
+        break;
+        default:
+          std::runtime_error("ProU RX: function<intf_decision_maker> Entering wrong state");
+        break;
+      }
+      update_retx_info(test_voe);
+      if((d_retx_count!=0) && (d_retx_count == d_retx_pkt_len.size()) ){
+        //TODO
+        do_interference_cancellation();
+        d_retx_count=0;
+        return true;
+      }
+      return false;
+    }
+
+    bool
+    prou_sample_receiver_cb_impl::process_symbols()
+    {
+      int count = 0;
+      unsigned char symbol;
+      uint64_t check_bits;
+      while(d_process_idx + count < d_process_size){
+        symbol = d_su_hdr_const->decision_maker(&d_process_buffer[ d_process_idx + count]);
+        switch(d_state)
+        {
+          case SEARCH_ACCESSCODE:
+            for(int i=0;i<d_su_bps;++i){
+              d_su_sync_reg = (d_su_sync_reg << 1) | ((symbol >> (d_su_bps-1-i) ) & 0x01);
+            }
+            check_bits = (d_su_sync_reg ^ d_su_accesscode) & d_su_code_mask;
+            if(check_bits == 0){
+              d_state = HEADER_WAIT;
+              d_su_bit_input.clear();
+              d_su_pkt_begin = (d_process_idx + count) - (d_su_code_len)/d_su_bps;
+            }
+          break;
+          case HEADER_WAIT:
+            for(int i=0;i<d_su_bps;++i){
+              d_su_bit_input.push_back( ((symbol >> (d_su_bps-1-i)) & 0x01) );
+            }
+            if(d_su_bit_input.size() == d_su_hdr_bits_len){
+              //uint16_t pld_len;
+              if(parse_su_header(d_qidx,d_qsize,d_pld_len, d_su_bit_input)){
+                d_state = PAYLOAD_WAIT;
+                //d_intf_state = CLEAR;
+                d_su_pld_counter = ( d_pld_len*8)/d_su_pld_bps;
+              }
+              else{
+                d_state = SEARCH_ACCESSCODE;
+              }
+            }
+          break;
+          case PAYLOAD_WAIT:
+            assert(d_su_pld_counter>=0);
+            if(d_su_pld_counter==0){
+              d_state = SEARCH_ACCESSCODE;
+              if(intf_decision_maker()){
+                //TODO
+                std::vector<gr_complex> out;
+                extract_samples_ed(out, -50);
+                int samp_size = out.size();
+                if(d_output_buffer_size + samp_size > d_output_buffer_cap){
+                  _out_buffer_double_cap();
+                }
+                memcpy(d_output_buffer + d_output_buffer_size,out.data(),sizeof(gr_complex)*samp_size);
+                d_output_buffer_size += samp_size;
+                return true;
+              }
+            }
+            d_su_pld_counter--;
+          break;
+          default:
+          break;
+        }
+        count++;
+      }
+      //update
+      d_process_idx = d_process_size;
+      return false;
+    }
+
+    bool
+    prou_sample_receiver_cb_impl::append_samples(const gr_complex* in, int size)
+    {
+      // forecast should handle the input sample length carefully
+      switch(d_intf_state)
+      {
+        case CLEAR:
+          if(d_process_size > 0.5* d_process_cap){
+            //still clear but sample length greater than half of capacity
+            reduce_sample(d_process_cap/3);
+          }
+        break;
+        case RETRANSMISSION:
+          if(d_process_size +size > d_process_cap){
+            double_cap();
+            if(d_process_cap > 128*d_cap_init){
+              //failed force reset
+              return false;
+            }
+          }
+        break;
+        default:
+          std::runtime_error("ProU RX: Func<append_samples>: Entering wrong state");
+        break;
+      }
+      memcpy(d_process_buffer + d_process_size, in, sizeof(gr_complex)*size);
+      d_process_size += size;
+      return true;
+    }
+
 
     int
     prou_sample_receiver_cb_impl::general_work (int noutput_items,
@@ -459,10 +551,10 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-
+      int true_output = 0;
       // Do <+signal processing+>
       std::vector<tag_t> tags;
-      get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("var_energy"));
+      get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("var_energy_alert"));
 
       switch(d_mode)
       {
@@ -470,7 +562,9 @@ namespace gr {
           if(!tags.empty()){
             return 0;
           }
+          //do nothing
           memcpy(out, in, sizeof(gr_complex)*noutput_items);
+          true_output = noutput_items;
         break;
 
         case INTERFERENCE_CANCELLATION:
@@ -478,17 +572,14 @@ namespace gr {
             //avoid memory overflow, force reset
             reset_buffer();
             reset_intf_reg();
-            d_intf_state = CLEAR;
             d_state = SEARCH_ACCESSCODE;
           }
           if(process_symbols()){
-            //TODO
-            //return true if interference cancellation is conducted,
-            // output the processed samples
-            // the number of samples may be to long
-            // how to do it efficiently
+            //handling the output flow
+            true_output = output_samples(out, noutput_items);
           }
         break;
+
         default:
           std::runtime_error("ProU RX: Wrong Receiver Mode!");
         break;
@@ -499,7 +590,7 @@ namespace gr {
       consume_each (noutput_items);
 
       // Tell runtime system how many output items we produced.
-      return noutput_items;
+      return true_output;
     }
 
   } /* namespace lsa */

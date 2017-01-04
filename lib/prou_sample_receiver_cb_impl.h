@@ -31,7 +31,12 @@ namespace gr {
     class prou_sample_receiver_cb_impl : public prou_sample_receiver_cb
     {
      private:
-      // Nothing to declare in this block.
+      // output buffer
+      gr_complex* d_output_buffer;
+      size_t d_output_buffer_cap;
+      size_t d_output_buffer_size;
+      size_t d_output_buffer_idx;
+
       // filter for proU signal
       std::vector<gr::filter::kernel::fir_filter_ccf*> d_pu_filters;
       int d_pu_nfilters;
@@ -51,6 +56,7 @@ namespace gr {
       int d_mode;
       int d_state;
       int d_intf_state;
+      //int d_output_buffer_state;
       //int d_intf_sync_state;
 
       // message port name
@@ -101,7 +107,6 @@ namespace gr {
       void update_retx_info(bool test_voe);
       void do_interference_cancellation();
 
-
       // buffer helper functions
       void reduce_sample(int nleft);
       void double_cap();
@@ -115,6 +120,12 @@ namespace gr {
       bool parse_su_header(uint8_t& qidx, uint8_t& qsize, uint16_t& pld_len, const std::vector<unsigned char>& input);
       uint16_t _get_bit16(int begin_idx,const std::vector<unsigned char>& input);
       uint8_t _get_bit8(int begin_idx, const std::vector<unsigned char>& input);
+
+      //output buffer helper function
+      int output_samples(gr_complex* out, int noutput_items);
+      void extract_samples_ed(std::vector<gr_complex>& out, double ed_db);
+      void _out_buffer_double_cap();
+      void _out_buffer_reset_cap();
 
      public:
       prou_sample_receiver_cb_impl(
