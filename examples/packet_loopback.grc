@@ -928,15 +928,15 @@
   </connection>
   <connection>
     <source_block_id>lsa_su_sample_receiver_cb_0</source_block_id>
-    <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
+    <sink_block_id>blocks_message_debug_0</sink_block_id>
     <source_key>info</source_key>
-    <sink_key>sensing_info</sink_key>
+    <sink_key>print</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_su_sample_receiver_cb_0</source_block_id>
-    <sink_block_id>blocks_message_debug_0</sink_block_id>
-    <source_key>packet</source_key>
-    <sink_key>print_pdu</sink_key>
+    <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
+    <source_key>info</source_key>
+    <sink_key>sensing_info</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_su_transmitter_bc_0</source_block_id>

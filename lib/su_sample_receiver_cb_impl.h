@@ -33,15 +33,6 @@ namespace gr {
     {
      private:
       // Nothing to declare in this block.
-
-/*
-      int d_nfilters;
-      std::vector<gr::filter::kernel::fir_filter_ccf*> d_filters;
-      //std::vector<gr::filter::kernel::fir_filter_ccf*> 
-      std::vector< std::vector<float> > d_taps;
-      //std::vector< std::vector<float> > d_dtaps;
-      std::vector<float> d_updated_taps;
-*/
       pmt::pmt_t d_src_id;
       pmt::pmt_t d_sensing_tag_id;
       pmt::pmt_t d_msg_port;
@@ -60,8 +51,8 @@ namespace gr {
       gr_complex  d_samp_reg;
       size_t d_cap;
       size_t d_byte_count;
-      //size_t d_samp_count;
-
+      int d_hdr_bps;
+      int d_pld_bps;
 
       // used for accesscode sync
       std::vector<bool> d_input;
@@ -79,17 +70,12 @@ namespace gr {
 
       //debug
       bool d_debug;
-
       
       bool parse_header();
       uint16_t _get_bit16(int begin_idx);
       uint8_t _get_bit8(int begin_idx);
 
-
-
       void pub_byte_pkt();
-
-
       bool symbol_segment(std::vector<tag_t>& intf_idx, const std::vector<tag_t>& tags, int nsamples);
 
       void feedback_info(bool type);
