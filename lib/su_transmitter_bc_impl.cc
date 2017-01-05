@@ -81,7 +81,7 @@ namespace gr {
       }
       d_qmax = qmax;
       d_debug = debug;
-      d_rxindextagname = pmt::intern("pkt_counter");
+      d_rxindextagname = pmt::intern("counter");
 
       d_hdr_points = hdr_points;
       d_pld_points = pld_points;
@@ -160,16 +160,14 @@ namespace gr {
         dict_items = pmt::cdr(dict_items);
       }
       for(int i=0;i<tag_keys.size();++i){        
-        if(pmt::equal(tag_keys[i],d_sensingtagname)){
+        if(pmt::eqv(tag_keys[i],d_sensingtagname)){
           rx_sensing_info = pmt::to_bool(tag_vals[i]);
         }
-        if(pmt::equal(tag_keys[i],d_rxindextagname)){
+        if(pmt::eqv(tag_keys[i],d_rxindextagname)){
           rx_counter = (int) pmt::to_long(tag_vals[i]);
         }
       }
-      if(rx_counter<0){
-        return;
-      }
+      
       switch(d_state)
       {
         case CLEAR_TO_SEND:
@@ -195,6 +193,7 @@ namespace gr {
         break;
         case RETRANSMISSION:
           if(!rx_sensing_info){
+            //linear search, may be optimized with faster algorithm
             for(int i=0;i<d_retx_counter_buffer.size();++i){
               if(rx_counter == d_retx_counter_buffer[i]){
                 d_retx_counter_buffer.erase(d_retx_counter_buffer.begin()+i);
@@ -212,8 +211,17 @@ namespace gr {
         default:
           std::runtime_error("SUTX: Entering wrong state");
         break;
-
       }
+      if(d_debug){
+        pmt::pmt_t debug_info = pmt::make_dict();//DEBUG
+        debug_info = pmt::dict_add(debug_info, pmt::intern("sutx"), pmt::string_to_symbol("receiver_msg_handler"));
+        //DEBUG
+        debug_info = pmt::dict_add(debug_info, pmt::intern("sensing_info"), pmt::from_bool(rx_sensing_info));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("rx_counter"), pmt::from_long(rx_counter));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("queue_size"), pmt::from_long(d_buffer_ptr->size()));
+        message_port_pub(d_debug_port,debug_info);//DEBUG  
+      }
+      
     }
 
     bool
@@ -373,9 +381,10 @@ namespace gr {
       noutput_items = pld_symbol_samp_len + d_hdr_samp_len;
       add_item_tag(0, nitems_written(0), pmt::intern("sutx_pkt_count"), pmt::from_long(d_pkt_counter));
       if(d_debug){
-      hdr_info = pmt::dict_add(hdr_info, pmt::intern("payload_len"), pmt::from_long(payload_len));
-      hdr_info = pmt::dict_add(hdr_info, pmt::intern("SUTX_state"), pmt::string_to_symbol(((d_state == CLEAR_TO_SEND)? "clear_to_send" : "proU_present")));  
-      message_port_pub(d_debug_port,hdr_info);
+        hdr_info = pmt::dict_add(hdr_info, pmt::intern("sutx"), pmt::string_to_symbol("general_work"));
+        hdr_info = pmt::dict_add(hdr_info, pmt::intern("payload_len"), pmt::from_long(payload_len));
+        hdr_info = pmt::dict_add(hdr_info, pmt::intern("SUTX_state"), pmt::string_to_symbol(((d_state == CLEAR_TO_SEND)? "clear_to_send" : "proU_present")));  
+        message_port_pub(d_debug_port,hdr_info);
       }
 
       // Tell runtime system how many output items we produced.

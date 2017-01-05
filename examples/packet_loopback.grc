@@ -433,7 +433,7 @@
     </param>
     <param>
       <key>debug</key>
-      <value>True</value>
+      <value>False</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -469,7 +469,7 @@
     </param>
     <param>
       <key>sen_tag</key>
-      <value>sense_tag</value>
+      <value>sensing</value>
     </param>
   </block>
   <block>
@@ -929,7 +929,7 @@
   <connection>
     <source_block_id>lsa_su_sample_receiver_cb_0</source_block_id>
     <sink_block_id>blocks_message_debug_0</sink_block_id>
-    <source_key>info</source_key>
+    <source_key>debug</source_key>
     <sink_key>print</sink_key>
   </connection>
   <connection>
@@ -937,6 +937,12 @@
     <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
     <source_key>info</source_key>
     <sink_key>sensing_info</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_su_transmitter_bc_0</source_block_id>
+    <sink_block_id>blocks_message_debug_0</sink_block_id>
+    <source_key>debug</source_key>
+    <sink_key>print</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_su_transmitter_bc_0</source_block_id>
