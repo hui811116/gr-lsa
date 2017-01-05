@@ -84,7 +84,10 @@ namespace gr {
 
       size_t d_su_pkt_begin;
       std::vector<unsigned char> d_su_bit_input;
-      //std::vector<gr_complex> d_su_pkt_sample_buffer;
+      
+      //Volk memory for variance of energy calculation
+      float * d_var_eng_buffer;
+      float * d_eng_buffer;
 
       uint8_t d_qidx;
       uint8_t d_qsize;
@@ -96,12 +99,13 @@ namespace gr {
 
       std::vector<int> d_cei_pkt_len;
       std::vector<int> d_cei_buf_idx;
+      std::vector<int> d_cei_qidx;
 
       // interference cancellation mode: helper funtions
       bool intf_decision_maker();
       void reset_intf_reg();
 
-      bool calc_var_energy(const gr_complex* array, size_t length, double threshold_db, int bin);
+      bool calc_var_energy(const gr_complex* array, size_t length, float threshold_db, int bin);
       void calc_cei_all();
 
       void update_retx_info(bool test_voe);

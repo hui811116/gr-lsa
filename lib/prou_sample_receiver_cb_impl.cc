@@ -24,6 +24,7 @@
 
 #include <gnuradio/io_signature.h>
 #include "prou_sample_receiver_cb_impl.h"
+#include <volk/volk.h>
 
 namespace gr {
   namespace lsa {
@@ -92,8 +93,8 @@ namespace gr {
       d_process_idx = 0;
 
       // NOTE: current version only support STANDARD mode
-      // d_mode = (mode) INTERFERENCE_CANCELLATION : STANDARD;
-      d_mode = STANDARD;
+      d_mode = (mode)? INTERFERENCE_CANCELLATION : STANDARD;
+      //d_mode = STANDARD;
       d_state = SEARCH_ACCESSCODE;
       d_intf_state = CLEAR;
       //d_output_buffer_state = IDLE;
@@ -111,6 +112,13 @@ namespace gr {
 
       message_port_register_out(d_debug_port);
       set_tag_propagation_policy(TPP_DONT);
+
+      //volk testing
+      //const int alignment_multiple = volk_get_alignment() / sizeof(float);
+      //set_alignment(std::max(1,alignment_multiple));
+      const size_t nitems = 1024*1024;
+      d_var_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
+      d_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
     }
 
     /*
@@ -126,6 +134,7 @@ namespace gr {
       delete d_sig_buffer;
       delete [] d_process_buffer;
       delete [] d_output_buffer;
+      volk_free(d_var_eng_buffer);
     }
 
     bool
@@ -140,7 +149,6 @@ namespace gr {
         pld_len = len0;
         qidx = _get_bit8(48,input);
         qsize = _get_bit8(56,input);
-        //d_su_pld_counter = len0 * 8 /d_su_pld_bps;
         return true;
       }
       return false;
@@ -175,7 +183,6 @@ namespace gr {
       if(d_su_code_len > 64){
         return false;
       }
-     
       d_su_code_mask = ((~0ULL) >> (64-d_su_code_len) );
       for(unsigned i=0;i<d_su_code_len;++i){
         d_su_accesscode = (d_su_accesscode << 1) | (su_accesscode[i] & 1);
@@ -226,7 +233,6 @@ namespace gr {
 
     //INTERFERENCE CANCELLER FUNCTIONS
 
-
     void
     prou_sample_receiver_cb_impl::update_retx_info(bool test_voe)
     {
@@ -257,15 +263,28 @@ namespace gr {
       d_retx_buf_idx.clear();
       d_cei_buf_idx.clear();
       d_cei_pkt_len.clear();
+      d_cei_qidx.clear();
     }
 
     bool
-    prou_sample_receiver_cb_impl::calc_var_energy(const gr_complex* in, size_t length, double threshold_db, int bin)
+    prou_sample_receiver_cb_impl::calc_var_energy(const gr_complex* in, size_t length, float threshold_db, int bin)
     {
-      //TODO
-      double voe = -1000;
-      threshold_db = -50;
-      return voe > threshold_db;
+      assert(length < 1024*1024);
+      float voe = -1000;
+
+      int alignment = volk_get_alignment();
+      float * mean = (float*) volk_malloc(sizeof(float), alignment);
+      float * stddev = (float*) volk_malloc(sizeof(float), alignment);
+      
+      volk_32fc_magnitude_squared_32f(d_eng_buffer, in, length);
+      volk_32f_stddev_and_mean_32f_x2(stddev,mean, d_eng_buffer, length);
+      
+      float var_eng_db = 20.0*log10(*stddev);
+      bool voe_result = (var_eng_db > threshold_db);
+      volk_free(mean);
+      volk_free(stddev);
+
+      return voe_result;
     }
 
     void
@@ -309,9 +328,9 @@ namespace gr {
           break;
           case INTF_PAYLOAD_WAIT:
             if(pld_count==0){
-              //TODO
               d_cei_buf_idx.push_back(i-pkt_len+1);
               d_cei_pkt_len.push_back(pkt_len);
+              d_cei_qidx.push_back(qidx);
               state = INTF_SEARCH;
             }
             pld_count--;
@@ -328,9 +347,60 @@ namespace gr {
     prou_sample_receiver_cb_impl::do_interference_cancellation()
     {
       //TODO
-      //input:
-      // d_retx_buf_idx, d_retx_pkt_len
-      // d_cei_buf_idx, d_cei_pkt_len
+      //First step, synchroniza with partial header information
+      assert(!d_cei_buf_idx.empty());
+      int total_len = 0;
+      int max_len = d_retx_pkt_len[0];
+      for(int i=0;i<d_retx_pkt_len.size();++i){
+        total_len += d_retx_pkt_len[i];
+        if(d_retx_pkt_len[i]>max_len){
+          max_len = d_retx_pkt_len[i];
+        }
+      }
+      total_len = 0;
+      gr_complex* retx_all = (gr_complex*) malloc(sizeof(gr_complex)* total_len);
+      //int alignment = volk_get_alignment();
+      //gr_complex* retx_all = (gr_complex*) volk_malloc(sizeof(gr_complex) * total_len, alignment);
+      //gr_complex* pkt_buf = (gr_complex*) volk_malloc(sizeof(gr_complex) * max_len, alignment);
+      std::vector<int> retx_idx;
+
+      //NOTE: this version does not replace the header part of the retransmitted packets
+      //<FIXME>
+      for(int i=0;i<d_retx_buf_idx.size();++i){
+        int tmp_len = d_retx_pkt_len[i];
+        int tmp_idx = d_retx_buf_idx[i];
+        memcpy(retx_all + total_len, d_process_buffer + tmp_idx, sizeof(gr_complex)* d_retx_buf_idx[i]);
+        retx_idx.push_back(total_len);
+        total_len += tmp_len;
+      }
+
+      int qsize = d_retx_buf_idx.size();
+      int last_good_idx = d_cei_buf_idx[d_cei_buf_idx.size()-1];
+      int last_qidx  = d_cei_qidx[d_cei_qidx.size()-1];
+      int last_len = d_cei_pkt_len[d_cei_pkt_len.size()-1];
+
+      while(last_good_idx + last_len < d_process_size){
+        last_qidx = (last_qidx+1) % qsize;
+        last_good_idx += last_len;
+        last_len = d_retx_pkt_len[last_qidx];
+      }
+
+      last_good_idx--;//shift to valid index
+      int pkt_count = d_retx_pkt_len[last_qidx]-1;
+
+      while(last_good_idx >=0){
+        d_process_buffer[last_good_idx] -= (retx_all[ retx_idx[last_qidx] + pkt_count] );
+        pkt_count--;
+        if(pkt_count < 0){
+          last_good_idx--;
+          last_good_idx %= qsize;
+          pkt_count = d_retx_pkt_len[last_good_idx];
+        }
+        last_good_idx--;
+      }
+
+      free(retx_all);
+      //volk_free(retx_all);
     }
 
     //OUTPUT BUFFER FUNCTIONS
@@ -400,6 +470,11 @@ namespace gr {
     prou_sample_receiver_cb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
+      if(d_output_buffer_size != 0){
+        ninput_items_required[0] = 0;  
+      }
+      ninput_items_required[0] = noutput_items;
+
     }
 
 
@@ -438,7 +513,6 @@ namespace gr {
       }
       update_retx_info(test_voe);
       if((d_retx_count!=0) && (d_retx_count == d_retx_pkt_len.size()) ){
-        //TODO
         do_interference_cancellation();
         d_retx_count=0;
         return true;
@@ -475,7 +549,6 @@ namespace gr {
               //uint16_t pld_len;
               if(parse_su_header(d_qidx,d_qsize,d_pld_len, d_su_bit_input)){
                 d_state = PAYLOAD_WAIT;
-                //d_intf_state = CLEAR;
                 d_su_pld_counter = ( d_pld_len*8)/d_su_pld_bps;
               }
               else{
@@ -488,8 +561,8 @@ namespace gr {
             if(d_su_pld_counter==0){
               d_state = SEARCH_ACCESSCODE;
               if(intf_decision_maker()){
-                //TODO
                 std::vector<gr_complex> out;
+                //<FIXME>: threshold of the interference detector
                 extract_samples_ed(out, -50);
                 int samp_size = out.size();
                 if(d_output_buffer_size + samp_size > d_output_buffer_cap){
@@ -528,7 +601,7 @@ namespace gr {
           if(d_process_size +size > d_process_cap){
             double_cap();
             if(d_process_cap > 128*d_cap_init){
-              //failed force reset
+              //failed, force reset
               return false;
             }
           }
@@ -552,6 +625,7 @@ namespace gr {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
       int true_output = 0;
+      noutput_items = (noutput_items > ninput_items[0])? ninput_items[0] : noutput_items;
       // Do <+signal processing+>
       std::vector<tag_t> tags;
       get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("var_energy_alert"));
