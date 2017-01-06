@@ -84,7 +84,6 @@ namespace gr {
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(gr_complex)))
     {
-      std::cout << "ProU RX Constructor begin" << std::endl;
       //TODO: testing configuration, reivise for actual implementation
       d_pu_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(32);
       std::vector<float> vtaps(1.0);
@@ -99,7 +98,6 @@ namespace gr {
       d_process_size = 0;
       d_process_idx = 0;
 
-      // NOTE: current version only support STANDARD mode
       d_mode = (mode)? INTERFERENCE_CANCELLATION : STANDARD;
       d_state = SEARCH_ACCESSCODE;
       d_intf_state = CLEAR;

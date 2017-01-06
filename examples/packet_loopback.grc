@@ -516,7 +516,7 @@
     </param>
     <param>
       <key>su_accesscode</key>
-      <value>1111000011010001</value>
+      <value>accesscode</value>
     </param>
     <param>
       <key>pu_taps</key>
