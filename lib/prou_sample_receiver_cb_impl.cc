@@ -539,11 +539,11 @@ namespace gr {
     prou_sample_receiver_cb_impl::process_symbols()
     {
       pmt::pmt_t debug_info = pmt::make_dict();
-      int count = 0;
+      //int count = 0;
       unsigned char symbol;
       uint64_t check_bits;
-      while(d_process_idx + count < d_process_size){
-        symbol = d_su_hdr_const->decision_maker(&d_process_buffer[ d_process_idx + count]);
+      for(d_process_idx ;d_process_idx < d_process_size; d_process_idx++){
+        symbol = d_su_hdr_const->decision_maker(&d_process_buffer[ d_process_idx]);
         switch(d_state)
         {
           case SEARCH_ACCESSCODE:
@@ -554,7 +554,7 @@ namespace gr {
             if(check_bits == 0){
               d_state = HEADER_WAIT;
               d_su_bit_input.clear();
-              d_su_pkt_begin = (d_process_idx + count) - (d_su_code_len)/d_su_bps;
+              d_su_pkt_begin = (d_process_idx) - (d_su_code_len)/d_su_bps;
             }
           break;
           case HEADER_WAIT:
@@ -602,11 +602,10 @@ namespace gr {
           default:
           break;
         }
-        count++;
       }
       //update
-      d_process_idx = d_process_size;
-      return false;
+      //d_process_idx = d_process_size;
+      return d_output_buffer_size!=0;
     }
 
     bool
