@@ -51,9 +51,11 @@ namespace gr {
       static sptr make(
         const gr::digital::constellation_sptr& su_hdr_const,
         int su_pld_bps,
+        const std::string& su_accesscode,
         int pu_nfilts,
         int su_nfilts,
-        bool mode);
+        bool mode,
+        bool debug);
     };
 
   } // namespace lsa

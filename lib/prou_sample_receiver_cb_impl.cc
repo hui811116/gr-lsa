@@ -33,17 +33,21 @@ namespace gr {
     prou_sample_receiver_cb::make(
       const gr::digital::constellation_sptr& su_hdr_const,
       int su_pld_bps,
+      const std::string& su_accesscode,
       int pu_nfilts,
       int su_nfilts,
-      bool mode)
+      bool mode,
+      bool debug)
     {
       return gnuradio::get_initial_sptr
         (new prou_sample_receiver_cb_impl(
           su_hdr_const,
           su_pld_bps,
+          su_accesscode,
           pu_nfilts,
           su_nfilts,
-          mode));
+          mode,
+          debug));
     }
 
     enum proURxMode{
@@ -71,33 +75,42 @@ namespace gr {
     prou_sample_receiver_cb_impl::prou_sample_receiver_cb_impl(
       const gr::digital::constellation_sptr& su_hdr_const,
       int su_pld_bps,
+      const std::string& su_accesscode,
       int pu_nfilts,
       int su_nfilts,
-      bool mode)
+      bool mode,
+      bool debug)
       : gr::block("prou_sample_receiver_cb",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(gr_complex)))
     {
+      std::cout << "ProU RX Constructor begin" << std::endl;
       //TODO: testing configuration, reivise for actual implementation
       d_pu_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(32);
       std::vector<float> vtaps(1.0);
       for(int i=0;i<32;++i){
         d_pu_filters[i] = new gr::filter::kernel::fir_filter_ccf(1, vtaps);
       }
-
+      const size_t nitems = 128*1024;
       d_sig_buffer = new std::vector< std::vector<gr_complex> >;
-      d_process_cap = 1024*1024; //memory preallocated
-      d_cap_init = 1024*1024;
+      d_process_cap = nitems; //memory preallocated
+      d_cap_init = nitems;
       d_process_buffer = new gr_complex[d_process_cap];
       d_process_size = 0;
       d_process_idx = 0;
 
       // NOTE: current version only support STANDARD mode
       d_mode = (mode)? INTERFERENCE_CANCELLATION : STANDARD;
-      //d_mode = STANDARD;
       d_state = SEARCH_ACCESSCODE;
       d_intf_state = CLEAR;
-      //d_output_buffer_state = IDLE;
+
+      // DEBUG Purpose
+      d_debug = debug;
+      d_debug_port = pmt::mp("debug");      
+
+      if(!set_su_accesscode(su_accesscode)){
+        std::invalid_argument("ProU RX: Invalid SU accesscode");
+      }
 
       d_su_hdr_const = su_hdr_const->base();
       d_su_bps = su_hdr_const->bits_per_symbol();
@@ -105,7 +118,7 @@ namespace gr {
       d_su_hdr_bits_len = (4+2+2)*8;
 
       //output sample buffer initialization
-      d_output_buffer_cap = 1024*1024;
+      d_output_buffer_cap = nitems;
       d_output_buffer = new gr_complex[d_output_buffer_cap];
       d_output_buffer_size = 0;
       d_output_buffer_idx = 0;
@@ -116,7 +129,7 @@ namespace gr {
       //volk testing
       //const int alignment_multiple = volk_get_alignment() / sizeof(float);
       //set_alignment(std::max(1,alignment_multiple));
-      const size_t nitems = 1024*1024;
+      
       d_var_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
       d_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
     }
@@ -135,6 +148,7 @@ namespace gr {
       delete [] d_process_buffer;
       delete [] d_output_buffer;
       volk_free(d_var_eng_buffer);
+      volk_free(d_eng_buffer);
     }
 
     bool
@@ -292,7 +306,7 @@ namespace gr {
     {
       unsigned symbol;
       int state = INTF_SEARCH;
-      uint64_t bit_reg = 0ULL;
+      uint64_t bit_reg = ~0ULL;
       uint8_t qidx,qsize;
       uint16_t pld_len;
       int pld_count;
@@ -473,8 +487,11 @@ namespace gr {
       if(d_output_buffer_size != 0){
         ninput_items_required[0] = 0;  
       }
-      ninput_items_required[0] = noutput_items;
-
+      else{
+        assert(d_process_cap >= d_process_size);
+        int max_sample = d_process_cap - d_process_size;
+        ninput_items_required[0] = (noutput_items > max_sample) ? max_sample: noutput_items;  
+      }
     }
 
 
@@ -523,6 +540,7 @@ namespace gr {
     bool
     prou_sample_receiver_cb_impl::process_symbols()
     {
+      pmt::pmt_t debug_info = pmt::make_dict();
       int count = 0;
       unsigned char symbol;
       uint64_t check_bits;
@@ -550,6 +568,14 @@ namespace gr {
               if(parse_su_header(d_qidx,d_qsize,d_pld_len, d_su_bit_input)){
                 d_state = PAYLOAD_WAIT;
                 d_su_pld_counter = ( d_pld_len*8)/d_su_pld_bps;
+                if(d_debug){
+                  debug_info = pmt::dict_add(debug_info, pmt::intern("ProU_RX"), pmt::string_to_symbol("process_symbols"));
+                  debug_info = pmt::dict_add(debug_info, pmt::intern("payload_len"), pmt::from_long(d_pld_len));
+                  debug_info = pmt::dict_add(debug_info, pmt::intern("qidx"), pmt::from_long(d_qidx));
+                  debug_info = pmt::dict_add(debug_info, pmt::intern("qsize"), pmt::from_long(d_qsize));
+                  message_port_pub(d_debug_port, debug_info);
+                }
+
               }
               else{
                 d_state = SEARCH_ACCESSCODE;
@@ -586,14 +612,14 @@ namespace gr {
     }
 
     bool
-    prou_sample_receiver_cb_impl::append_samples(const gr_complex* in, int size)
+    prou_sample_receiver_cb_impl::append_samples(const gr_complex* in, int size, int& consume)
     {
       // forecast should handle the input sample length carefully
+      
       switch(d_intf_state)
       {
         case CLEAR:
-          if(d_process_size > 0.5* d_process_cap){
-            //still clear but sample length greater than half of capacity
+          if(d_process_size == d_process_cap){
             reduce_sample(d_process_cap/3);
           }
         break;
@@ -610,8 +636,22 @@ namespace gr {
           std::runtime_error("ProU RX: Func<append_samples>: Entering wrong state");
         break;
       }
-      memcpy(d_process_buffer + d_process_size, in, sizeof(gr_complex)*size);
-      d_process_size += size;
+      
+      consume = (size > (d_process_cap - d_process_size))? (d_process_cap - d_process_size) : size;
+      memcpy(d_process_buffer + d_process_size, in, sizeof(gr_complex)*consume);
+      d_process_size += consume;
+      //DEBUG <FIXME>
+      /*
+      if(d_debug){
+        pmt::pmt_t debug_info = pmt::make_dict();
+        debug_info = pmt::dict_add(debug_info, pmt::intern("proU_RX"),pmt::string_to_symbol("append_samples"));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("CEI_state"),pmt::string_to_symbol((d_intf_state)? "RETRANSMISSION" : "CLEAR" ));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("buffer_size"), pmt::from_long(d_process_size));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("sample_size"), pmt::from_long(size));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("consume"), pmt::from_long(consume));
+        message_port_pub(d_debug_port, debug_info);
+      }*/
+
       return true;
     }
 
@@ -629,6 +669,7 @@ namespace gr {
       // Do <+signal processing+>
       std::vector<tag_t> tags;
       get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("var_energy_alert"));
+      int consume=0;
 
       switch(d_mode)
       {
@@ -642,7 +683,7 @@ namespace gr {
         break;
 
         case INTERFERENCE_CANCELLATION:
-          if(!append_samples(in, noutput_items)){
+          if(!append_samples(in, noutput_items, consume)){
             //avoid memory overflow, force reset
             reset_buffer();
             reset_intf_reg();
@@ -661,7 +702,7 @@ namespace gr {
 
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      consume_each (noutput_items);
+      consume_each (consume);
 
       // Tell runtime system how many output items we produced.
       return true_output;

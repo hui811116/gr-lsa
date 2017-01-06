@@ -61,6 +61,7 @@ namespace gr {
 
       // message port name
       pmt::pmt_t d_debug_port;
+      bool d_debug;
       
       // sample or symbol buffers
 
@@ -116,7 +117,7 @@ namespace gr {
       void double_cap();
       void reset_buffer();
 
-      bool append_samples (const gr_complex* in, int size);
+      bool append_samples (const gr_complex* in, int size, int& consume);
 
 
       //su sync helper functions
@@ -135,9 +136,11 @@ namespace gr {
       prou_sample_receiver_cb_impl(
         const gr::digital::constellation_sptr& su_hdr_const,
         int su_pld_bps,
+        const std::string& su_accesscode,
         int pu_nfilts,
         int su_nfilts,
-        bool mode);
+        bool mode,
+        bool debug);
       ~prou_sample_receiver_cb_impl();
 
       // Where all the action really happens

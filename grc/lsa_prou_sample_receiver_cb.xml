@@ -4,7 +4,7 @@
   <key>lsa_prou_sample_receiver_cb</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.prou_sample_receiver_cb($su_hdr_const,$su_pld_bps,$pu_taps, $su_taps,$mode)</make>
+  <make>lsa.prou_sample_receiver_cb($su_hdr_const,$su_pld_bps,$su_accesscode,$pu_taps, $su_taps,$mode, $debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -22,6 +22,12 @@
     <type>int</type>
   </param>
   <param>
+    <name>SU Accesscode</name>
+    <key>su_accesscode</key>
+    <value>1111000011010001</value>
+    <type>string</type>
+  </param>
+  <param>
     <name>number of taps (ProU)</name>
     <key>pu_taps</key>
     <type>int</type>
@@ -34,15 +40,29 @@
   <param>
     <name>Mode</name>
     <key>mode</key>
-    <value>FALSE</value>
+    <value>False</value>
     <type>bool</type>
     <option>
       <name>Interference Cancellation</name>
-      <key>TRUE</key>
+      <key>True</key>
     </option>
     <option>
       <name>STANDARD</name>
-      <key>FALSE</key>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Debug</name>
+    <key>debug</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
     </option>
   </param>
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -63,5 +83,10 @@
   <source>
     <name>out</name>
     <type>complex</type>
+  </source>
+  <source>
+    <name>debug</name>
+    <type>message</type>
+    <optional>1</optional>
   </source>
 </block>
