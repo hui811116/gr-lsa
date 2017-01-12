@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<block>
+  <name>Interference Energy Detector</name>
+  <key>lsa_interference_energy_detector_cc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.interference_energy_detector_cc($ed_tagname, $voe_tagname,  $ed_thres, $voe_thres,$blocklength)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Energy Tagname</name>
+    <key>ed_tagname</key>
+    <value>"energy_tag"</value>
+    <type>string</type> 
+  </param>
+
+  <param>
+    <name>Variance of Energy Tagname</name>
+    <key>voe_tagname</key>
+    <value>"interference_tag"</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>ED threshold(dB)</name>
+    <key>ed_thres</key>
+    <type>float</type>
+  </param>
+  <param>
+    <name>VoE threshold(dB)</name>
+    <key>voe_thres</key>
+    <type>float</type>
+  </param>
+  <param>
+    <name>Blocklength</name>
+    <key>blocklength</key>
+    <type>int</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+  <source>
+    <name>ED</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>VoE</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
+</block>

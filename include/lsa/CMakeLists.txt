@@ -30,5 +30,6 @@ install(FILES
     su_header_prefix.h
     su_sample_receiver_cb.h
     su_transmitter_bc.h
-    prou_sample_receiver_cb.h DESTINATION include/lsa
+    prou_sample_receiver_cb.h
+    interference_energy_detector_cc.h DESTINATION include/lsa
 )
