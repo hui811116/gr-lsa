@@ -64,8 +64,9 @@
     <optional>1</optional>
   </source>
   <source>
-    <name>VoE</name>
-    <type>float</type>
+    <name>debug</name>
+    <type>message</type>
     <optional>1</optional>
   </source>
+  
 </block>

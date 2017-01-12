@@ -25,6 +25,7 @@
 #include <gnuradio/io_signature.h>
 #include "interference_energy_detector_cc_impl.h"
 #include <volk/volk.h>
+#include <pmt/pmt.h>
 
 namespace gr {
   namespace lsa {
@@ -57,7 +58,10 @@ namespace gr {
       size_t blocklength)
       : gr::block("interference_energy_detector_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make3(1, 3, sizeof(gr_complex), sizeof(float), sizeof(float)))
+              gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
+      d_src_id(pmt::intern(alias())),
+      d_ed_tagname(pmt::string_to_symbol(ed_tagname)),
+      d_voe_tagname(pmt::string_to_symbol(voe_tagname))
     {
       if(blocklength==0){
         std::invalid_argument("Invalid argument: blocklength must be greater than 0");
@@ -69,10 +73,13 @@ namespace gr {
 
       const size_t max_size = 32*1024;
       d_energy_reg = (float*) volk_malloc( sizeof(float)*max_size, volk_get_alignment());
-      d_voe_reg = (float*) volk_malloc(sizeof(float) * max_size, volk_get_alignment());
+      //d_voe_reg = (float*) volk_malloc(sizeof(float) * max_size, volk_get_alignment());
 
       set_tag_propagation_policy(TPP_DONT);
       set_output_multiple(d_blocklength);
+
+      d_debug_port = pmt::mp("debug");
+      message_port_register_out(d_debug_port);
     }
 
     /*
@@ -81,7 +88,43 @@ namespace gr {
     interference_energy_detector_cc_impl::~interference_energy_detector_cc_impl()
     {
       volk_free(d_energy_reg);
-      volk_free(d_voe_reg);
+      //volk_free(d_voe_reg);
+    }
+
+    void
+    interference_energy_detector_cc_impl::set_ed_threshold(float threshold_db)
+    {
+      d_ed_thres_db = threshold_db;
+    }
+
+    float
+    interference_energy_detector_cc_impl::ed_threshold() const
+    {
+      return d_ed_thres_db;
+    }
+
+    void
+    interference_energy_detector_cc_impl::set_voe_threshold(float threshold_db)
+    {
+      d_voe_thres_db = threshold_db;
+    }
+
+    float
+    interference_energy_detector_cc_impl::voe_threshold() const
+    {
+      return d_voe_thres_db;
+    }
+
+    void
+    interference_energy_detector_cc_impl::set_blocklength(size_t blocklength)
+    {
+      d_blocklength = blocklength;
+    }
+
+    size_t
+    interference_energy_detector_cc_impl::blocklength() const
+    {
+      return d_blocklength;
     }
 
     void
@@ -99,14 +142,42 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      float* ed_val, *voe_val;
-      if(output_items.size()==3){
+      memcpy(out, in, sizeof(gr_complex) * noutput_items);
+      float* ed_val=NULL;
+      if(output_items.size()==2){
         ed_val = (float*) output_items[1];
-        voe_val = (float*) output_items[2];
+        //voe_val = (float*) output_items[2];
+      }
+      //float mean, stddev;
+      // Do <+signal processing+>
+      //cal energy val
+      float * v_stddev = (float*) volk_malloc(sizeof(float),volk_get_alignment());
+      float * v_mean = (float*) volk_malloc(sizeof(float),volk_get_alignment());
+      volk_32fc_magnitude_squared_32f(d_energy_reg, in, noutput_items);
+      //cal mean and std of energy
+      volk_32f_stddev_and_mean_32f_x2(v_stddev, v_mean, d_energy_reg, noutput_items);
+
+      //float mean = -100;
+      float var = pow(*(v_stddev),2) ; // variance
+      if(ed_val!=NULL){
+        for(int i=0;i<noutput_items;++i){
+          ed_val[i] = 10.0 * log10(d_energy_reg[i]);
+        }
+      }
+      
+      if(10.0*log10(*v_mean) > d_ed_thres_db){
+        add_item_tag(0,nitems_written(0),d_ed_tagname,pmt::from_float(10.0f*log10(*v_mean)),d_src_id);
+      }
+      if(10.0*log10(var) > d_voe_thres_db){
+        add_item_tag(0,nitems_written(0),d_voe_tagname,pmt::from_float(10.0f*log10(var)),d_src_id);
+        //pmt::pmt_t debug_info = pmt::make_dict();
+        //debug_info = pmt::dict_add(debug_info, pmt::intern("output_items"), pmt::from_long(noutput_items));
+        //debug_info = pmt::dict_add(debug_info, pmt::intern("items_written"), pmt::from_long(nitems_written(0)));
+        //message_port_pub(d_debug_port,debug_info);
       }
 
-      // Do <+signal processing+>
-
+      volk_free(v_stddev);
+      volk_free(v_mean);
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (noutput_items);

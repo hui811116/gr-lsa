@@ -31,7 +31,7 @@ namespace gr {
      private:
       // Nothing to declare in this block.
       float* d_energy_reg;
-      float* d_voe_reg;
+      //float* d_voe_reg;
       int d_blocklength;
       //size_t d_buffer_length;
       float d_ed_thres_db;
@@ -39,6 +39,8 @@ namespace gr {
 
       pmt::pmt_t d_voe_tagname;
       pmt::pmt_t d_ed_tagname;
+      pmt::pmt_t d_src_id;
+      pmt::pmt_t d_debug_port;
 
      public:
       interference_energy_detector_cc_impl(
