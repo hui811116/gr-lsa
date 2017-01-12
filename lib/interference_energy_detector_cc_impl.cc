@@ -42,7 +42,7 @@ namespace gr {
           ed_tagname,
           voe_tagname,
           ed_threshold,
-          voe_tagname,
+          voe_threshold,
           blocklength));
     }
 
@@ -55,25 +55,24 @@ namespace gr {
       float ed_threshold,
       float voe_threshold,
       size_t blocklength)
-      : gr::sync_block("interference_energy_detector_cc",
+      : gr::block("interference_energy_detector_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make3(1, 3, sizeof(gr_complex), sizeof(float), sizeof(float))),
-      d_ed_tagname(pmt::string_to_symbol(ed_tagname)),
-      d_voe_tagname(pmt::string_to_symbol(voe_tagname))
+              gr::io_signature::make3(1, 3, sizeof(gr_complex), sizeof(float), sizeof(float)))
     {
       if(blocklength==0){
-        std::invalid_argument("Invalid Blocklength");
+        std::invalid_argument("Invalid argument: blocklength must be greater than 0");
         return;
       }
+      set_blocklength(blocklength);
       set_ed_threshold(ed_threshold);
       set_voe_threshold(voe_threshold);
-      set_blocklength(blocklength);
 
       const size_t max_size = 32*1024;
-      d_energy_reg = (float*) volk_malloc( sizeof(float) * max_size, volk_get_alignment());
-      d_voe_reg    = (float*) volk_malloc( sizeof(float) * max_size, volk_get_alignment());
+      d_energy_reg = (float*) volk_malloc( sizeof(float)*max_size, volk_get_alignment());
+      d_voe_reg = (float*) volk_malloc(sizeof(float) * max_size, volk_get_alignment());
 
       set_tag_propagation_policy(TPP_DONT);
+      set_output_multiple(d_blocklength);
     }
 
     /*
@@ -85,22 +84,32 @@ namespace gr {
       volk_free(d_voe_reg);
     }
 
+    void
+    interference_energy_detector_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
+    {
+      /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
+      ninput_items_required[0] = d_blocklength * (noutput_items/d_blocklength);
+    }
+
     int
-    interference_energy_detector_cc_impl::work(int noutput_items,
-        gr_vector_const_void_star &input_items,
-        gr_vector_void_star &output_items)
+    interference_energy_detector_cc_impl::general_work (int noutput_items,
+                       gr_vector_int &ninput_items,
+                       gr_vector_const_void_star &input_items,
+                       gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      float* ed_val, voe_val;
+      float* ed_val, *voe_val;
       if(output_items.size()==3){
-        //require energy value and interference value
         ed_val = (float*) output_items[1];
         voe_val = (float*) output_items[2];
       }
 
       // Do <+signal processing+>
-      volk_32fc_magnitude_squared_32f(d_energy_reg, in, )
+
+      // Tell runtime system how many input items we consumed on
+      // each input stream.
+      consume_each (noutput_items);
 
       // Tell runtime system how many output items we produced.
       return noutput_items;

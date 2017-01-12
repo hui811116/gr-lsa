@@ -23,7 +23,8 @@
 #define INCLUDED_LSA_INTERFERENCE_ENERGY_DETECTOR_CC_H
 
 #include <lsa/api.h>
-#include <gnuradio/sync_block.h>
+#include <gnuradio/block.h>
+
 
 namespace gr {
   namespace lsa {
@@ -33,7 +34,8 @@ namespace gr {
      * \ingroup lsa
      *
      */
-    class LSA_API interference_energy_detector_cc : virtual public gr::sync_block
+
+    class LSA_API interference_energy_detector_cc : virtual public gr::block
     {
      public:
       typedef boost::shared_ptr<interference_energy_detector_cc> sptr;
@@ -46,7 +48,13 @@ namespace gr {
        * class. lsa::interference_energy_detector_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make();
+
+      static sptr make(
+        const std::string& ed_tagname,
+        const std::string& voe_tagname,
+        float ed_threshold,
+        float voe_threshold,
+        size_t blocklength);
     };
 
   } // namespace lsa

@@ -33,13 +33,12 @@ namespace gr {
       float* d_energy_reg;
       float* d_voe_reg;
       int d_blocklength;
-      size_t d_buffer_length;
-      float d_ed_threshold_db;
-      float d_voe_threshold_db;
+      //size_t d_buffer_length;
+      float d_ed_thres_db;
+      float d_voe_thres_db;
 
       pmt::pmt_t d_voe_tagname;
       pmt::pmt_t d_ed_tagname;
-      //pmt::pmt_t d_debug;
 
      public:
       interference_energy_detector_cc_impl(
@@ -51,9 +50,12 @@ namespace gr {
       ~interference_energy_detector_cc_impl();
 
       // Where all the action really happens
-      int work(int noutput_items,
-         gr_vector_const_void_star &input_items,
-         gr_vector_void_star &output_items);
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+
+      int general_work(int noutput_items,
+           gr_vector_int &ninput_items,
+           gr_vector_const_void_star &input_items,
+           gr_vector_void_star &output_items);
 
       void set_ed_threshold(float threshold_db);
       float ed_threshold() const;
@@ -63,8 +65,6 @@ namespace gr {
 
       void set_blocklength(size_t blocklength);
       size_t blocklength() const;
-
-
     };
 
   } // namespace lsa
