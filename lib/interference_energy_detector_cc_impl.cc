@@ -154,27 +154,24 @@ namespace gr {
       float * v_stddev = (float*) volk_malloc(sizeof(float),volk_get_alignment());
       float * v_mean = (float*) volk_malloc(sizeof(float),volk_get_alignment());
       volk_32fc_magnitude_squared_32f(d_energy_reg, in, noutput_items);
-      //cal mean and std of energy
-      volk_32f_stddev_and_mean_32f_x2(v_stddev, v_mean, d_energy_reg, noutput_items);
-
-      //float mean = -100;
-      float var = pow(*(v_stddev),2) ; // variance
       if(ed_val!=NULL){
-        for(int i=0;i<noutput_items;++i){
-          ed_val[i] = 10.0 * log10(d_energy_reg[i]);
+          for(int i=0;i<noutput_items;++i){
+            ed_val[i] = 10.0 * log10(d_energy_reg[i]);
+          }
+        }
+      int iter = noutput_items /d_blocklength;
+      for(int i=0; i < iter ; ++i){
+        //cal mean and std of energy
+        volk_32f_stddev_and_mean_32f_x2(v_stddev, v_mean, d_energy_reg + i*d_blocklength, d_blocklength);
+        float var = pow(*(v_stddev),2) ; // variance
+        if(10.0*log10(*v_mean) > d_ed_thres_db){
+          add_item_tag(0,nitems_written(0)+i*d_blocklength,d_ed_tagname,pmt::from_float(10.0f*log10(*v_mean)),d_src_id);
+        }
+        if(10.0*log10(var) > d_voe_thres_db){
+          add_item_tag(0,nitems_written(0)+i*d_blocklength,d_voe_tagname,pmt::from_float(10.0f*log10(var)),d_src_id);
         }
       }
       
-      if(10.0*log10(*v_mean) > d_ed_thres_db){
-        add_item_tag(0,nitems_written(0),d_ed_tagname,pmt::from_float(10.0f*log10(*v_mean)),d_src_id);
-      }
-      if(10.0*log10(var) > d_voe_thres_db){
-        add_item_tag(0,nitems_written(0),d_voe_tagname,pmt::from_float(10.0f*log10(var)),d_src_id);
-        //pmt::pmt_t debug_info = pmt::make_dict();
-        //debug_info = pmt::dict_add(debug_info, pmt::intern("output_items"), pmt::from_long(noutput_items));
-        //debug_info = pmt::dict_add(debug_info, pmt::intern("items_written"), pmt::from_long(nitems_written(0)));
-        //message_port_pub(d_debug_port,debug_info);
-      }
 
       volk_free(v_stddev);
       volk_free(v_mean);
