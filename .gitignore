@@ -5,6 +5,7 @@ log/*.log
 *.app
 build/
 examples/*.py
+examples/*.pyc
 *.dat
 *.out
 tag
