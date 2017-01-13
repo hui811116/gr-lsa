@@ -23,9 +23,6 @@
 install(FILES
     api.h
     eng_det_cc.h
-    autoCorr_cc.h
-    correlate_extract_cc.h
-    my_access_corr_bb.h
     header_payload_parser_cb.h
     su_header_prefix.h
     su_sample_receiver_cb.h

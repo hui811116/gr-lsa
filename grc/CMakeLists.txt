@@ -18,9 +18,6 @@
 # Boston, MA 02110-1301, USA.
 install(FILES
     lsa_eng_det_cc.xml
-    lsa_autoCorr_cc.xml
-    lsa_correlate_extract_cc.xml
-    lsa_my_access_corr_bb.xml
     lsa_header_payload_parser_cb.xml
     lsa_su_header_prefix.xml
     lsa_su_sample_receiver_cb.xml
