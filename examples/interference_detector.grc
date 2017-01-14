@@ -904,6 +904,10 @@
       <value></value>
     </param>
     <param>
+      <key>debug</key>
+      <value>False</value>
+    </param>
+    <param>
       <key>ed_thres</key>
       <value>-30</value>
     </param>

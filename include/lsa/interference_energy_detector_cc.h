@@ -54,7 +54,8 @@ namespace gr {
         const std::string& voe_tagname,
         float ed_threshold,
         float voe_threshold,
-        size_t blocklength);
+        size_t blocklength,
+        bool debug);
     };
 
   } // namespace lsa

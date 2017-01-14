@@ -36,7 +36,8 @@ namespace gr {
       const std::string& voe_tagname,
       float ed_threshold,
       float voe_threshold,
-      size_t blocklength)
+      size_t blocklength,
+      bool debug)
     {
       return gnuradio::get_initial_sptr
         (new interference_energy_detector_cc_impl(
@@ -44,7 +45,8 @@ namespace gr {
           voe_tagname,
           ed_threshold,
           voe_threshold,
-          blocklength));
+          blocklength,
+          debug));
     }
 
     /*
@@ -55,7 +57,8 @@ namespace gr {
       const std::string& voe_tagname,
       float ed_threshold,
       float voe_threshold,
-      size_t blocklength)
+      size_t blocklength,
+      bool debug)
       : gr::block("interference_energy_detector_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
@@ -70,10 +73,10 @@ namespace gr {
       set_blocklength(blocklength);
       set_ed_threshold(ed_threshold);
       set_voe_threshold(voe_threshold);
+      d_debug = debug;
 
       const size_t max_size = 32*1024;
       d_energy_reg = (float*) volk_malloc( sizeof(float)*max_size, volk_get_alignment());
-      //d_voe_reg = (float*) volk_malloc(sizeof(float) * max_size, volk_get_alignment());
 
       set_tag_propagation_policy(TPP_DONT);
       set_output_multiple(d_blocklength);
@@ -88,7 +91,6 @@ namespace gr {
     interference_energy_detector_cc_impl::~interference_energy_detector_cc_impl()
     {
       volk_free(d_energy_reg);
-      //volk_free(d_voe_reg);
     }
 
     void
@@ -128,6 +130,16 @@ namespace gr {
     }
 
     void
+    interference_energy_detector_cc_impl::print(float var_db,float ed_db)
+    {
+      std::cout << "<Interference detected>";
+      std::cout << " variance: "<<var_db<<" dB,";
+      std::cout << " energy: " <<ed_db<<" dB,";
+      std::cout << " threshold (VoE, Ed): (" <<d_voe_thres_db<<","<<d_ed_thres_db<<")";
+      std::cout << std::endl;
+    }
+
+    void
     interference_energy_detector_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
@@ -146,9 +158,7 @@ namespace gr {
       float* ed_val=NULL;
       if(output_items.size()==2){
         ed_val = (float*) output_items[1];
-        //voe_val = (float*) output_items[2];
       }
-      //float mean, stddev;
       // Do <+signal processing+>
       //cal energy val
       float * v_stddev = (float*) volk_malloc(sizeof(float),volk_get_alignment());
@@ -169,6 +179,9 @@ namespace gr {
         }
         if(10.0*log10(var) > d_voe_thres_db){
           add_item_tag(0,nitems_written(0)+i*d_blocklength,d_voe_tagname,pmt::from_float(10.0f*log10(var)),d_src_id);
+          if(d_debug){
+            print(10.0*log10(var),10.0*log10(*v_mean));
+          }
         }
       }
       

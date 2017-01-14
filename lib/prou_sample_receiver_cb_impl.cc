@@ -123,10 +123,6 @@ namespace gr {
 
       message_port_register_out(d_debug_port);
       set_tag_propagation_policy(TPP_DONT);
-
-      //volk testing
-      //const int alignment_multiple = volk_get_alignment() / sizeof(float);
-      //set_alignment(std::max(1,alignment_multiple));
       
       d_var_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
       d_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
@@ -153,7 +149,6 @@ namespace gr {
     prou_sample_receiver_cb_impl::parse_su_header(uint8_t& qidx, uint8_t& qsize, uint16_t& pld_len, const std::vector<unsigned char>& input)
     {
       uint16_t len0,len1;
-      //int pld_len;
       len0 = _get_bit16(0,input);
       len1 = _get_bit16(16,input);
       if(len0 == len1)
@@ -292,11 +287,10 @@ namespace gr {
       volk_32f_stddev_and_mean_32f_x2(stddev,mean, d_eng_buffer, length);
       
       float var_eng_db = 20.0*log10(*stddev);
-      bool voe_result = (var_eng_db > threshold_db);
       volk_free(mean);
       volk_free(stddev);
 
-      return voe_result;
+      return (var_eng_db > threshold_db);
     }
 
     void
@@ -371,9 +365,6 @@ namespace gr {
       }
       total_len = 0;
       gr_complex* retx_all = (gr_complex*) malloc(sizeof(gr_complex)* total_len);
-      //int alignment = volk_get_alignment();
-      //gr_complex* retx_all = (gr_complex*) volk_malloc(sizeof(gr_complex) * total_len, alignment);
-      //gr_complex* pkt_buf = (gr_complex*) volk_malloc(sizeof(gr_complex) * max_len, alignment);
       std::vector<int> retx_idx;
 
       //NOTE: this version does not replace the header part of the retransmitted packets
@@ -412,7 +403,6 @@ namespace gr {
       }
 
       free(retx_all);
-      //volk_free(retx_all);
     }
 
     //OUTPUT BUFFER FUNCTIONS
@@ -539,7 +529,6 @@ namespace gr {
     prou_sample_receiver_cb_impl::process_symbols()
     {
       pmt::pmt_t debug_info = pmt::make_dict();
-      //int count = 0;
       unsigned char symbol;
       uint64_t check_bits;
       for(d_process_idx ;d_process_idx < d_process_size; d_process_idx++){
@@ -562,7 +551,6 @@ namespace gr {
               d_su_bit_input.push_back( ((symbol >> (d_su_bps-1-i)) & 0x01) );
             }
             if(d_su_bit_input.size() == d_su_hdr_bits_len){
-              //uint16_t pld_len;
               if(parse_su_header(d_qidx,d_qsize,d_pld_len, d_su_bit_input)){
                 d_state = PAYLOAD_WAIT;
                 d_su_pld_counter = ( d_pld_len*8)/d_su_pld_bps;
@@ -604,7 +592,6 @@ namespace gr {
         }
       }
       //update
-      //d_process_idx = d_process_size;
       return d_output_buffer_size!=0;
     }
 
@@ -612,7 +599,6 @@ namespace gr {
     prou_sample_receiver_cb_impl::append_samples(const gr_complex* in, int size, int& consume)
     {
       // forecast should handle the input sample length carefully
-      
       switch(d_intf_state)
       {
         case CLEAR:
