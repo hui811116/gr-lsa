@@ -52,7 +52,10 @@ namespace gr {
         const gr::digital::constellation_sptr& su_hdr_const,
         int su_pld_bps,
         const std::string& su_accesscode,
-        int pu_nfilts,
+        //int pu_nfilts,
+        double plf_sps,
+        float plf_loop_bw,
+        const std::vector<float>& plf_taps,
         int su_nfilts,
         bool mode,
         bool debug);

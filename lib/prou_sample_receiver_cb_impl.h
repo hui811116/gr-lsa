@@ -38,19 +38,21 @@ namespace gr {
       size_t d_output_buffer_idx;
 
       // filter for proU signal
-      std::vector<gr::filter::kernel::fir_filter_ccf*> d_pu_filters;
-      int d_pu_nfilters;
-      std::vector< std::vector<float> > d_pu_taps;
-      float d_pu_loop_bw;
-      double d_pu_sps;
+      //std::vector<gr::filter::kernel::fir_filter_ccf*> d_pu_filters;
+      //int d_pu_nfilters;
+      //std::vector< std::vector<float> > d_pu_taps;
+      //float d_pu_loop_bw;
+      //double d_pu_sps;
 
 
       // filter for su signal
-      std::vector<gr::filter::kernel::fir_filter_ccf*> d_su_filters;
-      int d_su_nfilters;
-      std::vector< std::vector<float> > d_su_taps;
-      float d_su_loop_bw;
-      double d_su_sps;
+      //std::vector<gr::filter::kernel::fir_filter_ccf*> d_su_filters;
+      //std::vector<gr::filter::kernel::fir_filter_ccf*> d_su_diff_filters;
+      //int d_su_nfilters;
+      //std::vector< std::vector<float> > d_su_taps;
+      //std::vector< std::vector<float> > d_su_dtaps; 
+      //float d_su_loop_bw;
+      //double d_su_sps;
 
       // state registers
       int d_mode;
@@ -132,12 +134,58 @@ namespace gr {
       void _out_buffer_double_cap();
       void _out_buffer_reset_cap();
 
+      //su sync---polyphase clock sync
+      double d_plf_sps;
+      double d_plf_sample_num;
+      float d_plf_loop_bw;
+      float d_plf_damping;
+      float d_plf_alpha;
+      float d_plf_beta;
+
+      int d_plf_nfilts;
+      int d_plf_taps_per_filter;
+      std::vector<gr::filter::kernel::fir_filter_ccf*> d_plf_filters;
+      std::vector<gr::filter::kernel::fir_filter_ccf*> d_plf_diff_filters;
+      std::vector< std::vector<float> > d_plf_taps;
+      std::vector< std::vector<float> > d_plf_dtaps;
+      float d_plf_k;  //what
+      float d_plf_rate; //what
+      float d_plf_rate_i; // what
+      float d_plf_rate_f; // what
+      float d_plf_max_dev; // what
+      int d_plf_filtnum;
+      int d_plf_osps;
+      float d_plf_error;
+      int d_plf_out_idx;
+      // copy from original polyphase filter, seems like using these vars to handle tags
+      //uint64_t d_plf_old_in, d_plf_new_in, d_pld_last_out;
+
+      void plf_create_diff_taps(
+        const std::vector<float> &newtaps,
+        std::vector<float> &difftaps);
+
+      void plf_set_taps(
+        const std::vector<float> &newtaps,
+        std::vector< std::vector<float> > &ourtaps,
+        std::vector< gr::filter::kernel::fir_filter_ccf*> &ourfilter);      
+      
+      int plf_core(
+        gr_complex* out,
+        float* error,
+        const gr_complex* in,
+        int nsample,
+        int& nconsume);
+      //su sync---costas loop
+
      public:
       prou_sample_receiver_cb_impl(
         const gr::digital::constellation_sptr& su_hdr_const,
         int su_pld_bps,
         const std::string& su_accesscode,
-        int pu_nfilts,
+        //int pu_nfilts,
+        double d_plf_sps,
+        float d_plf_loop_bw,
+        const std::vector<float>& plf_taps,
         int su_nfilts,
         bool mode,
         bool debug);

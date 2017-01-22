@@ -26,6 +26,12 @@
 #include "prou_sample_receiver_cb_impl.h"
 #include <volk/volk.h>
 
+#include <gnuradio/math.h>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+
+
 namespace gr {
   namespace lsa {
 
@@ -34,7 +40,10 @@ namespace gr {
       const gr::digital::constellation_sptr& su_hdr_const,
       int su_pld_bps,
       const std::string& su_accesscode,
-      int pu_nfilts,
+      //int pu_nfilts,
+      double plf_sps,
+      float plf_loop_bw,
+      const std::vector<float> &plf_taps,
       int su_nfilts,
       bool mode,
       bool debug)
@@ -44,7 +53,10 @@ namespace gr {
           su_hdr_const,
           su_pld_bps,
           su_accesscode,
-          pu_nfilts,
+          //pu_nfilts,
+          plf_sps,
+          plf_loop_bw,
+          plf_taps,
           su_nfilts,
           mode,
           debug));
@@ -76,7 +88,10 @@ namespace gr {
       const gr::digital::constellation_sptr& su_hdr_const,
       int su_pld_bps,
       const std::string& su_accesscode,
-      int pu_nfilts,
+      //int pu_nfilts,
+      double plf_sps,
+      float plf_loop_bw,
+      const std::vector<float>& plf_taps,
       int su_nfilts,
       bool mode,
       bool debug)
@@ -85,11 +100,11 @@ namespace gr {
               gr::io_signature::make(1, 1, sizeof(gr_complex)))
     {
       //TODO: testing configuration, reivise for actual implementation
-      d_pu_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(32);
-      std::vector<float> vtaps(1.0);
-      for(int i=0;i<32;++i){
-        d_pu_filters[i] = new gr::filter::kernel::fir_filter_ccf(1, vtaps);
-      }
+      //d_pu_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(32);
+      //std::vector<float> vtaps(1.0);
+      //for(int i=0;i<32;++i){
+        //d_pu_filters[i] = new gr::filter::kernel::fir_filter_ccf(1, vtaps);
+      //}
       const size_t nitems = 128*1024;
       d_sig_buffer = new std::vector< std::vector<gr_complex> >;
       d_process_cap = nitems; //memory preallocated
@@ -126,6 +141,44 @@ namespace gr {
       
       d_var_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
       d_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
+
+      //su sync---polyphase clock sync
+      if(plf_taps.empty()){
+        throw std::runtime_error("ProU RX::Polyphase Sync::filter length should not be 0");
+      }
+      d_plf_nfilts = su_nfilts;
+      d_plf_sps = floor(plf_sps);
+      d_plf_damping = 2*d_plf_nfilts;
+      d_plf_loop_bw = plf_loop_bw;
+      d_plf_max_dev = 1.5;//FIXME use var here
+
+      d_plf_k = 0.0; // init phase
+      d_plf_rate = (d_plf_sps-floor(d_plf_sps)*(double)d_plf_nfilts);
+      d_plf_rate_i = (int)floor(d_plf_k);
+      d_plf_rate_f = d_plf_rate - (float)d_plf_rate_i;
+      d_plf_filtnum = (int)floor(d_plf_k);
+
+      d_plf_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(d_plf_nfilts);
+      d_plf_diff_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(d_plf_nfilts);
+
+      std::vector<float> vtaps(1,0);
+      for(int i=0 ; i < d_plf_nfilts; i++) {
+        d_plf_filters[i] = new gr::filter::kernel::fir_filter_ccf(1, vtaps);
+        d_plf_diff_filters[i] = new gr::filter::kernel::fir_filter_ccf(1, vtaps);
+      }
+
+      std::vector<float> dtaps;
+      plf_create_diff_taps(plf_taps, dtaps);
+      plf_set_taps(plf_taps, d_plf_taps, d_plf_filters);
+      plf_set_taps(dtaps, d_plf_dtaps, d_plf_diff_filters);
+
+      float denom = (1.0 + 2.0*d_plf_damping*d_plf_loop_bw + d_plf_loop_bw*d_plf_loop_bw);
+      d_plf_alpha = (4*d_plf_damping*d_plf_loop_bw) / denom;
+      d_plf_beta = (4*d_plf_loop_bw*d_plf_loop_bw) / denom;
+
+      d_plf_out_idx = 0;
+      d_plf_error = 0;
+      //su sync---costas loop
     }
 
     /*
@@ -133,9 +186,13 @@ namespace gr {
      */
     prou_sample_receiver_cb_impl::~prou_sample_receiver_cb_impl()
     {
-      for(int i=0;i<32;++i)
-      {
-        delete d_pu_filters[i];
+      //for(int i=0;i<32;++i)
+      //{
+        //delete d_pu_filters[i];
+      //}
+      for(int i=0;i<d_plf_nfilts;++i){
+        delete d_plf_filters[i];
+        delete d_plf_diff_filters[i];
       }
       d_sig_buffer->clear();
       delete d_sig_buffer;
@@ -159,6 +216,119 @@ namespace gr {
         return true;
       }
       return false;
+    }
+    //SU SYNC--- POLYPHASE CLOCK SYNC
+    void
+    prou_sample_receiver_cb_impl::plf_create_diff_taps(
+      const std::vector<float> &newtaps,
+      std::vector<float> &difftaps)
+    {
+      std::vector<float> diff_filter(3);
+      diff_filter[0] = -1;
+      diff_filter[1] = 0;
+      diff_filter[2] = 1;
+
+      float pwr=0;
+      difftaps.clear();
+      difftaps.push_back(0);
+      for(unsigned int i=0;i<newtaps.size()-2; i++){
+        float tap = 0;
+        for(unsigned int j=0;j<diff_filter.size();j++){
+          tap += diff_filter[j]*newtaps[i+j];
+        }
+        difftaps.push_back(tap);
+        pwr += fabsf(tap);
+      }
+      difftaps.push_back(0);
+      for (unsigned int i=0;i<difftaps.size();i++){
+        difftaps[i] *= d_plf_nfilts/pwr;
+        if(difftaps[i] != difftaps[i]) {
+          throw std::runtime_error("ProU RX::Polyphase Clock Sync::create_diff_taps produced NaN");
+        }
+      }
+    }
+
+    void
+    prou_sample_receiver_cb_impl::plf_set_taps(
+      const std::vector<float> &newtaps,
+      std::vector< std::vector<float> > &ourtaps,
+      std::vector< gr::filter::kernel::fir_filter_ccf*> &ourfilter)
+    {
+      int i,j;
+      unsigned int ntaps = newtaps.size();
+      d_plf_taps_per_filter = (unsigned)ceil((double)ntaps/(double)d_plf_nfilts);
+
+      ourtaps.resize(d_plf_nfilts);
+
+      std::vector<float> tmp_taps;
+      tmp_taps = newtaps;
+      while((float)(tmp_taps.size()) < d_plf_nfilts*d_plf_taps_per_filter)
+      {
+        tmp_taps.push_back(0.0);
+      }
+      for(i=0;i<d_plf_nfilts;i++){
+        ourtaps[i] = std::vector<float>(d_plf_taps_per_filter,0);
+        for(j=0;j<d_plf_taps_per_filter; j++){
+          ourtaps[i][j] = tmp_taps[i+j*d_plf_nfilts];
+        }
+      }
+      ourfilter[i]->set_taps(ourtaps[i]);
+      //FIXME (copy from original plf, check if this is neccessary)
+      //set_history(d_plf_taps_per_filter + d_plf_sps + d_plf_sps);
+      //set_output_multiples(d_osps);
+    }
+
+    int
+    prou_sample_receiver_cb_impl::plf_core(
+      gr_complex* out,
+      float* error,
+      const gr_complex* in,
+      int nsample,
+      int& nconsume)
+    {
+      int i =0, count =0;
+      float error_r, error_i;
+      while(i < nsample) {
+        while(d_plf_out_idx < d_plf_osps){
+          d_plf_filtnum = (int) floor(d_plf_k);
+          while(d_plf_filtnum >= d_plf_nfilts){
+            d_plf_k -= d_plf_nfilts;
+            d_plf_filtnum -= d_plf_nfilts;
+            count += 1;
+          }
+          while(d_plf_filtnum <0){
+            d_plf_k += d_plf_nfilts;
+            d_plf_filtnum += d_plf_nfilts;
+            count -= 1;
+          }
+          out[i+d_plf_out_idx] = d_plf_filters[d_plf_filtnum]->filter(&in[count+d_plf_out_idx]);
+          d_plf_k = d_plf_k + d_plf_rate_i + d_plf_rate_f;
+          d_plf_out_idx++;
+          if(i+d_plf_out_idx >= nsample) {
+            nconsume = count;
+            return i; // output numbers
+          }
+        }
+        //reset
+        d_plf_out_idx = 0;
+        gr_complex diff = d_plf_diff_filters[d_plf_filtnum]->filter(&in[count]);
+        error_r = out[i].real() * diff.real();
+        error_i = out[i].imag() * diff.imag();
+        d_plf_error = (error_i+error_r)/2.0;
+
+        for(int s =0; s<d_plf_sps;s++){
+          d_plf_rate_f = d_plf_rate_f + d_plf_beta*d_plf_error;
+          d_plf_k = d_plf_k + d_plf_rate_f + d_plf_alpha*d_plf_error;
+        }
+        // what
+        d_plf_rate_f = gr::branchless_clip(d_plf_rate_f, d_plf_max_dev);
+        i+=d_plf_osps;
+        count += (int)floor(d_plf_sps);
+      }
+      nconsume = count;
+      return i;
+      //FIXME
+      //make sure all input and outputs are connected  
     }
 
     //INTERFERENCE CANCELLATION HELPER FUNCTIONS
