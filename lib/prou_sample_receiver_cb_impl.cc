@@ -27,6 +27,9 @@
 #include <volk/volk.h>
 
 #include <gnuradio/math.h>
+#include <gnuradio/expj.h>
+#include <gnuradio/sincos.h>
+
 #include <cstdio>
 #include <cmath>
 #include <algorithm>
@@ -40,11 +43,12 @@ namespace gr {
       const gr::digital::constellation_sptr& su_hdr_const,
       int su_pld_bps,
       const std::string& su_accesscode,
-      //int pu_nfilts,
       double plf_sps,
       float plf_loop_bw,
       const std::vector<float> &plf_taps,
       int su_nfilts,
+      float costas_loop_bw,
+      int costas_order,
       bool mode,
       bool debug)
     {
@@ -53,11 +57,12 @@ namespace gr {
           su_hdr_const,
           su_pld_bps,
           su_accesscode,
-          //pu_nfilts,
           plf_sps,
           plf_loop_bw,
           plf_taps,
           su_nfilts,
+          costas_loop_bw,
+          costas_order,
           mode,
           debug));
     }
@@ -88,23 +93,21 @@ namespace gr {
       const gr::digital::constellation_sptr& su_hdr_const,
       int su_pld_bps,
       const std::string& su_accesscode,
-      //int pu_nfilts,
       double plf_sps,
       float plf_loop_bw,
       const std::vector<float>& plf_taps,
       int su_nfilts,
+      float costas_loop_bw,
+      int costas_order,
       bool mode,
       bool debug)
       : gr::block("prou_sample_receiver_cb",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(1, 1, sizeof(gr_complex)))
+              gr::io_signature::make(1, 1, sizeof(gr_complex))),
+      gr::blocks::control_loop(costas_loop_bw, 1.0,-1.0),
+      d_costas_phase_detector(NULL)
     {
       //TODO: testing configuration, reivise for actual implementation
-      //d_pu_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(32);
-      //std::vector<float> vtaps(1.0);
-      //for(int i=0;i<32;++i){
-        //d_pu_filters[i] = new gr::filter::kernel::fir_filter_ccf(1, vtaps);
-      //}
       const size_t nitems = 128*1024;
       d_sig_buffer = new std::vector< std::vector<gr_complex> >;
       d_process_cap = nitems; //memory preallocated
@@ -179,6 +182,26 @@ namespace gr {
       d_plf_out_idx = 0;
       d_plf_error = 0;
       //su sync---costas loop
+      
+      d_costas_loop_bw = costas_loop_bw;
+      d_costas_order = costas_order;
+      d_costas_error = 0.0;
+      d_costas_noise = 1.0;
+      switch(d_costas_order)
+      {
+        case 2:
+          d_costas_phase_detector = &prou_sample_receiver_cb_impl::phase_detector_2;
+        break;
+        case 4:
+          d_costas_phase_detector = &prou_sample_receiver_cb_impl::phase_detector_4;
+        break;
+        case 8:
+          d_costas_phase_detector = &prou_sample_receiver_cb_impl::phase_detector_8;
+        break;
+        default:
+          std::invalid_argument("ProU RX::Costas_loop::Order should be 2,4,8");
+        break;
+      }
     }
 
     /*
@@ -186,10 +209,6 @@ namespace gr {
      */
     prou_sample_receiver_cb_impl::~prou_sample_receiver_cb_impl()
     {
-      //for(int i=0;i<32;++i)
-      //{
-        //delete d_pu_filters[i];
-      //}
       for(int i=0;i<d_plf_nfilts;++i){
         delete d_plf_filters[i];
         delete d_plf_diff_filters[i];
@@ -330,7 +349,53 @@ namespace gr {
       //FIXME
       //make sure all input and outputs are connected  
     }
+    //SU FREQUENCY/PHASE SYNC::COSTAS_LOOP
+    float
+    prou_sample_receiver_cb_impl::phase_detector_8(gr_complex sample) const
+    {
+      float K = sqrt(2.0)-1;
+      if(fabsf(sample.real()) >= fabsf(sample.imag())){
+        return ((sample.real() > 0?1.0:-1.0) * sample.imag() - (sample.imag()>0 ? 1.0:-1.0) * sample.real()*K);
+      }
+      else{
+        return ((sample.real() > 0?1.0:-1.0) * sample.imag() *K-(sample.imag()>0?1.0:-1.0)*sample.real());
+      }
+    }
+    float
+    prou_sample_receiver_cb_impl::phase_detector_4(gr_complex sample) const
+    {
+      return ((sample.real()>0?1.0:-1.0) *sample.imag() - (sample.imag()>0?1.0:-1.0) * sample.real());
+    }
+    float
+    prou_sample_receiver_cb_impl::phase_detector_2(gr_complex sample) const
+    {
+      return (sample.real()*sample.imag());
+    }
+    int 
+    prou_sample_receiver_cb_impl::costas_core(
+      gr_complex* out,
+      float* error_ang,
+      int& out_count,
+      const gr_complex* in,
+      int nsample
+      )
+    {
+      gr_complex nco_out;
+      for(int i=0;i<nsample;++i){
+        nco_out = gr_expj(-d_phase);
+        out[i]=in[i] * nco_out;
 
+        d_costas_error = (*this.*d_costas_phase_detector)(out[i]);
+        d_costas_error = gr::branchless_clip(d_costas_error,1.0);
+
+        advance_loop(d_costas_error);
+        phase_wrap();
+        frequency_limit();
+
+        error_ang[i] = d_freq;
+      }
+      return nsample;
+    }
     //INTERFERENCE CANCELLATION HELPER FUNCTIONS
     uint16_t
     prou_sample_receiver_cb_impl::_get_bit16(int begin_idx, const std::vector<unsigned char>& input)

@@ -26,6 +26,7 @@
 #include <gnuradio/block.h>
 #include <gnuradio/filter/fir_filter.h>
 #include <gnuradio/digital/constellation.h>
+#include <gnuradio/blocks/control_loop.h>
 
 namespace gr {
   namespace lsa {
@@ -35,7 +36,9 @@ namespace gr {
      * \ingroup lsa
      *
      */
-    class LSA_API prou_sample_receiver_cb : virtual public gr::block
+    class LSA_API prou_sample_receiver_cb
+    : virtual public gr::block,
+      virtual public gr::blocks::control_loop
     {
      public:
       typedef boost::shared_ptr<prou_sample_receiver_cb> sptr;
@@ -52,11 +55,12 @@ namespace gr {
         const gr::digital::constellation_sptr& su_hdr_const,
         int su_pld_bps,
         const std::string& su_accesscode,
-        //int pu_nfilts,
         double plf_sps,
         float plf_loop_bw,
         const std::vector<float>& plf_taps,
         int su_nfilts,
+        float costas_loop_bw,
+        int costas_order,
         bool mode,
         bool debug);
     };

@@ -4,7 +4,7 @@
   <key>lsa_prou_sample_receiver_cb</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.prou_sample_receiver_cb($su_hdr_const,$su_pld_bps,$su_accesscode,$plf_sps,$plf_loop_bw,$plf_taps, $su_nfilts,$mode, $debug)</make>
+  <make>lsa.prou_sample_receiver_cb($su_hdr_const,$su_pld_bps,$su_accesscode,$plf_sps,$plf_loop_bw,$plf_taps, $su_nfilts,$cost_loop_bw,$cost_order,$mode, $debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -45,6 +45,16 @@
   <param>
     <name>number of taps (SU)</name>
     <key>su_nfilts</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>SU costas loop bandwidth</name>
+    <key>cost_loop_bw</key>
+    <type>real</type>
+  </param>
+  <param>
+    <name>SU costas order</name>
+    <key>cost_order</key>
     <type>int</type>
   </param>
   <param>

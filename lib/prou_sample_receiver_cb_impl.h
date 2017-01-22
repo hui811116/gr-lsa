@@ -37,29 +37,10 @@ namespace gr {
       size_t d_output_buffer_size;
       size_t d_output_buffer_idx;
 
-      // filter for proU signal
-      //std::vector<gr::filter::kernel::fir_filter_ccf*> d_pu_filters;
-      //int d_pu_nfilters;
-      //std::vector< std::vector<float> > d_pu_taps;
-      //float d_pu_loop_bw;
-      //double d_pu_sps;
-
-
-      // filter for su signal
-      //std::vector<gr::filter::kernel::fir_filter_ccf*> d_su_filters;
-      //std::vector<gr::filter::kernel::fir_filter_ccf*> d_su_diff_filters;
-      //int d_su_nfilters;
-      //std::vector< std::vector<float> > d_su_taps;
-      //std::vector< std::vector<float> > d_su_dtaps; 
-      //float d_su_loop_bw;
-      //double d_su_sps;
-
       // state registers
       int d_mode;
       int d_state;
       int d_intf_state;
-      //int d_output_buffer_state;
-      //int d_intf_sync_state;
 
       // message port name
       pmt::pmt_t d_debug_port;
@@ -176,17 +157,34 @@ namespace gr {
         int nsample,
         int& nconsume);
       //su sync---costas loop
+      int d_costas_order;
+      float d_costas_error;
+      float d_costas_noise;
+      float d_costas_loop_bw;
+
+      float phase_detector_8(gr_complex sample) const;
+      float phase_detector_4(gr_complex sample) const;
+      float phase_detector_2(gr_complex sample) const;
+
+      float (prou_sample_receiver_cb_impl::*d_costas_phase_detector)(gr_complex sample) const;
+      int costas_core(
+        gr_complex* out,
+        float* error_ang,
+        int& out_count,
+        const gr_complex* in,
+        int nsample);
 
      public:
       prou_sample_receiver_cb_impl(
         const gr::digital::constellation_sptr& su_hdr_const,
         int su_pld_bps,
         const std::string& su_accesscode,
-        //int pu_nfilts,
         double d_plf_sps,
         float d_plf_loop_bw,
         const std::vector<float>& plf_taps,
         int su_nfilts,
+        float costas_loop_bw,
+        int costas_order,
         bool mode,
         bool debug);
       ~prou_sample_receiver_cb_impl();
