@@ -46,12 +46,16 @@ namespace gr {
       pmt::pmt_t d_debug_port;
       bool d_debug;
       
-      // sample or symbol buffers
-
-      std::vector< std::vector<gr_complex> >* d_sig_buffer;
-      gr_complex* d_process_buffer;
+      // symbol buffer
+      gr_complex* d_sample_buffer; // for samples
+      size_t d_sample_cap;
+      const size_t d_sample_cap_init;
+      size_t d_sample_size;
+      size_t d_sample_idx;
+      // sample buffer
+      gr_complex* d_process_buffer;// for symbols
       size_t d_process_cap;
-      size_t d_cap_init;
+      const size_t d_cap_init;
       size_t d_process_size;
       size_t d_process_idx;
 
@@ -59,11 +63,11 @@ namespace gr {
       gr::digital::constellation_sptr d_su_hdr_const;
       uint64_t d_su_sync_reg;
       size_t d_su_code_len;
-      size_t d_su_hdr_bits_len;
+      const size_t d_su_hdr_bits_len;
       uint64_t d_su_accesscode;
       uint64_t d_su_code_mask;
-      int d_su_bps;
-      int d_su_pld_bps;
+      const int d_su_bps;
+      const int d_su_pld_bps;
       int d_su_pld_counter;
 
       size_t d_su_pkt_begin;
@@ -88,19 +92,18 @@ namespace gr {
       // interference cancellation mode: helper funtions
       bool intf_decision_maker();
       void reset_intf_reg();
-
-      bool calc_var_energy(const gr_complex* array, size_t length, float threshold_db, int bin);
+      bool calc_var_energy(const gr_complex* array, size_t length, float threshold_db);
       void calc_cei_all();
-
       void update_retx_info(bool test_voe);
       void do_interference_cancellation();
+      void interference_detector(std::vector<bool>& result, int window);
 
       // buffer helper functions
-      void reduce_sample(int nleft);
+      void reduce_sample(int divider);
       void double_cap();
       void reset_buffer();
-
       bool append_samples (const gr_complex* in, int size, int& consume);
+      void su_sample_sync(const std::vector<bool>& sensing_result, int window);
 
 
       //su sync helper functions
@@ -170,7 +173,6 @@ namespace gr {
       int costas_core(
         gr_complex* out,
         float* error_ang,
-        int& out_count,
         const gr_complex* in,
         int nsample);
 

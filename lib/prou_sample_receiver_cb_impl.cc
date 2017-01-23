@@ -105,16 +105,19 @@ namespace gr {
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
       gr::blocks::control_loop(costas_loop_bw, 1.0,-1.0),
-      d_costas_phase_detector(NULL)
+      d_costas_phase_detector(NULL),
+      d_process_buffer(NULL),
+      d_sample_buffer(NULL),
+      d_su_bps(su_hdr_const->bits_per_symbol()),
+      d_su_pld_bps(su_pld_bps),
+      d_sample_cap_init(128*1024),
+      d_cap_init(floor(128*1024/plf_sps)),
+      d_su_hdr_bits_len((4+2+2)*8)
     {
       //TODO: testing configuration, reivise for actual implementation
-      const size_t nitems = 128*1024;
-      d_sig_buffer = new std::vector< std::vector<gr_complex> >;
-      d_process_cap = nitems; //memory preallocated
-      d_cap_init = nitems;
-      d_process_buffer = new gr_complex[d_process_cap];
-      d_process_size = 0;
-      d_process_idx = 0;
+      d_sample_cap = d_sample_cap_init;
+      d_process_cap = d_cap_init;
+      reset_buffer();
 
       d_mode = (mode)? INTERFERENCE_CANCELLATION : STANDARD;
       d_state = SEARCH_ACCESSCODE;
@@ -129,12 +132,9 @@ namespace gr {
       }
 
       d_su_hdr_const = su_hdr_const->base();
-      d_su_bps = su_hdr_const->bits_per_symbol();
-      d_su_pld_bps = su_pld_bps;
-      d_su_hdr_bits_len = (4+2+2)*8;
-
+      
       //output sample buffer initialization
-      d_output_buffer_cap = nitems;
+      d_output_buffer_cap = d_cap_init;
       d_output_buffer = new gr_complex[d_output_buffer_cap];
       d_output_buffer_size = 0;
       d_output_buffer_idx = 0;
@@ -142,8 +142,8 @@ namespace gr {
       message_port_register_out(d_debug_port);
       set_tag_propagation_policy(TPP_DONT);
       
-      d_var_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
-      d_eng_buffer = (float *) volk_malloc(sizeof(float)*nitems, volk_get_alignment());
+      d_var_eng_buffer = (float *) volk_malloc(sizeof(float)*d_cap_init, volk_get_alignment());
+      d_eng_buffer = (float *) volk_malloc(sizeof(float)*d_cap_init, volk_get_alignment());
 
       //su sync---polyphase clock sync
       if(plf_taps.empty()){
@@ -213,8 +213,10 @@ namespace gr {
         delete d_plf_filters[i];
         delete d_plf_diff_filters[i];
       }
-      d_sig_buffer->clear();
-      delete d_sig_buffer;
+      //d_sig_buffer->clear();
+      //delete d_sig_buffer;
+      //TODO check all samples are deleted
+      delete [] d_sample_buffer;
       delete [] d_process_buffer;
       delete [] d_output_buffer;
       volk_free(d_var_eng_buffer);
@@ -375,7 +377,6 @@ namespace gr {
     prou_sample_receiver_cb_impl::costas_core(
       gr_complex* out,
       float* error_ang,
-      int& out_count,
       const gr_complex* in,
       int nsample
       )
@@ -441,20 +442,41 @@ namespace gr {
 
     //BUFFER HELPER FUNCTION
     void
-    prou_sample_receiver_cb_impl::reduce_sample(int nleft)
+    prou_sample_receiver_cb_impl::reduce_sample(int divider)
     {
-      assert(nleft<d_process_size);
-      gr_complex tmp[nleft];
-      memcpy(tmp, d_process_buffer + ( d_process_size - nleft), sizeof(gr_complex) * nleft);
-      memcpy(d_process_buffer, tmp, sizeof(gr_complex) * nleft);
-      d_process_size = nleft;
-      d_process_idx = nleft;
+      int nleft = d_sample_size/divider;
+      int nleft_symbol = d_process_size/divider;
+
+      gr_complex tmp[d_sample_size];
+      memcpy(tmp,d_sample_buffer+nleft,sizeof(gr_complex)*(d_sample_size-nleft));
+      memcpy(d_sample_buffer, tmp, sizeof(gr_complex)*(d_sample_size-nleft));
+      d_sample_size -= nleft;
+      //d_sample_idx = 0; //if use this, sync continue without resync
+      if(d_sample_idx >nleft){
+        d_sample_idx -= nleft;
+      }
+
+      gr_complex tmp_symbol[d_process_size];
+      memcpy(tmp_symbol, d_process_buffer+nleft_symbol,sizeof(gr_complex)*(d_process_size-nleft_symbol));
+      memcpy(d_process_buffer, tmp_symbol, sizeof(gr_complex)*(d_process_size-nleft_symbol));
+      d_process_size-= nleft_symbol;
+      if(d_process_idx > nleft_symbol){
+        d_process_idx-= nleft_symbol;
+      }
     }
 
     void
     prou_sample_receiver_cb_impl::double_cap()
     {
+      gr_complex tmp_sample[d_sample_size];
       gr_complex tmp[d_process_size];
+
+      memcpy(tmp_sample, d_sample_buffer, sizeof(gr_complex)*d_sample_size);
+      delete [] d_sample_buffer;
+      d_sample_buffer = new gr_complex[d_sample_cap*2];
+      memcpy(d_sample_buffer, tmp_sample, sizeof(gr_complex)*d_sample_size);
+      d_sample_cap*=2;
+      
       memcpy(tmp, d_process_buffer, sizeof(gr_complex)*d_process_size);
       delete [] d_process_buffer;
       d_process_buffer = new gr_complex[d_process_cap*2];
@@ -466,11 +488,19 @@ namespace gr {
     void
     prou_sample_receiver_cb_impl::reset_buffer()
     {
-      delete [] d_process_buffer;
+      if(d_process_buffer!=NULL)
+        delete [] d_process_buffer;
       d_process_buffer = new gr_complex[d_cap_init];
       d_process_cap = d_cap_init;
       d_process_size = 0;
       d_process_idx = 0;
+
+      if(d_sample_buffer!=NULL)
+        delete [] d_sample_buffer;
+      d_sample_buffer = new gr_complex[d_sample_cap_init];
+      d_sample_cap = d_sample_cap_init;
+      d_sample_size = 0;
+      d_sample_idx = 0;
     }
 
     //INTERFERENCE CANCELLER FUNCTIONS
@@ -509,7 +539,7 @@ namespace gr {
     }
 
     bool
-    prou_sample_receiver_cb_impl::calc_var_energy(const gr_complex* in, size_t length, float threshold_db, int bin)
+    prou_sample_receiver_cb_impl::calc_var_energy(const gr_complex* in, size_t length, float threshold_db)
     {
       assert(length < 1024*1024);
       float voe = -1000;
@@ -724,7 +754,7 @@ namespace gr {
     {
       //cei will be kept until this function ends
       int pkt_symbol_len = d_pld_len*8/d_su_pld_bps + d_su_hdr_bits_len/d_su_bps;
-      bool test_voe = calc_var_energy(d_process_buffer + d_su_pkt_begin, pkt_symbol_len,-40,5);
+      bool test_voe = calc_var_energy(d_process_buffer + d_su_pkt_begin, pkt_symbol_len,-40.0);
       switch(d_intf_state)
       {
         case CLEAR:
@@ -823,6 +853,7 @@ namespace gr {
             d_su_pld_counter--;
           break;
           default:
+            std::runtime_error("ProU RX::process_symbols::entering wrong state");
           break;
         }
       }
@@ -830,21 +861,74 @@ namespace gr {
       return d_output_buffer_size!=0;
     }
 
+    void
+    prou_sample_receiver_cb_impl::su_sample_sync(const std::vector<bool>& sensing_result, int window)
+    {
+      //int nsample =d_sample_size-d_sample_idx;
+      //TODO: compare the available space of cotas and polyphase and choose the smaller one
+      int plf_consume, plf_total_consume=0;
+      int plf_out, costas_out; // costas is sync block, input num = output num
+
+      int c_count=0, p_count=0;
+
+      gr_complex sync_out[8192];
+      float sync_plf_error[8192];
+      float sync_costas_error[4096];
+      int info_iter = sensing_result.size();
+      if(info_iter==0)
+        return;
+      int max_len = info_iter*window;
+      int info_count=0;
+      while( (info_count<info_iter) && ( (plf_total_consume + window) < max_len)){
+          if(!sensing_result[info_count]){
+            plf_out = plf_core(sync_out+p_count,sync_plf_error+plf_total_consume, d_sample_buffer+d_sample_idx+plf_total_consume,window, plf_consume);
+            costas_out = costas_core(d_process_buffer+d_process_idx+c_count, sync_costas_error+c_count,sync_out+p_count, plf_out);
+            p_count += plf_out;
+            plf_total_consume += plf_consume;
+            c_count += costas_out;
+          }
+          else{
+            plf_total_consume += window;
+            p_count += (window / d_plf_sps);
+            c_count += (window / d_plf_sps);
+          }
+          //skip since this window is interfered by su
+          info_count = floor(plf_total_consume/ window);
+      }
+      d_sample_idx += (plf_total_consume > max_len)? plf_total_consume-window : plf_total_consume;
+      d_process_size += (plf_total_consume > max_len)? c_count - (window/d_plf_sps):c_count;
+      //TODO: record freq and time error and rebuild interfering signal for cancellation
+    }
+
+    void
+    prou_sample_receiver_cb_impl::interference_detector(std::vector<bool>& result, int window)
+    {
+      double thres_db = -50.0;
+      int start_index = d_sample_idx;
+      //int nsample = d_sample_size-d_sample_idx;
+      int iter = (d_sample_size-d_sample_idx)/window;
+      for(int i=0;i<iter;++i){
+        result.push_back(calc_var_energy(d_sample_buffer+d_sample_idx+i*window,window,thres_db));
+      }
+      
+    }
+
     bool
     prou_sample_receiver_cb_impl::append_samples(const gr_complex* in, int size, int& consume)
     {
+      // sample queued in buffer, symbol wait for sync done
       // forecast should handle the input sample length carefully
       switch(d_intf_state)
       {
         case CLEAR:
-          if(d_process_size == d_process_cap){
-            reduce_sample(d_process_cap/3);
+          if(d_sample_size == d_sample_cap){
+            reduce_sample(2);
           }
         break;
         case RETRANSMISSION:
-          if(d_process_size +size > d_process_cap){
-            double_cap();
-            if(d_process_cap > 128*d_cap_init){
+          if(d_sample_size +size > d_sample_cap){
+            double_cap(); // sample and symbol both update
+            if(d_sample_cap > 64*d_sample_cap_init){
               //failed, force reset
               return false;
             }
@@ -855,21 +939,10 @@ namespace gr {
         break;
       }
       
-      consume = (size > (d_process_cap - d_process_size))? (d_process_cap - d_process_size) : size;
-      memcpy(d_process_buffer + d_process_size, in, sizeof(gr_complex)*consume);
-      d_process_size += consume;
-      //DEBUG <FIXME>
-      /*
-      if(d_debug){
-        pmt::pmt_t debug_info = pmt::make_dict();
-        debug_info = pmt::dict_add(debug_info, pmt::intern("proU_RX"),pmt::string_to_symbol("append_samples"));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("CEI_state"),pmt::string_to_symbol((d_intf_state)? "RETRANSMISSION" : "CLEAR" ));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("buffer_size"), pmt::from_long(d_process_size));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("sample_size"), pmt::from_long(size));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("consume"), pmt::from_long(consume));
-        message_port_pub(d_debug_port, debug_info);
-      }*/
-
+      consume = (size > (d_sample_cap - d_sample_size))? (d_sample_cap - d_sample_size) : size;
+      memcpy(d_sample_buffer + d_sample_size, in, sizeof(gr_complex)*consume);
+      d_sample_size += consume;
+      
       return true;
     }
 
@@ -886,8 +959,11 @@ namespace gr {
       noutput_items = (noutput_items > ninput_items[0])? ninput_items[0] : noutput_items;
       // Do <+signal processing+>
       std::vector<tag_t> tags;
-      get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("var_energy_alert"));
+      get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("interference_tag"));
+      //get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("energy_tag"));
       int consume=0;
+      std::vector<bool> sensing_result;
+      int window = 512;
 
       switch(d_mode)
       {
@@ -901,12 +977,17 @@ namespace gr {
         break;
 
         case INTERFERENCE_CANCELLATION:
+          // append samples to process_buffer
           if(!append_samples(in, noutput_items, consume)){
             //avoid memory overflow, force reset
             reset_buffer();
             reset_intf_reg();
             d_state = SEARCH_ACCESSCODE;
           }
+          //TODO: apply the synchronization modules here
+            interference_detector(sensing_result,window);
+            su_sample_sync(sensing_result,window);
+          //      then pass the symbols to process_symbols
           if(process_symbols()){
             //handling the output flow
             true_output = output_samples(out, noutput_items);
