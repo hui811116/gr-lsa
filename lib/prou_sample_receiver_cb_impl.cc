@@ -164,6 +164,8 @@ namespace gr {
       d_plf_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(d_plf_nfilts);
       d_plf_diff_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(d_plf_nfilts);
 
+      //std::cout << "DEBUG:: constructor to the part before filter newtaps" << std::endl;
+
       std::vector<float> vtaps(1,0);
       for(int i=0 ; i < d_plf_nfilts; i++) {
         d_plf_filters[i] = new gr::filter::kernel::fir_filter_ccf(1, vtaps);
@@ -202,6 +204,7 @@ namespace gr {
           std::invalid_argument("ProU RX::Costas_loop::Order should be 2,4,8");
         break;
       }
+      //std::cout << "DEBUG: constructor passed" << std::endl;
     }
 
     /*
@@ -292,11 +295,12 @@ namespace gr {
         for(j=0;j<d_plf_taps_per_filter; j++){
           ourtaps[i][j] = tmp_taps[i+j*d_plf_nfilts];
         }
+        ourfilter[i]->set_taps(ourtaps[i]);
       }
-      ourfilter[i]->set_taps(ourtaps[i]);
+      
       //FIXME (copy from original plf, check if this is neccessary)
-      //set_history(d_plf_taps_per_filter + d_plf_sps + d_plf_sps);
-      //set_output_multiples(d_osps);
+      set_history(d_plf_taps_per_filter + d_plf_sps + d_plf_sps);
+      //set_output_multiples();
     }
 
     int
