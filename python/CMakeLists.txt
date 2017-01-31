@@ -48,3 +48,4 @@ GR_ADD_TEST(qa_su_sample_receiver_cb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE
 GR_ADD_TEST(qa_su_transmitter_bc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_transmitter_bc.py)
 GR_ADD_TEST(qa_prou_sample_receiver_cb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_prou_sample_receiver_cb.py)
 GR_ADD_TEST(qa_interference_energy_detector_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_interference_energy_detector_cc.py)
+GR_ADD_TEST(qa_poly_costas_sync_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_poly_costas_sync_cc.py)

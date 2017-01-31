@@ -32,6 +32,7 @@ list(APPEND lsa_sources
     su_transmitter_bc_impl.cc
     prou_sample_receiver_cb_impl.cc
     interference_energy_detector_cc_impl.cc
+    poly_costas_sync_cc_impl.cc
 )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)

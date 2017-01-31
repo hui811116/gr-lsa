@@ -20,6 +20,7 @@
 #include "lsa/su_transmitter_bc.h"
 #include "lsa/prou_sample_receiver_cb.h"
 #include "lsa/interference_energy_detector_cc.h"
+#include "lsa/poly_costas_sync_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -39,3 +40,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, su_transmitter_bc);
 GR_SWIG_BLOCK_MAGIC2(lsa, prou_sample_receiver_cb);
 %include "lsa/interference_energy_detector_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_energy_detector_cc);
+%include "lsa/poly_costas_sync_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, poly_costas_sync_cc);

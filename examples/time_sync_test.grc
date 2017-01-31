@@ -338,7 +338,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(48, 560)</value>
+      <value>(16, 564)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1330,7 +1330,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>filter_size</key>
@@ -1485,6 +1485,69 @@
     <param>
       <key>type</key>
       <value>ccc</value>
+    </param>
+  </block>
+  <block>
+    <key>lsa_poly_costas_sync_cc</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>costas_loop_bw</key>
+      <value>6.28/100</value>
+    </param>
+    <param>
+      <key>costas_order</key>
+      <value>hdr_const.arity()</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(216, 580)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_poly_costas_sync_cc_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>plf_loop_bw</key>
+      <value>6.28/200</value>
+    </param>
+    <param>
+      <key>plf_nfilts</key>
+      <value>nfilts</value>
+    </param>
+    <param>
+      <key>plf_sps</key>
+      <value>sps</value>
+    </param>
+    <param>
+      <key>plf_taps</key>
+      <value>rx_taps</value>
     </param>
   </block>
   <block>
@@ -2939,7 +3002,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(48, 676)</value>
+      <value>(24, 676)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -3237,8 +3300,32 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>lsa_poly_costas_sync_cc_0</source_block_id>
+    <sink_block_id>digital_constellation_decoder_cb_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_poly_costas_sync_cc_0</source_block_id>
+    <sink_block_id>qtgui_const_sink_x_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_poly_costas_sync_cc_0</source_block_id>
+    <sink_block_id>qtgui_time_sink_x_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>virtual_source_0</source_block_id>
     <sink_block_id>digital_pfb_clock_sync_xxx_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>virtual_source_0</source_block_id>
+    <sink_block_id>lsa_poly_costas_sync_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

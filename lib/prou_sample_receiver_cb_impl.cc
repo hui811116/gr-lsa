@@ -69,7 +69,8 @@ namespace gr {
 
     enum proURxMode{
       STANDARD,
-      INTERFERENCE_CANCELLATION
+      INTERFERENCE_CANCELLATION,
+      //DEBUGGING
     };
     enum suSyncState{
       SEARCH_ACCESSCODE,
@@ -155,7 +156,7 @@ namespace gr {
       d_plf_loop_bw = plf_loop_bw;
       d_plf_max_dev = 1.5;//FIXME use var here
 
-      d_plf_k = 0.0; // init phase
+      d_plf_k = su_nfilts/2.0; // init phase
       d_plf_rate = (d_plf_sps-floor(d_plf_sps)*(double)d_plf_nfilts);
       d_plf_rate_i = (int)floor(d_plf_k);
       d_plf_rate_f = d_plf_rate - (float)d_plf_rate_i;
@@ -183,6 +184,7 @@ namespace gr {
 
       d_plf_out_idx = 0;
       d_plf_error = 0;
+      d_plf_osps = 1;
       //su sync---costas loop
       
       d_costas_loop_bw = costas_loop_bw;
@@ -299,7 +301,7 @@ namespace gr {
       }
       
       //FIXME (copy from original plf, check if this is neccessary)
-      set_history(d_plf_taps_per_filter + d_plf_sps + d_plf_sps);
+      //set_history(d_plf_taps_per_filter + d_plf_sps + d_plf_sps);
       //set_output_multiples();
     }
 
@@ -311,6 +313,7 @@ namespace gr {
       int nsample,
       int& nconsume)
     {
+      //pmt::pmt_t debug= pmt::make_dict();
       int i =0, count =0;
       float error_r, error_i;
       while(i < nsample) {
@@ -968,6 +971,8 @@ namespace gr {
       int consume=0;
       std::vector<bool> sensing_result;
       int window = 512;
+      //debugging
+      int debug_iter;
 
       switch(d_mode)
       {
@@ -997,6 +1002,13 @@ namespace gr {
             true_output = output_samples(out, noutput_items);
           }
         break;
+
+        /*case DEBUGGING:
+          debug_iter = ninput_items[0]/window;
+          for(int i=0;i<debug_iter;++i)
+            sensing_result.push_back(false);
+        break;
+        */
 
         default:
           std::runtime_error("ProU RX: Wrong Receiver Mode!");
