@@ -93,7 +93,7 @@ namespace gr {
       d_hdr_buffer = new unsigned char[d_accesscode.size()+8];
       d_hdr_symbol_buffer = new unsigned char[d_hdr_samp_len];
 
-      size_t max_pld_symbol_size=65536;
+      const size_t max_pld_symbol_size=65536;
       d_pld_symbol_buffer = new unsigned char[max_pld_symbol_size];
 
       d_sensing_info_port = pmt::mp("sensing_info");
@@ -138,9 +138,9 @@ namespace gr {
           noutput_items = (d_buffer_ptr->at(d_qiter)).size() + d_hdr_samp_len;
         break;
         default:
+          std::runtime_error("SU TX::output stream::entering wrong state");
         break;
       }
-
       return noutput_items;
     }
 
@@ -326,12 +326,13 @@ namespace gr {
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
+      gr::thread::scoped_lock guard(d_setlock);
       const unsigned char *in = (const unsigned char *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
 
       int payload_len = ninput_items[0];
       int pld_symbol_samp_len;
-      pmt::pmt_t hdr_info = pmt::make_dict();
+      //pmt::pmt_t hdr_info = pmt::make_dict();
 
       switch(d_state)
       {
@@ -339,20 +340,14 @@ namespace gr {
           if(d_buffer_ptr->size() == d_qmax){
             queue_size_adapt();
           }
-          generate_hdr(ninput_items[0],false);
+          pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
+          generate_hdr(payload_len,false);
           _repack(d_hdr_symbol_buffer, d_hdr_buffer, header_nbits()/8, (int)log2(d_hdr_points.size()));
           _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points);
-          _repack(d_pld_symbol_buffer, (const unsigned char*)input_items[0], ninput_items[0], (int)log2(d_pld_points.size()));
+          _repack(d_pld_symbol_buffer, in, payload_len, (int)log2(d_pld_points.size()));
           _map_sample(out+d_hdr_samp_len, d_pld_symbol_buffer, pld_symbol_samp_len, d_pld_points);
-
-          pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
-          store_to_queue(out+d_hdr_samp_len, pld_symbol_samp_len, ninput_items[0]);
-          if(d_debug){
-          hdr_info = pmt::dict_add(hdr_info, pmt::intern("pkt_counter"), pmt::from_long(d_pkt_counter));
-          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_index"),pmt::from_long(d_qiter));
-          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_size"),pmt::from_long(d_qsize));  
-          }
           
+          store_to_queue(out+d_hdr_samp_len, pld_symbol_samp_len, payload_len);
           d_pkt_counter++;
         break;
 
@@ -364,11 +359,6 @@ namespace gr {
 
           pld_symbol_samp_len = (d_buffer_ptr->at(d_qiter)).size();
           payload_len = d_pld_len_buffer[d_qiter];
-          if(d_debug){
-          hdr_info = pmt::dict_add(hdr_info, pmt::intern("pkt_counter"), pmt::from_long((uint16_t)d_counter_buffer[d_qiter]));
-          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_index"),pmt::from_long(0));
-          hdr_info = pmt::dict_add(hdr_info, pmt::intern("queue_size"),pmt::from_long(0));  
-          }
           memcpy(out+d_hdr_samp_len,&(d_buffer_ptr->at(d_qiter)),sizeof(gr_complex)*pld_symbol_samp_len);
           d_qiter++;
           d_qiter %= d_qsize;
@@ -378,15 +368,8 @@ namespace gr {
         break;
       }
       //number of output processing
+      consume_each(ninput_items[0]);
       noutput_items = pld_symbol_samp_len + d_hdr_samp_len;
-      add_item_tag(0, nitems_written(0), pmt::intern("sutx_pkt_count"), pmt::from_long(d_pkt_counter));
-      if(d_debug){
-        hdr_info = pmt::dict_add(hdr_info, pmt::intern("sutx"), pmt::string_to_symbol("general_work"));
-        hdr_info = pmt::dict_add(hdr_info, pmt::intern("payload_len"), pmt::from_long(payload_len));
-        hdr_info = pmt::dict_add(hdr_info, pmt::intern("SUTX_state"), pmt::string_to_symbol(((d_state == CLEAR_TO_SEND)? "clear_to_send" : "proU_present")));  
-        message_port_pub(d_debug_port,hdr_info);
-      }
-
       // Tell runtime system how many output items we produced.
       return noutput_items;
     }
