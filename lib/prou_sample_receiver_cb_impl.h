@@ -118,7 +118,14 @@ namespace gr {
       void _out_buffer_double_cap();
       void _out_buffer_reset_cap();
 
+      //su sync---symbol buffer, error buffers
+      float* d_plf_time_error;
+      float* d_costas_phase_error;
+      gr_complex* d_plf_symbol_buffer;
+
       //su sync---polyphase clock sync
+      int d_plf_history;
+
       double d_plf_sps;
       double d_plf_sample_num;
       float d_plf_loop_bw;
@@ -132,17 +139,15 @@ namespace gr {
       std::vector<gr::filter::kernel::fir_filter_ccf*> d_plf_diff_filters;
       std::vector< std::vector<float> > d_plf_taps;
       std::vector< std::vector<float> > d_plf_dtaps;
-      float d_plf_k;  //what
-      float d_plf_rate; //what
-      float d_plf_rate_i; // what
-      float d_plf_rate_f; // what
-      float d_plf_max_dev; // what
+      float d_plf_k;  // time
+      float d_plf_rate; //
+      float d_plf_rate_i; // int part of rate
+      float d_plf_rate_f; // fraction part of rate
+      float d_plf_max_dev;
       int d_plf_filtnum;
       int d_plf_osps;
       float d_plf_error;
       int d_plf_out_idx;
-      // copy from original polyphase filter, seems like using these vars to handle tags
-      //uint64_t d_plf_old_in, d_plf_new_in, d_pld_last_out;
 
       void plf_create_diff_taps(
         const std::vector<float> &newtaps,
@@ -165,11 +170,11 @@ namespace gr {
       float d_costas_noise;
       float d_costas_loop_bw;
 
-      float phase_detector_8(gr_complex sample) const;
-      float phase_detector_4(gr_complex sample) const;
-      float phase_detector_2(gr_complex sample) const;
+      float phase_detector_8(const gr_complex& sample) const;
+      float phase_detector_4(const gr_complex& sample) const;
+      float phase_detector_2(const gr_complex& sample) const;
 
-      float (prou_sample_receiver_cb_impl::*d_costas_phase_detector)(gr_complex sample) const;
+      float (prou_sample_receiver_cb_impl::*d_costas_phase_detector)(const gr_complex& sample) const;
       int costas_core(
         gr_complex* out,
         float* error_ang,

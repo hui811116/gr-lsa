@@ -70,7 +70,6 @@ namespace gr {
     enum proURxMode{
       STANDARD,
       INTERFERENCE_CANCELLATION,
-      //DEBUGGING
     };
     enum suSyncState{
       SEARCH_ACCESSCODE,
@@ -115,7 +114,6 @@ namespace gr {
       d_cap_init(floor(128*1024/plf_sps)),
       d_su_hdr_bits_len((4+2+2)*8)
     {
-      //TODO: testing configuration, reivise for actual implementation
       d_sample_cap = d_sample_cap_init;
       d_process_cap = d_cap_init;
       reset_buffer();
@@ -155,17 +153,16 @@ namespace gr {
       d_plf_damping = 2*d_plf_nfilts;
       d_plf_loop_bw = plf_loop_bw;
       d_plf_max_dev = 1.5;//FIXME use var here
+      d_plf_osps = 1;
 
       d_plf_k = su_nfilts/2.0; // init phase
-      d_plf_rate = (d_plf_sps-floor(d_plf_sps)*(double)d_plf_nfilts);
-      d_plf_rate_i = (int)floor(d_plf_k);
+      d_plf_rate = (d_plf_sps-floor(d_plf_sps))*(double)d_plf_nfilts;
+      d_plf_rate_i = (int)floor(d_plf_rate);
       d_plf_rate_f = d_plf_rate - (float)d_plf_rate_i;
       d_plf_filtnum = (int)floor(d_plf_k);
 
       d_plf_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(d_plf_nfilts);
       d_plf_diff_filters = std::vector<gr::filter::kernel::fir_filter_ccf*>(d_plf_nfilts);
-
-      //std::cout << "DEBUG:: constructor to the part before filter newtaps" << std::endl;
 
       std::vector<float> vtaps(1,0);
       for(int i=0 ; i < d_plf_nfilts; i++) {
@@ -181,10 +178,9 @@ namespace gr {
       float denom = (1.0 + 2.0*d_plf_damping*d_plf_loop_bw + d_plf_loop_bw*d_plf_loop_bw);
       d_plf_alpha = (4*d_plf_damping*d_plf_loop_bw) / denom;
       d_plf_beta = (4*d_plf_loop_bw*d_plf_loop_bw) / denom;
-
       d_plf_out_idx = 0;
       d_plf_error = 0;
-      d_plf_osps = 1;
+      
       //su sync---costas loop
       
       d_costas_loop_bw = costas_loop_bw;
@@ -206,7 +202,10 @@ namespace gr {
           std::invalid_argument("ProU RX::Costas_loop::Order should be 2,4,8");
         break;
       }
-      //std::cout << "DEBUG: constructor passed" << std::endl;
+
+      d_plf_time_error = new float[4096];
+      d_costas_phase_error = new float[4096];
+      d_plf_symbol_buffer = new gr_complex[4096];
     }
 
     /*
@@ -218,14 +217,15 @@ namespace gr {
         delete d_plf_filters[i];
         delete d_plf_diff_filters[i];
       }
-      //d_sig_buffer->clear();
-      //delete d_sig_buffer;
-      //TODO check all samples are deleted
       delete [] d_sample_buffer;
       delete [] d_process_buffer;
       delete [] d_output_buffer;
       volk_free(d_var_eng_buffer);
       volk_free(d_eng_buffer);
+
+      delete [] d_plf_time_error;
+      delete [] d_costas_phase_error;
+      delete [] d_plf_symbol_buffer;
     }
 
     bool
@@ -253,7 +253,6 @@ namespace gr {
       diff_filter[0] = -1;
       diff_filter[1] = 0;
       diff_filter[2] = 1;
-
       float pwr=0;
       difftaps.clear();
       difftaps.push_back(0);
@@ -299,10 +298,10 @@ namespace gr {
         }
         ourfilter[i]->set_taps(ourtaps[i]);
       }
-      
-      //FIXME (copy from original plf, check if this is neccessary)
+      //FIXME (history can be handled through internal queue)
       //set_history(d_plf_taps_per_filter + d_plf_sps + d_plf_sps);
-      //set_output_multiples();
+      d_plf_history = d_plf_taps_per_filter + d_plf_sps + d_plf_sps;
+      //set_output_multiples(d_plf_osps);
     }
 
     int
@@ -313,7 +312,6 @@ namespace gr {
       int nsample,
       int& nconsume)
     {
-      //pmt::pmt_t debug= pmt::make_dict();
       int i =0, count =0;
       float error_r, error_i;
       while(i < nsample) {
@@ -355,12 +353,10 @@ namespace gr {
       }
       nconsume = count;
       return i;
-      //FIXME
-      //make sure all input and outputs are connected  
     }
     //SU FREQUENCY/PHASE SYNC::COSTAS_LOOP
     float
-    prou_sample_receiver_cb_impl::phase_detector_8(gr_complex sample) const
+    prou_sample_receiver_cb_impl::phase_detector_8(const gr_complex& sample) const
     {
       float K = sqrt(2.0)-1;
       if(fabsf(sample.real()) >= fabsf(sample.imag())){
@@ -371,12 +367,12 @@ namespace gr {
       }
     }
     float
-    prou_sample_receiver_cb_impl::phase_detector_4(gr_complex sample) const
+    prou_sample_receiver_cb_impl::phase_detector_4(const gr_complex& sample) const
     {
       return ((sample.real()>0?1.0:-1.0) *sample.imag() - (sample.imag()>0?1.0:-1.0) * sample.real());
     }
     float
-    prou_sample_receiver_cb_impl::phase_detector_2(gr_complex sample) const
+    prou_sample_receiver_cb_impl::phase_detector_2(const gr_complex& sample) const
     {
       return (sample.real()*sample.imag());
     }
@@ -458,7 +454,6 @@ namespace gr {
       memcpy(tmp,d_sample_buffer+nleft,sizeof(gr_complex)*(d_sample_size-nleft));
       memcpy(d_sample_buffer, tmp, sizeof(gr_complex)*(d_sample_size-nleft));
       d_sample_size -= nleft;
-      //d_sample_idx = 0; //if use this, sync continue without resync
       if(d_sample_idx >nleft){
         d_sample_idx -= nleft;
       }
@@ -837,6 +832,10 @@ namespace gr {
               }
               else{
                 d_state = SEARCH_ACCESSCODE;
+                if(d_debug){
+                  debug_info = pmt::dict_add(debug_info, pmt::intern("ProU RX"), pmt::string_to_symbol("accesscode found but failed"));
+                  message_port_pub(d_debug_port, debug_info);
+                }
               }
             }
           break;
@@ -871,16 +870,32 @@ namespace gr {
     void
     prou_sample_receiver_cb_impl::su_sample_sync(const std::vector<bool>& sensing_result, int window)
     {
-      //int nsample =d_sample_size-d_sample_idx;
-      //TODO: compare the available space of cotas and polyphase and choose the smaller one
-      int plf_consume, plf_total_consume=0;
-      int plf_out, costas_out; // costas is sync block, input num = output num
+      //int plf_consume, plf_total_consume=0;
+      int plf_consume;
+      //int plf_out, costas_out; // costas is sync block, input num = output num
 
       int c_count=0, p_count=0;
+      //in original design, noutput_items meant for output buffer size!!!!
+      int nsample = (sensing_result.size() * window)/d_plf_sps; // equivalent available output size
+      if(nsample==0){
+        return;
+      }
+      int sample_start = (d_sample_idx >= d_plf_history)? d_sample_idx - d_plf_history : 0;
+      p_count = plf_core(d_plf_symbol_buffer, d_plf_time_error, d_sample_buffer+sample_start,nsample, plf_consume);
+      c_count = costas_core(d_process_buffer+d_process_size,d_costas_phase_error, d_plf_symbol_buffer, p_count);
+      d_sample_idx += plf_consume;
+      d_process_size += c_count;
 
-      gr_complex sync_out[8192];
-      float sync_plf_error[8192];
-      float sync_costas_error[4096];
+      /*
+      if(d_debug){
+        pmt::pmt_t debug_info = pmt::make_dict();
+        debug_info = pmt::dict_add(debug_info, pmt::intern("polyphase output"),pmt::from_long(p_count));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("polyphase consume"), pmt::from_long(plf_consume));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("costas output"),pmt::from_long(c_count));
+        message_port_pub(d_debug_port,debug_info);
+      }*/
+
+      /*
       int info_iter = sensing_result.size();
       if(info_iter==0)
         return;
@@ -888,8 +903,8 @@ namespace gr {
       int info_count=0;
       while( (info_count<info_iter) && ( (plf_total_consume + window) < max_len)){
           if(!sensing_result[info_count]){
-            plf_out = plf_core(sync_out+p_count,sync_plf_error+plf_total_consume, d_sample_buffer+d_sample_idx+plf_total_consume,window, plf_consume);
-            costas_out = costas_core(d_process_buffer+d_process_idx+c_count, sync_costas_error+c_count,sync_out+p_count, plf_out);
+            plf_out = plf_core(d_plf_symbol_buffer+p_count,d_plf_time_error+plf_total_consume, d_sample_buffer+d_sample_idx+plf_total_consume,window, plf_consume);
+            costas_out = costas_core(d_process_buffer+d_process_idx+c_count, d_costas_phase_error+c_count,d_plf_symbol_buffer+p_count, plf_out);
             p_count += plf_out;
             plf_total_consume += plf_consume;
             c_count += costas_out;
@@ -904,6 +919,7 @@ namespace gr {
       }
       d_sample_idx += (plf_total_consume > max_len)? plf_total_consume-window : plf_total_consume;
       d_process_size += (plf_total_consume > max_len)? c_count - (window/d_plf_sps):c_count;
+      */
       //TODO: record freq and time error and rebuild interfering signal for cancellation
     }
 
@@ -912,7 +928,6 @@ namespace gr {
     {
       double thres_db = -50.0;
       int start_index = d_sample_idx;
-      //int nsample = d_sample_size-d_sample_idx;
       int iter = (d_sample_size-d_sample_idx)/window;
       for(int i=0;i<iter;++i){
         result.push_back(calc_var_energy(d_sample_buffer+d_sample_idx+i*window,window,thres_db));
@@ -923,8 +938,18 @@ namespace gr {
     bool
     prou_sample_receiver_cb_impl::append_samples(const gr_complex* in, int size, int& consume)
     {
-      // sample queued in buffer, symbol wait for sync done
       // forecast should handle the input sample length carefully
+      /*
+      while(d_sample_size +size > d_sample_cap)
+      {
+        double_cap(); // sample and symbol both update
+        if(d_sample_cap > 64*d_sample_cap_init)
+        {
+          return false;//failed, force reset
+        }
+      }
+      */
+      
       switch(d_intf_state)
       {
         case CLEAR:
@@ -933,7 +958,7 @@ namespace gr {
           }
         break;
         case RETRANSMISSION:
-          if(d_sample_size +size > d_sample_cap){
+          while(d_sample_size +size > d_sample_cap){
             double_cap(); // sample and symbol both update
             if(d_sample_cap > 64*d_sample_cap_init){
               //failed, force reset
@@ -965,21 +990,13 @@ namespace gr {
       int true_output = 0;
       noutput_items = (noutput_items > ninput_items[0])? ninput_items[0] : noutput_items;
       // Do <+signal processing+>
-      std::vector<tag_t> tags;
-      get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("interference_tag"));
-      //get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("energy_tag"));
       int consume=0;
       std::vector<bool> sensing_result;
-      int window = 512;
-      //debugging
-      int debug_iter;
+      int window = 256;
 
       switch(d_mode)
       {
         case STANDARD:
-          if(!tags.empty()){
-            return 0;
-          }
           //do nothing
           memcpy(out, in, sizeof(gr_complex)*noutput_items);
           true_output = noutput_items;
@@ -993,28 +1010,27 @@ namespace gr {
             reset_intf_reg();
             d_state = SEARCH_ACCESSCODE;
           }
-          //TODO: apply the synchronization modules here
             interference_detector(sensing_result,window);
             su_sample_sync(sensing_result,window);
-          //      then pass the symbols to process_symbols
           if(process_symbols()){
             //handling the output flow
             true_output = output_samples(out, noutput_items);
           }
         break;
-
-        /*case DEBUGGING:
-          debug_iter = ninput_items[0]/window;
-          for(int i=0;i<debug_iter;++i)
-            sensing_result.push_back(false);
-        break;
-        */
-
         default:
           std::runtime_error("ProU RX: Wrong Receiver Mode!");
         break;
       }
 
+      /*
+      if(d_debug){
+        pmt::pmt_t debug_info = pmt::make_dict();
+        debug_info = pmt::dict_add(debug_info, pmt::intern("sensing size"),pmt::from_long(sensing_result.size()));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("sample_size"),pmt::from_long(d_sample_size));
+        debug_info = pmt::dict_add(debug_info, pmt::intern("symbol_size"),pmt::from_long(d_process_size));
+        message_port_pub(d_debug_port,debug_info);
+      }
+      */
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (consume);
