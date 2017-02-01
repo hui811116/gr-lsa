@@ -517,8 +517,8 @@ namespace gr {
             if(d_retx_pkt_len[d_qidx] == 0){
               d_retx_count++;
             }
-            d_retx_buf_idx[d_qidx] = d_su_pkt_begin;
-            d_retx_pkt_len[d_qidx] = d_pld_len*8/d_su_pld_bps + d_su_hdr_bits_len/d_su_bps;
+            d_retx_buf_idx[d_qidx] = d_su_pkt_begin * d_plf_sps;
+            d_retx_pkt_len[d_qidx] = (d_pld_len*8/d_su_pld_bps + d_su_hdr_bits_len/d_su_bps)*d_plf_sps;
           }
         break;
         case CLEAR:
@@ -601,8 +601,8 @@ namespace gr {
           break;
           case INTF_PAYLOAD_WAIT:
             if(pld_count==0){
-              d_cei_buf_idx.push_back(i-pkt_len+1);
-              d_cei_pkt_len.push_back(pkt_len);
+              d_cei_buf_idx.push_back((i-pkt_len+1)*d_plf_sps); //FIXME sample index
+              d_cei_pkt_len.push_back(pkt_len*d_plf_sps);
               d_cei_qidx.push_back(qidx);
               state = INTF_SEARCH;
             }
@@ -629,17 +629,18 @@ namespace gr {
         if(d_retx_pkt_len[i]>max_len){
           max_len = d_retx_pkt_len[i];
         }
-      }
-      total_len = 0;
+      }//linear search for maximum length
+      //total_len = 0;
       gr_complex* retx_all = (gr_complex*) malloc(sizeof(gr_complex)* total_len);
       std::vector<int> retx_idx;
-
+      total_len =0;
       //NOTE: this version does not replace the header part of the retransmitted packets
       //<FIXME>
       for(int i=0;i<d_retx_buf_idx.size();++i){
         int tmp_len = d_retx_pkt_len[i];
         int tmp_idx = d_retx_buf_idx[i];
-        memcpy(retx_all + total_len, d_process_buffer + tmp_idx, sizeof(gr_complex)* d_retx_buf_idx[i]);
+        memcpy(retx_all + total_len, d_sample_buffer + tmp_idx, sizeof(gr_complex)* tmp_len);
+        //memcpy(retx_all + total_len, d_process_buffer + tmp_idx, sizeof(gr_complex)* d_retx_buf_idx[i]);
         retx_idx.push_back(total_len);
         total_len += tmp_len;
       }
@@ -649,7 +650,8 @@ namespace gr {
       int last_qidx  = d_cei_qidx[d_cei_qidx.size()-1];
       int last_len = d_cei_pkt_len[d_cei_pkt_len.size()-1];
 
-      while(last_good_idx + last_len < d_process_size){
+      //push idx to the end
+      while(last_good_idx + last_len < d_sample_size){
         last_qidx = (last_qidx+1) % qsize;
         last_good_idx += last_len;
         last_len = d_retx_pkt_len[last_qidx];
@@ -659,16 +661,15 @@ namespace gr {
       int pkt_count = d_retx_pkt_len[last_qidx]-1;
 
       while(last_good_idx >=0){
-        d_process_buffer[last_good_idx] -= (retx_all[ retx_idx[last_qidx] + pkt_count] );
+        d_sample_buffer[last_good_idx] -= (retx_all[ retx_idx[last_qidx] + pkt_count] );
         pkt_count--;
         if(pkt_count < 0){
-          last_good_idx--;
-          last_good_idx %= qsize;
-          pkt_count = d_retx_pkt_len[last_good_idx];
+          last_qidx--;
+          last_qidx %= qsize;
+          pkt_count = d_retx_pkt_len[last_qidx]-1;
         }
         last_good_idx--;
       }
-
       free(retx_all);
     }
 
@@ -677,7 +678,7 @@ namespace gr {
     prou_sample_receiver_cb_impl::output_samples(gr_complex* out, int noutput_items)
     {
       int true_noutput_items;
-      if(noutput_items > d_output_buffer_size){
+      if(noutput_items >= (d_output_buffer_size - d_output_buffer_idx-1) ){
         memcpy(out, d_output_buffer + d_output_buffer_idx, sizeof(gr_complex)*d_output_buffer_size);
         true_noutput_items = d_output_buffer_size;
         d_output_buffer_size = 0;
@@ -688,7 +689,7 @@ namespace gr {
         memcpy(out, d_output_buffer + d_output_buffer_idx, sizeof(gr_complex)*noutput_items);
         true_noutput_items = noutput_items;
         d_output_buffer_idx += noutput_items;
-        d_output_buffer_size -= noutput_items;
+        //d_output_buffer_size -= noutput_items;
       }
       return true_noutput_items;
     }
@@ -698,10 +699,10 @@ namespace gr {
     {
       //NOTE: this may lose some transition sample which are parts of a symbol
       double ed_tmp;
-      for(int i=0;i<d_process_size;++i){
-        ed_tmp = 10* log10(norm(d_process_buffer[i]));
+      for(int i=0;i<d_sample_size;++i){
+        ed_tmp = 10* log10(norm(d_sample_buffer[i]));
         if(ed_tmp > ed_db){
-          out.push_back(d_process_buffer[i]);
+          out.push_back(d_sample_buffer[i]);
         }
       }
     }
@@ -743,8 +744,8 @@ namespace gr {
         ninput_items_required[0] = 0;  
       }
       else{
-        assert(d_process_cap >= d_process_size);
-        int max_sample = d_process_cap - d_process_size;
+        assert(d_sample_cap >= d_sample_size);
+        int max_sample = d_sample_cap - d_sample_size;
         ninput_items_required[0] = (noutput_items > max_sample) ? max_sample: noutput_items;  
       }
     }
@@ -755,6 +756,7 @@ namespace gr {
     prou_sample_receiver_cb_impl::intf_decision_maker()
     {
       //cei will be kept until this function ends
+      //FIXME this is for symbol, should change to sample
       int pkt_symbol_len = d_pld_len*8/d_su_pld_bps + d_su_hdr_bits_len/d_su_bps;
       bool test_voe = calc_var_energy(d_process_buffer + d_su_pkt_begin, pkt_symbol_len,-40.0);
       switch(d_intf_state)
@@ -792,7 +794,7 @@ namespace gr {
       return false;
     }
 
-    bool
+    void
     prou_sample_receiver_cb_impl::process_symbols()
     {
       pmt::pmt_t debug_info = pmt::make_dict();
@@ -848,12 +850,12 @@ namespace gr {
                 //<FIXME>: threshold of the interference detector
                 extract_samples_ed(out, -50);
                 int samp_size = out.size();
-                if(d_output_buffer_size + samp_size > d_output_buffer_cap){
+                while(d_output_buffer_size + samp_size > d_output_buffer_cap){
                   _out_buffer_double_cap();
                 }
                 memcpy(d_output_buffer + d_output_buffer_size,out.data(),sizeof(gr_complex)*samp_size);
                 d_output_buffer_size += samp_size;
-                return true;
+                //return true;
               }
             }
             d_su_pld_counter--;
@@ -864,7 +866,7 @@ namespace gr {
         }
       }
       //update
-      return d_output_buffer_size!=0;
+      //return d_output_buffer_size!=0;
     }
 
     void
@@ -1012,7 +1014,8 @@ namespace gr {
           }
             interference_detector(sensing_result,window);
             su_sample_sync(sensing_result,window);
-          if(process_symbols()){
+            process_symbols();
+          if(d_output_buffer_size > d_output_buffer_idx){
             //handling the output flow
             true_output = output_samples(out, noutput_items);
           }

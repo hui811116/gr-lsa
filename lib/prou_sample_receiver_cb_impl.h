@@ -107,7 +107,7 @@ namespace gr {
 
 
       //su sync helper functions
-      bool process_symbols ();
+      void process_symbols ();
       bool parse_su_header(uint8_t& qidx, uint8_t& qsize, uint16_t& pld_len, const std::vector<unsigned char>& input);
       uint16_t _get_bit16(int begin_idx,const std::vector<unsigned char>& input);
       uint8_t _get_bit8(int begin_idx, const std::vector<unsigned char>& input);
