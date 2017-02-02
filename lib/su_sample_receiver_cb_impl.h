@@ -48,7 +48,7 @@ namespace gr {
 
       unsigned char* d_byte_reg;
       unsigned char* d_symbol_to_bytes;
-      gr_complex  d_samp_reg;
+      //gr_complex  d_samp_reg;
       size_t d_cap;
       size_t d_byte_count;
       int d_hdr_bps;
@@ -81,8 +81,9 @@ namespace gr {
       void feedback_info(bool type);
       void data_reg_reset();
 
-      bool insert_parse_byte();
+      bool insert_parse_byte(const gr_complex& sample);
 
+      void check_tags(std::vector<tag_t>& out_tags, const std::vector<tag_t>& in_tags);
 
      public:
       su_sample_receiver_cb_impl(

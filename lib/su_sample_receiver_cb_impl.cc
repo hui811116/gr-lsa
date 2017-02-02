@@ -87,9 +87,6 @@ namespace gr {
       }
       d_byte_reg = (unsigned char*) malloc(sizeof(char)*d_cap);
       d_symbol_to_bytes = (unsigned char*) malloc(sizeof(char)*d_cap);
-
-      // d_name = (gr_complex*) volk_malloc(sizeof(gr_complex)*nitems, volk_get_alignment());
-      //set_output_multiple(nsamples);
       d_debug = debug;
 
       message_port_register_out(d_msg_port);
@@ -110,7 +107,6 @@ namespace gr {
     void
     su_sample_receiver_cb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
-      //TODO
       ninput_items_required[0]= noutput_items; 
     }
 
@@ -244,7 +240,7 @@ namespace gr {
     }
 
     bool
-    su_sample_receiver_cb_impl::insert_parse_byte()
+    su_sample_receiver_cb_impl::insert_parse_byte(const gr_complex& sample)
     {
       unsigned char byte_hold; 
       if(d_byte_count == d_cap){
@@ -254,7 +250,7 @@ namespace gr {
       switch(d_bit_state)
       {
         case SEARCH_SYNC_CODE:
-          byte_hold = d_hdr_sptr->decision_maker(&d_samp_reg);
+          byte_hold = d_hdr_sptr->decision_maker(&sample);
           for(int i=0;i<d_hdr_bps;++i)
           {
             uint64_t check_bits = (~0ULL);
@@ -267,7 +263,7 @@ namespace gr {
           } 
         break;
         case SYNC_WAIT_HEADER:
-          byte_hold = d_hdr_sptr->decision_maker(&d_samp_reg);
+          byte_hold = d_hdr_sptr->decision_maker(&sample);
           for(int i=0;i<d_hdr_bps;++i){
             d_input.push_back( (((byte_hold >> (d_hdr_bps-1-i)) & 0x01)==0x00 )? false : true);
           }
@@ -283,7 +279,7 @@ namespace gr {
           }
         break;
         case WAIT_PAYLOAD:
-          d_byte_reg[d_byte_count++] = d_pld_sptr->decision_maker(&d_samp_reg);
+          d_byte_reg[d_byte_count++] = d_pld_sptr->decision_maker(&sample);
           if(d_payload_len*8 == (d_byte_count * d_pld_sptr->bits_per_symbol()))
           {
             pub_byte_pkt();
@@ -297,7 +293,18 @@ namespace gr {
       }
       //MSB parsing
       return false;
-      
+    }
+
+    void
+    su_sample_receiver_cb_impl::check_tags(std::vector<tag_t>& out_tags, const std::vector<tag_t>& in_tags)
+    {
+      bool sensing;
+      for(int i=0;i<in_tags.size();++i){
+        if(in_tags[i].key == d_sensing_tag_id){
+          sensing = pmt::to_bool(in_tags[i].value);
+            out_tags.push_back(in_tags[i]);            
+        }
+      }
     }
     int
     su_sample_receiver_cb_impl::general_work (int noutput_items,
@@ -310,64 +317,49 @@ namespace gr {
       std::vector<tag_t> intf_idx;
       std::vector<tag_t> tags;
       get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items);
-      if(!symbol_segment(intf_idx,tags,noutput_items)){
-        //this case represent no state info found
-        if(d_state == SU_ONLY){
-            for(int i=0;i<noutput_items;++i){
-              d_samp_reg = in[i];
-              if(insert_parse_byte()){
-                feedback_info(false);
-              }
-            }
+      check_tags(intf_idx,tags);
+      int sense_offset;
+      bool sense_state;
+      int count =0;
+      tag_t check_tag;
+      pmt::pmt_t debug = pmt::make_dict();
+
+      while(count < noutput_items)
+      {
+        if(!intf_idx.empty()){
+          check_tag = intf_idx.front();
+          sense_offset = check_tag.offset-nitems_read(0);
+          sense_state = to_bool(check_tag.value);
+          intf_idx.erase(intf_idx.begin());
         }
-      }
-      else{
-        //there are states to be checked
-        int tag_count = 0;
-        int offset_reg = intf_idx[tag_count].offset-nitems_read(0);
-        bool next_info = pmt::to_bool(intf_idx[tag_count].value);
-        for(int i=0;i<noutput_items;++i){
-          if( (offset_reg == i)){
-            if( tag_count < (intf_idx.size()-1)){
-              tag_count++;
-              next_info = pmt::to_bool(intf_idx[tag_count].value);
-              offset_reg = intf_idx[tag_count].offset-nitems_read(0);
-            }
-            d_state = (next_info) ? INTERFERING : SU_ONLY;
-            if((d_state == INTERFERING) && (d_byte_count != 0) ){
-              // process current bytes
-                feedback_info(true);
-                data_reg_reset();
+        if(count == sense_offset){
+          d_state = (sense_state)? INTERFERING: SU_ONLY;
+          if(sense_state){
+            feedback_info(true);
+            if(d_debug){
+              debug = pmt::dict_add(debug, pmt::intern("SU TX"), pmt::string_to_symbol("Interfering detected"));
+              data_reg_reset();
             }
           }
-          switch(d_state){
-            case SU_ONLY:
-              d_samp_reg = in[i];
-              if(insert_parse_byte()){
-                feedback_info(false);
-              }
-              //input to data register and run searching code alg.
-            break;
-            case INTERFERING:
-            break;
-            default:
-              std::runtime_error("SU Receiver: sensing info into wrong state");
-            break;
-          } // end switch
-        }//end for
-
+        }
+        switch(d_state)
+        {
+          case SU_ONLY:
+            if(insert_parse_byte(in[count])){
+              feedback_info(false);
+              data_reg_reset();
+            }
+          break;
+          case INTERFERING:
+            //do nothing?
+          break;
+          default:
+            std::runtime_error("SU RX:entering wrong state");
+          break;
+        }
+        count++;
       }
-      if(d_debug){
-        pmt::pmt_t debug_info = pmt::make_dict();
-        debug_info = pmt::dict_add(debug_info, pmt::intern("ninput_items"),pmt::from_long(noutput_items));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("SURX_state"),pmt::string_to_symbol((d_state)?"SU_ONLY":"INTERFERING" ));
-        message_port_pub(d_debug_port,debug_info);
-      }
-      // Do <+signal processing+>
-      // Tell runtime system how many input items we consumed on
-      // each input stream.
       consume_each (noutput_items);
-      // Tell runtime system how many output items we produced.
       return noutput_items;
     }
 

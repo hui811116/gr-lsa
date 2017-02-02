@@ -326,14 +326,13 @@ namespace gr {
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
-      gr::thread::scoped_lock guard(d_setlock);
+      //gr::thread::scoped_lock guard(d_setlock);
       const unsigned char *in = (const unsigned char *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
 
       int payload_len = ninput_items[0];
       int pld_symbol_samp_len;
-      //pmt::pmt_t hdr_info = pmt::make_dict();
-
+      
       switch(d_state)
       {
         case CLEAR_TO_SEND:
