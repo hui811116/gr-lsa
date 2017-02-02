@@ -78,15 +78,15 @@ namespace gr {
       d_debug_port = pmt::mp("debug");  //debug
       d_sensing_tag_id = pmt::string_to_symbol(sensing_tag_id);
 
-      d_cap = 16*1024;
+      d_cap = 1024*64;
       d_byte_count = 0;
   
       set_max_noutput_items(d_cap);
       if(!set_accesscode(accesscode)){
         throw std::runtime_error("SU Receiver: Setting access code failed");
       }
-      d_byte_reg = (unsigned char*) malloc(sizeof(char)*d_cap);
-      d_symbol_to_bytes = (unsigned char*) malloc(sizeof(char)*d_cap);
+      d_byte_reg = new unsigned char[d_cap];
+      d_symbol_to_bytes = new unsigned char[d_cap];
       d_debug = debug;
 
       message_port_register_out(d_msg_port);
@@ -100,8 +100,10 @@ namespace gr {
      */
     su_sample_receiver_cb_impl::~su_sample_receiver_cb_impl()
     {
-      free(d_byte_reg);
-      free(d_symbol_to_bytes);
+      //free(d_byte_reg);
+      //free(d_symbol_to_bytes);
+      delete [] d_byte_reg;
+      delete [] d_symbol_to_bytes;
     }
 
     void
@@ -110,30 +112,11 @@ namespace gr {
       ninput_items_required[0]= noutput_items; 
     }
 
-    bool
-    su_sample_receiver_cb_impl::symbol_segment(
-      std::vector<tag_t>& intf_idx,
-      const std::vector<tag_t>& tags,
-      int nsamples)
-    {
-      bool sensing_result;
-      for(int i=0;i<tags.size();++i)
-      {
-        if(tags[i].key == d_sensing_tag_id){
-          sensing_result = pmt::to_bool(tags[i].value);
-          int offset_check=tags[i].offset-nitems_read(0);
-          if( (offset_check>=0) && (offset_check < nsamples) )
-            intf_idx.push_back(tags[i]);
-        }
-      }
-      return !intf_idx.empty();
-    }
-
     void
     su_sample_receiver_cb_impl::pub_byte_pkt()
     {  
         int bits_count = d_pld_bps * d_byte_count;
-        int byte_count = (bits_count%8==0)? bits_count /8 : bits_count/8+1;
+        int byte_count = bits_count/8;
         unsigned char tmp;   
         
         for(int i=0;i<bits_count;++i){
@@ -270,11 +253,16 @@ namespace gr {
           if(d_input.size() == (header_nbits()-d_accesscode_len) )
           {
             if(parse_header()){
-              d_byte_count=0;
               d_bit_state = WAIT_PAYLOAD;
             }
             else{
               d_bit_state = SEARCH_SYNC_CODE;
+            }
+            d_byte_count=0;
+            if(d_debug){
+              pmt::pmt_t debug = pmt::make_dict();
+              debug = pmt::dict_add(debug, pmt::intern("SU RX header"), pmt::from_long(d_payload_len));
+              message_port_pub(d_debug_port,debug);
             }
           }
         break;
@@ -338,8 +326,8 @@ namespace gr {
             feedback_info(true);
             if(d_debug){
               debug = pmt::dict_add(debug, pmt::intern("SU TX"), pmt::string_to_symbol("Interfering detected"));
-              data_reg_reset();
             }
+            data_reg_reset();
           }
         }
         switch(d_state)

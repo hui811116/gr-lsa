@@ -296,14 +296,19 @@ namespace gr {
           tmp = 0x00;
         }
       }
-      if( (size*8 % const_m) !=0)
-        out[size*8/const_m] = tmp;
     }
 
     void
-    su_transmitter_bc_impl::_map_sample(gr_complex* out, const unsigned char* in, int size, const std::vector<gr_complex>& mapper)
+    su_transmitter_bc_impl::_map_sample(
+      gr_complex* out, 
+      const unsigned char* in, 
+      int size, 
+      const std::vector<gr_complex>& mapper)
     {
       for(int i=0;i<size;++i){
+        //if(in[i] >= mapper.size()){
+          //std::runtime_error("SU_TX::exceed size, failed");
+        //}
         out[i] = mapper[in[i]];
       }
     }
@@ -332,6 +337,22 @@ namespace gr {
 
       int payload_len = ninput_items[0];
       int pld_symbol_samp_len;
+      switch(d_state)
+      {
+        case CLEAR_TO_SEND:
+          pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
+        break;
+        case RETRANSMISSION:
+          pld_symbol_samp_len = (d_buffer_ptr->at(d_qiter)).size();
+        break;
+        default:
+          std::runtime_error("SU_TX::wrong state. failed");
+        break;
+      }
+      if(noutput_items < (pld_symbol_samp_len + d_hdr_samp_len)){
+        consume_each(0);
+        return 0;
+      }
       
       switch(d_state)
       {
@@ -339,7 +360,7 @@ namespace gr {
           if(d_buffer_ptr->size() == d_qmax){
             queue_size_adapt();
           }
-          pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
+          
           generate_hdr(payload_len,false);
           _repack(d_hdr_symbol_buffer, d_hdr_buffer, header_nbits()/8, (int)log2(d_hdr_points.size()));
           _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points);
@@ -356,9 +377,8 @@ namespace gr {
           _repack(d_hdr_symbol_buffer, d_hdr_buffer,header_nbits()/8,(int)log2(d_hdr_points.size()));
           _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points);
 
-          pld_symbol_samp_len = (d_buffer_ptr->at(d_qiter)).size();
           payload_len = d_pld_len_buffer[d_qiter];
-          memcpy(out+d_hdr_samp_len,&(d_buffer_ptr->at(d_qiter)),sizeof(gr_complex)*pld_symbol_samp_len);
+          memcpy(out+d_hdr_samp_len,(d_buffer_ptr->at(d_qiter)).data(),sizeof(gr_complex)*pld_symbol_samp_len);
           d_qiter++;
           d_qiter %= d_qsize;
         break;

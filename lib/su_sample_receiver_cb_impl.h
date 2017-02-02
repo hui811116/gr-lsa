@@ -76,7 +76,6 @@ namespace gr {
       uint8_t _get_bit8(int begin_idx);
 
       void pub_byte_pkt();
-      bool symbol_segment(std::vector<tag_t>& intf_idx, const std::vector<tag_t>& tags, int nsamples);
 
       void feedback_info(bool type);
       void data_reg_reset();
