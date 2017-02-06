@@ -93,7 +93,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(544, 148)</value>
+      <value>(360, 12)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -120,7 +120,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(432, 132)</value>
+      <value>(264, 84)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -133,6 +133,69 @@
     <param>
       <key>value</key>
       <value>0.35</value>
+    </param>
+  </block>
+  <block>
+    <key>variable_qtgui_range</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>-250e-6</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1152, 592)</value>
+    </param>
+    <param>
+      <key>gui_hint</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>freq_off</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>Frequency offset</value>
+    </param>
+    <param>
+      <key>min_len</key>
+      <value>200</value>
+    </param>
+    <param>
+      <key>orient</key>
+      <value>Qt.Horizontal</value>
+    </param>
+    <param>
+      <key>start</key>
+      <value>-250e-6</value>
+    </param>
+    <param>
+      <key>step</key>
+      <value>100e-6</value>
+    </param>
+    <param>
+      <key>stop</key>
+      <value>250e-6</value>
+    </param>
+    <param>
+      <key>rangeType</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>widget</key>
+      <value>counter_slider</value>
     </param>
   </block>
   <block>
@@ -159,7 +222,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(296, 40)</value>
+      <value>(184, 12)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -198,7 +261,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(784, 28)</value>
+      <value>(520, 12)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -211,6 +274,132 @@
     <param>
       <key>value</key>
       <value>32</value>
+    </param>
+  </block>
+  <block>
+    <key>variable_qtgui_range</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>-50</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1152, 464)</value>
+    </param>
+    <param>
+      <key>gui_hint</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>noise</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>Noise Power</value>
+    </param>
+    <param>
+      <key>min_len</key>
+      <value>200</value>
+    </param>
+    <param>
+      <key>orient</key>
+      <value>Qt.Horizontal</value>
+    </param>
+    <param>
+      <key>start</key>
+      <value>-50</value>
+    </param>
+    <param>
+      <key>step</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>stop</key>
+      <value>10</value>
+    </param>
+    <param>
+      <key>rangeType</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>widget</key>
+      <value>counter_slider</value>
+    </param>
+  </block>
+  <block>
+    <key>variable_qtgui_range</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>10</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1304, 584)</value>
+    </param>
+    <param>
+      <key>gui_hint</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>path_loss</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>Path Loss(dB)</value>
+    </param>
+    <param>
+      <key>min_len</key>
+      <value>200</value>
+    </param>
+    <param>
+      <key>orient</key>
+      <value>Qt.Horizontal</value>
+    </param>
+    <param>
+      <key>start</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>step</key>
+      <value>5</value>
+    </param>
+    <param>
+      <key>stop</key>
+      <value>140</value>
+    </param>
+    <param>
+      <key>rangeType</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>widget</key>
+      <value>counter_slider</value>
     </param>
   </block>
   <block>
@@ -229,7 +418,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1048, 544)</value>
+      <value>(24, 592)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -268,7 +457,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(680, 36)</value>
+      <value>(464, 84)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -295,7 +484,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(576, 44)</value>
+      <value>(368, 84)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -322,7 +511,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(336, 156)</value>
+      <value>(184, 84)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -335,6 +524,69 @@
     <param>
       <key>value</key>
       <value>4</value>
+    </param>
+  </block>
+  <block>
+    <key>variable_qtgui_range</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1304, 464)</value>
+    </param>
+    <param>
+      <key>gui_hint</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>time_off</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>Time offset</value>
+    </param>
+    <param>
+      <key>min_len</key>
+      <value>200</value>
+    </param>
+    <param>
+      <key>orient</key>
+      <value>Qt.Horizontal</value>
+    </param>
+    <param>
+      <key>start</key>
+      <value>999.9e-3</value>
+    </param>
+    <param>
+      <key>step</key>
+      <value>10e-6</value>
+    </param>
+    <param>
+      <key>stop</key>
+      <value>1.001</value>
+    </param>
+    <param>
+      <key>rangeType</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>widget</key>
+      <value>counter_slider</value>
     </param>
   </block>
   <block>
@@ -353,7 +605,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(856, 536)</value>
+      <value>(32, 464)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -400,7 +652,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(96, 112)</value>
+      <value>(8, 80)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -455,7 +707,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -537,7 +789,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(176, 268)</value>
+      <value>(48, 212)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -592,7 +844,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(680, 228)</value>
+      <value>(520, 228)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -625,6 +877,69 @@
     <param>
       <key>vlen</key>
       <value>1</value>
+    </param>
+  </block>
+  <block>
+    <key>channels_channel_model</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>block_tags</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>epsilon</key>
+      <value>time_off</value>
+    </param>
+    <param>
+      <key>freq_offset</key>
+      <value>freq_off</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(688, 192)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>channels_channel_model_0_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>noise_voltage</key>
+      <value>sps * 10.0**(noise/10.0)</value>
+    </param>
+    <param>
+      <key>seed</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>taps</key>
+      <value>10.0**(-path_loss/20.0)</value>
     </param>
   </block>
   <block>
@@ -765,11 +1080,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(448, 220)</value>
+      <value>(312, 220)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -793,7 +1108,7 @@
     </param>
     <param>
       <key>samp_delay</key>
-      <value>0</value>
+      <value>34</value>
     </param>
     <param>
       <key>taps</key>
@@ -915,7 +1230,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(448, 600)</value>
+      <value>(648, 600)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -970,11 +1285,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(184, 432)</value>
+      <value>(160, 344)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1390,25 +1705,31 @@
   </connection>
   <connection>
     <source_block_id>blocks_throttle_0</source_block_id>
+    <sink_block_id>channels_channel_model_0_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>channels_channel_model_0_0</source_block_id>
     <sink_block_id>digital_pfb_clock_sync_xxx_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>blocks_throttle_0</source_block_id>
+    <source_block_id>channels_channel_model_0_0</source_block_id>
     <sink_block_id>lsa_prou_sample_receiver_cb_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>blocks_throttle_0</source_block_id>
-    <sink_block_id>qtgui_time_sink_x_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>digital_costas_loop_cc_0</source_block_id>
     <sink_block_id>lsa_su_sample_receiver_cb_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>digital_costas_loop_cc_0</source_block_id>
+    <sink_block_id>qtgui_time_sink_x_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -1441,6 +1762,12 @@
     <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
     <source_key>info</source_key>
     <sink_key>sensing_info</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_su_transmitter_bc_0</source_block_id>
+    <sink_block_id>blocks_message_debug_0</sink_block_id>
+    <source_key>debug</source_key>
+    <sink_key>print</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_su_transmitter_bc_0</source_block_id>

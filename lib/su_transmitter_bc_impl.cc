@@ -25,6 +25,8 @@
 #include <gnuradio/io_signature.h>
 #include "su_transmitter_bc_impl.h"
 
+#include <sstream>
+
 namespace gr {
   namespace lsa {
 
@@ -213,13 +215,10 @@ namespace gr {
         break;
       }
       if(d_debug){
-        pmt::pmt_t debug_info = pmt::make_dict();//DEBUG
-        debug_info = pmt::dict_add(debug_info, pmt::intern("sutx"), pmt::string_to_symbol("receiver_msg_handler"));
-        //DEBUG
-        debug_info = pmt::dict_add(debug_info, pmt::intern("sensing_info"), pmt::from_bool(rx_sensing_info));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("rx_counter"), pmt::from_long(rx_counter));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("queue_size"), pmt::from_long(d_buffer_ptr->size()));
-        message_port_pub(d_debug_port,debug_info);//DEBUG  
+        std::stringstream ss;
+        ss<<"SUTX::receiver_msg_handler"<<" sensing_info:"<<(rx_sensing_info)? "TRUE":"FALSE";
+        ss<<" rx_counter:"<<rx_counter<< " queue_size:"<< d_buffer_ptr->size();
+        GR_LOG_DEBUG(d_logger, ss.str());
       }
       
     }
@@ -250,6 +249,7 @@ namespace gr {
     void
     su_transmitter_bc_impl::generate_hdr(int pld_len, bool type)
     {
+      //GR_LOG_DEBUG(d_logger, "SU Queued Transmitter::gen_hdr");
       uint16_t pld_len16 = (uint16_t)pld_len;
       unsigned char* pkt_len= (unsigned char*)& pld_len16;
       unsigned char* pkt_counter= (unsigned char*)& d_pkt_counter;
@@ -287,13 +287,21 @@ namespace gr {
     void
     su_transmitter_bc_impl::_repack(unsigned char* out, const unsigned char* in, int size, int const_m)
     {
-      unsigned char tmp;
-      for(int i=0;i<size *8;++i)
-      {
-        tmp = tmp | (((in[i/8]>>(7-i%8)) & 0x01) << (const_m-1- (i%const_m)) );
-        if( (i+1) % const_m == 0){
-          out[i/const_m] = tmp;
-          tmp = 0x00;
+      //GR_LOG_DEBUG(d_logger, "SU Queued Transmitter::_repack");
+      int out_idx = 0, out_written = 0;
+      int in_read = 0, in_idx = 0;
+      while(in_read<size){
+        if(out_idx == 0){
+          out[out_written] = 0;
+        }
+        out[out_written] |= ((in[in_read] >> (7-in_idx)) & 0x01) << (const_m -1 - out_idx);
+        in_idx = (in_idx +1) % 8;
+        out_idx  = (out_idx +1) % const_m;
+        if(in_idx == 0){
+          in_read ++;
+        }
+        if(out_idx == 0){
+          out_written ++;
         }
       }
     }
@@ -305,10 +313,8 @@ namespace gr {
       int size, 
       const std::vector<gr_complex>& mapper)
     {
+      //GR_LOG_DEBUG(d_logger, "SU Queued Transmitter::_map_sample");
       for(int i=0;i<size;++i){
-        //if(in[i] >= mapper.size()){
-          //std::runtime_error("SU_TX::exceed size, failed");
-        //}
         out[i] = mapper[in[i]];
       }
     }
@@ -316,10 +322,8 @@ namespace gr {
     void
     su_transmitter_bc_impl::store_to_queue(gr_complex* samp, int pld_samp_len, int pld_bytes_len)
     {
-      std::vector<gr_complex> samp_vec;
-      for(int i=0;i<pld_samp_len;++i){
-        samp_vec.push_back(samp[i]);
-      }
+      std::vector<gr_complex> samp_vec(pld_samp_len);
+      memcpy(samp_vec.data(), samp, sizeof(gr_complex)*pld_samp_len);
       d_buffer_ptr->push_back(samp_vec);
       d_counter_buffer.push_back(d_pkt_counter);
       d_pld_len_buffer.push_back(pld_bytes_len);
@@ -331,10 +335,9 @@ namespace gr {
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
-      //gr::thread::scoped_lock guard(d_setlock);
+      gr::thread::scoped_lock guard(d_setlock);
       const unsigned char *in = (const unsigned char *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-
       int payload_len = ninput_items[0];
       int pld_symbol_samp_len;
       switch(d_state)
@@ -350,6 +353,9 @@ namespace gr {
         break;
       }
       if(noutput_items < (pld_symbol_samp_len + d_hdr_samp_len)){
+        if(d_debug){
+          GR_LOG_DEBUG(d_logger, "output buffer smaller than a packet size");
+        }
         consume_each(0);
         return 0;
       }
@@ -360,7 +366,6 @@ namespace gr {
           if(d_buffer_ptr->size() == d_qmax){
             queue_size_adapt();
           }
-          
           generate_hdr(payload_len,false);
           _repack(d_hdr_symbol_buffer, d_hdr_buffer, header_nbits()/8, (int)log2(d_hdr_points.size()));
           _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points);
@@ -387,7 +392,11 @@ namespace gr {
         break;
       }
       //number of output processing
-      consume_each(ninput_items[0]);
+      if(d_debug){
+        std::stringstream ss;
+        ss<<"SU_TX::general_state= "<<(d_state == CLEAR_TO_SEND) ? "CLEAR" : "INTERFERING" ;
+        GR_LOG_DEBUG(d_logger, ss.str());
+      }
       noutput_items = pld_symbol_samp_len + d_hdr_samp_len;
       // Tell runtime system how many output items we produced.
       return noutput_items;

@@ -25,6 +25,7 @@
 #include <gnuradio/io_signature.h>
 #include "su_sample_receiver_cb_impl.h"
 #include <gnuradio/blocks/pdu.h>
+#include <sstream>
 
 namespace gr {
   namespace lsa {
@@ -100,8 +101,6 @@ namespace gr {
      */
     su_sample_receiver_cb_impl::~su_sample_receiver_cb_impl()
     {
-      //free(d_byte_reg);
-      //free(d_symbol_to_bytes);
       delete [] d_byte_reg;
       delete [] d_symbol_to_bytes;
     }
@@ -260,9 +259,9 @@ namespace gr {
             }
             d_byte_count=0;
             if(d_debug){
-              pmt::pmt_t debug = pmt::make_dict();
-              debug = pmt::dict_add(debug, pmt::intern("SU RX header"), pmt::from_long(d_payload_len));
-              message_port_pub(d_debug_port,debug);
+              std::stringstream ss;
+              ss<<"SU_RX_header= "<<d_payload_len;
+              GR_LOG_DEBUG(d_logger, ss.str());
             }
           }
         break;
@@ -325,7 +324,7 @@ namespace gr {
           if(sense_state){
             feedback_info(true);
             if(d_debug){
-              debug = pmt::dict_add(debug, pmt::intern("SU TX"), pmt::string_to_symbol("Interfering detected"));
+              GR_LOG_DEBUG(d_logger,"Interfering signal detected");
             }
             data_reg_reset();
           }
@@ -347,6 +346,7 @@ namespace gr {
         }
         count++;
       }
+      
       consume_each (noutput_items);
       return noutput_items;
     }
