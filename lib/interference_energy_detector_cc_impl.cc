@@ -144,6 +144,11 @@ namespace gr {
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
       ninput_items_required[0] = d_blocklength * (noutput_items/d_blocklength);
+      if(d_debug){
+        std::stringstream ss;
+        ss<<"<forecast>"<<"ninput_items_required[0]="<<ninput_items_required[0];
+        GR_LOG_DEBUG(d_logger, ss.str());
+      }
     }
 
     int
@@ -154,7 +159,9 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      memcpy(out, in, sizeof(gr_complex) * noutput_items);
+      noutput_items = ((noutput_items < ninput_items[0]) ? noutput_items:ninput_items[0]);
+      int iter = noutput_items /d_blocklength;
+      noutput_items = iter*d_blocklength;
       float* ed_val=NULL;
       if(output_items.size()==2){
         ed_val = (float*) output_items[1];
@@ -169,29 +176,33 @@ namespace gr {
             ed_val[i] = 10.0 * log10(d_energy_reg[i]);
           }
         }
-      int iter = noutput_items /d_blocklength;
       for(int i=0; i < iter ; ++i){
         //cal mean and std of energy
         volk_32f_stddev_and_mean_32f_x2(v_stddev, v_mean, d_energy_reg + i*d_blocklength, d_blocklength);
         float var = pow(*(v_stddev),2) ; // variance
-        if(10.0*log10(*v_mean) > d_ed_thres_db){
-          add_item_tag(0,nitems_written(0)+i*d_blocklength,d_ed_tagname,pmt::from_float(10.0f*log10(*v_mean)),d_src_id);
-        }
-        if(10.0*log10(var) > d_voe_thres_db){
-          add_item_tag(0,nitems_written(0)+i*d_blocklength,d_voe_tagname,pmt::from_float(10.0f*log10(var)),d_src_id);
-          if(d_debug){
-            print(10.0*log10(var),10.0*log10(*v_mean));
-          }
-        }
+        
+          add_item_tag(0,nitems_written(0)+i*d_blocklength,pmt::intern("ed_val"),pmt::from_float(10.0f*log10(*v_mean)),d_src_id);
+          add_item_tag(0,nitems_written(0)+i*d_blocklength,d_ed_tagname,pmt::from_bool(10.0*log10(*v_mean) >= d_ed_thres_db),d_src_id);
+
+          add_item_tag(0,nitems_written(0)+i*d_blocklength,pmt::intern("intf_val"),pmt::from_float(10.0f*log10(var)),d_src_id);
+          add_item_tag(0,nitems_written(0)+i*d_blocklength,d_voe_tagname,pmt::from_bool(10.0*log10(var) >= d_voe_thres_db),d_src_id);
+          //if(d_debug){
+            //print(10.0*log10(var),10.0*log10(*v_mean));
+          //}
       }
       
-
       volk_free(v_stddev);
       volk_free(v_mean);
       // Tell runtime system how many input items we consumed on
+      memcpy(out, in, sizeof(gr_complex) * noutput_items);
       // each input stream.
       consume_each (noutput_items);
-
+      if(d_debug){
+        std::stringstream ss;
+        ss << "consume/output samples-->"<<noutput_items;
+        GR_LOG_DEBUG(d_logger, ss.str());
+      }
+      
       // Tell runtime system how many output items we produced.
       return noutput_items;
     }

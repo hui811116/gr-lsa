@@ -79,6 +79,7 @@ namespace gr {
 
       uint8_t d_qidx;
       uint8_t d_qsize;
+      uint16_t debug_counter;
       uint16_t d_pld_len;
 
       std::vector<int> d_retx_buf_idx;

@@ -84,6 +84,7 @@ namespace gr {
 
       void check_tags(std::vector<tag_t>& out_tags, const std::vector<tag_t>& in_tags);
 
+
      public:
       su_sample_receiver_cb_impl(
         const std::string& sensing_tag_id,

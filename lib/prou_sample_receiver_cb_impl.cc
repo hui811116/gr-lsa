@@ -33,6 +33,7 @@
 #include <cstdio>
 #include <cmath>
 #include <algorithm>
+#include <sstream>
 
 
 namespace gr {
@@ -237,6 +238,8 @@ namespace gr {
       if(len0 == len1)
       {
         pld_len = len0;
+        //for debugging purpose
+        debug_counter = _get_bit16(32,input);
         qidx = _get_bit8(48,input);
         qsize = _get_bit8(56,input);
         return true;
@@ -544,8 +547,6 @@ namespace gr {
     prou_sample_receiver_cb_impl::calc_var_energy(const gr_complex* in, size_t length, float threshold_db)
     {
       assert(length < 1024*1024);
-      float voe = -1000;
-
       int alignment = volk_get_alignment();
       float * mean = (float*) volk_malloc(sizeof(float), alignment);
       float * stddev = (float*) volk_malloc(sizeof(float), alignment);
@@ -630,7 +631,6 @@ namespace gr {
           max_len = d_retx_pkt_len[i];
         }
       }//linear search for maximum length
-      //total_len = 0;
       gr_complex* retx_all = (gr_complex*) malloc(sizeof(gr_complex)* total_len);
       std::vector<int> retx_idx;
       total_len =0;
@@ -640,7 +640,6 @@ namespace gr {
         int tmp_len = d_retx_pkt_len[i];
         int tmp_idx = d_retx_buf_idx[i];
         memcpy(retx_all + total_len, d_sample_buffer + tmp_idx, sizeof(gr_complex)* tmp_len);
-        //memcpy(retx_all + total_len, d_process_buffer + tmp_idx, sizeof(gr_complex)* d_retx_buf_idx[i]);
         retx_idx.push_back(total_len);
         total_len += tmp_len;
       }
@@ -677,6 +676,7 @@ namespace gr {
     int
     prou_sample_receiver_cb_impl::output_samples(gr_complex* out, int noutput_items)
     {
+      //<FIXME>while loop? 
       int true_noutput_items;
       if(noutput_items >= (d_output_buffer_size - d_output_buffer_idx-1) ){
         memcpy(out, d_output_buffer + d_output_buffer_idx, sizeof(gr_complex)*d_output_buffer_size);
@@ -689,7 +689,6 @@ namespace gr {
         memcpy(out, d_output_buffer + d_output_buffer_idx, sizeof(gr_complex)*noutput_items);
         true_noutput_items = noutput_items;
         d_output_buffer_idx += noutput_items;
-        //d_output_buffer_size -= noutput_items;
       }
       return true_noutput_items;
     }
@@ -740,14 +739,9 @@ namespace gr {
     prou_sample_receiver_cb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      if(d_output_buffer_size != 0){
-        ninput_items_required[0] = 0;  
-      }
-      else{
         assert(d_sample_cap >= d_sample_size);
         int max_sample = d_sample_cap - d_sample_size;
-        ninput_items_required[0] = (noutput_items > max_sample) ? max_sample: noutput_items;  
-      }
+        ninput_items_required[0] = ((noutput_items > max_sample) ? max_sample: noutput_items);  
     }
 
 
@@ -797,7 +791,6 @@ namespace gr {
     void
     prou_sample_receiver_cb_impl::process_symbols()
     {
-      pmt::pmt_t debug_info = pmt::make_dict();
       unsigned char symbol;
       uint64_t check_bits;
       for(d_process_idx ;d_process_idx < d_process_size; d_process_idx++){
@@ -824,19 +817,16 @@ namespace gr {
                 d_state = PAYLOAD_WAIT;
                 d_su_pld_counter = ( d_pld_len*8)/d_su_pld_bps;
                 if(d_debug){
-                  debug_info = pmt::dict_add(debug_info, pmt::intern("ProU_RX"), pmt::string_to_symbol("process_symbols"));
-                  debug_info = pmt::dict_add(debug_info, pmt::intern("payload_len"), pmt::from_long(d_pld_len));
-                  debug_info = pmt::dict_add(debug_info, pmt::intern("qidx"), pmt::from_long(d_qidx));
-                  debug_info = pmt::dict_add(debug_info, pmt::intern("qsize"), pmt::from_long(d_qsize));
-                  message_port_pub(d_debug_port, debug_info);
+                  std::stringstream ss;
+                  ss<<"<process_symbols>"<<"payload_len:"<<d_pld_len<<",qidx:"<<(int)d_qidx<<",qsize:"<<(int)d_qsize<<",counter:"<<debug_counter;
+                  GR_LOG_DEBUG(d_logger, ss.str());
                 }
 
               }
               else{
                 d_state = SEARCH_ACCESSCODE;
                 if(d_debug){
-                  debug_info = pmt::dict_add(debug_info, pmt::intern("ProU RX"), pmt::string_to_symbol("accesscode found but failed"));
-                  message_port_pub(d_debug_port, debug_info);
+                  GR_LOG_DEBUG(d_logger,"<process_symbols>warning: accesscode found but header failed!");
                 }
               }
             }
@@ -888,40 +878,7 @@ namespace gr {
       d_sample_idx += plf_consume;
       d_process_size += c_count;
 
-      /*
-      if(d_debug){
-        pmt::pmt_t debug_info = pmt::make_dict();
-        debug_info = pmt::dict_add(debug_info, pmt::intern("polyphase output"),pmt::from_long(p_count));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("polyphase consume"), pmt::from_long(plf_consume));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("costas output"),pmt::from_long(c_count));
-        message_port_pub(d_debug_port,debug_info);
-      }*/
-
-      /*
-      int info_iter = sensing_result.size();
-      if(info_iter==0)
-        return;
-      int max_len = info_iter*window;
-      int info_count=0;
-      while( (info_count<info_iter) && ( (plf_total_consume + window) < max_len)){
-          if(!sensing_result[info_count]){
-            plf_out = plf_core(d_plf_symbol_buffer+p_count,d_plf_time_error+plf_total_consume, d_sample_buffer+d_sample_idx+plf_total_consume,window, plf_consume);
-            costas_out = costas_core(d_process_buffer+d_process_idx+c_count, d_costas_phase_error+c_count,d_plf_symbol_buffer+p_count, plf_out);
-            p_count += plf_out;
-            plf_total_consume += plf_consume;
-            c_count += costas_out;
-          }
-          else{
-            plf_total_consume += window;
-            p_count += (window / d_plf_sps);
-            c_count += (window / d_plf_sps);
-          }
-          //skip since this window is interfered by su
-          info_count = floor(plf_total_consume/ window);
-      }
-      d_sample_idx += (plf_total_consume > max_len)? plf_total_consume-window : plf_total_consume;
-      d_process_size += (plf_total_consume > max_len)? c_count - (window/d_plf_sps):c_count;
-      */
+      
       //TODO: record freq and time error and rebuild interfering signal for cancellation
     }
 
@@ -940,18 +897,7 @@ namespace gr {
     bool
     prou_sample_receiver_cb_impl::append_samples(const gr_complex* in, int size, int& consume)
     {
-      // forecast should handle the input sample length carefully
-      /*
-      while(d_sample_size +size > d_sample_cap)
-      {
-        double_cap(); // sample and symbol both update
-        if(d_sample_cap > 64*d_sample_cap_init)
-        {
-          return false;//failed, force reset
-        }
-      }
-      */
-      
+      // forecast should handle the input sample length carefully      
       switch(d_intf_state)
       {
         case CLEAR:
@@ -990,7 +936,7 @@ namespace gr {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
       int true_output = 0;
-      noutput_items = (noutput_items > ninput_items[0])? ninput_items[0] : noutput_items;
+      noutput_items = ((noutput_items > ninput_items[0])? ninput_items[0] : noutput_items);
       // Do <+signal processing+>
       int consume=0;
       std::vector<bool> sensing_result;
@@ -1024,16 +970,6 @@ namespace gr {
           std::runtime_error("ProU RX: Wrong Receiver Mode!");
         break;
       }
-
-      /*
-      if(d_debug){
-        pmt::pmt_t debug_info = pmt::make_dict();
-        debug_info = pmt::dict_add(debug_info, pmt::intern("sensing size"),pmt::from_long(sensing_result.size()));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("sample_size"),pmt::from_long(d_sample_size));
-        debug_info = pmt::dict_add(debug_info, pmt::intern("symbol_size"),pmt::from_long(d_process_size));
-        message_port_pub(d_debug_port,debug_info);
-      }
-      */
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (consume);

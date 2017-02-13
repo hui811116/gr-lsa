@@ -149,6 +149,11 @@ namespace gr {
         sen_back = pmt::dict_add(sen_back,pmt::intern("queue_index"),pmt::from_long(d_qidx));
         sen_back = pmt::dict_add(sen_back,pmt::intern("queue_size"),pmt::from_long(d_qsize));
         sen_back = pmt::dict_add(sen_back,pmt::intern("counter"),pmt::from_long(d_counter));
+        if(d_debug){
+          std::stringstream ss;
+          ss<<"SU_RX_feedback----->"<<((type)? "INTERFERING":"CLEAR_TO_SEND");
+          GR_LOG_DEBUG(d_logger, ss.str());
+        }
       }
       message_port_pub(d_msg_port,sen_back);
     }
@@ -216,6 +221,11 @@ namespace gr {
         d_counter = _get_bit16(32);
         d_qidx = _get_bit8(48);
         d_qsize = _get_bit8(56);
+        if(d_debug){
+          std::stringstream ss;
+          ss<<"Packet found-->"<<"payload_len:"<<len0<<", counter:"<<d_counter<<", qidx:"<<(int)d_qidx<<", qsize:"<<(int)d_qsize;
+          GR_LOG_DEBUG(d_logger,ss.str());
+        }
         return true;
       }
       return false;
@@ -258,11 +268,6 @@ namespace gr {
               d_bit_state = SEARCH_SYNC_CODE;
             }
             d_byte_count=0;
-            if(d_debug){
-              std::stringstream ss;
-              ss<<"SU_RX_header= "<<d_payload_len;
-              GR_LOG_DEBUG(d_logger, ss.str());
-            }
           }
         break;
         case WAIT_PAYLOAD:
@@ -305,7 +310,7 @@ namespace gr {
       std::vector<tag_t> tags;
       get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items);
       check_tags(intf_idx,tags);
-      int sense_offset;
+      int sense_offset=-1;
       bool sense_state;
       int count =0;
       tag_t check_tag;
@@ -320,13 +325,17 @@ namespace gr {
           intf_idx.erase(intf_idx.begin());
         }
         if(count == sense_offset){
+
           d_state = (sense_state)? INTERFERING: SU_ONLY;
           if(sense_state){
             feedback_info(true);
-            if(d_debug){
-              GR_LOG_DEBUG(d_logger,"Interfering signal detected");
-            }
             data_reg_reset();
+            if(d_debug){
+              std::stringstream ss;
+              ss<<"Interfering tag reply: "<< ((sense_state)? "Interfering":"Clear,");
+              ss<<" original offset--->"<<sense_offset + nitems_read(0);
+              GR_LOG_DEBUG(d_logger, ss.str());
+            }
           }
         }
         switch(d_state)
@@ -335,6 +344,12 @@ namespace gr {
             if(insert_parse_byte(in[count])){
               feedback_info(false);
               data_reg_reset();
+              if(d_debug){
+                std::stringstream ss;
+                ss<<"Interfering tag reply: "<< ((sense_state)? "Interfering":"Clear,");
+                ss<<" original offset--->"<<sense_offset + nitems_read(0);
+                GR_LOG_DEBUG(d_logger, ss.str());
+              }
             }
           break;
           case INTERFERING:

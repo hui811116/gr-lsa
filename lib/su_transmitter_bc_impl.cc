@@ -392,11 +392,6 @@ namespace gr {
         break;
       }
       //number of output processing
-      if(d_debug){
-        std::stringstream ss;
-        ss<<"SU_TX::general_state= "<<(d_state == CLEAR_TO_SEND) ? "CLEAR" : "INTERFERING" ;
-        GR_LOG_DEBUG(d_logger, ss.str());
-      }
       noutput_items = pld_symbol_samp_len + d_hdr_samp_len;
       // Tell runtime system how many output items we produced.
       return noutput_items;
