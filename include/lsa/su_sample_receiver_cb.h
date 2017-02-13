@@ -24,7 +24,6 @@
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
-//#include <gnuradio/filter/fir_filter.h>
 #include <gnuradio/digital/constellation.h>
 #include <pmt/pmt.h>
 
@@ -54,6 +53,14 @@ namespace gr {
         const std::string& accesscode,
         const gr::digital::constellation_sptr& hdr_const,
         const gr::digital::constellation_sptr& pld_const,
+        double sps,
+        float loop_bw,
+        const std::vector<float> &taps,
+        unsigned int filter_size,
+        float init_phase,
+        float max_rate_deviation,
+        int osps,
+        int cos_order,
         bool debug);
     };
 
