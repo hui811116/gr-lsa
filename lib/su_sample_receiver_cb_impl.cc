@@ -49,7 +49,8 @@ namespace gr {
       float max_rate_deviation,
       int osps,
       int cos_order,
-      bool debug)
+      bool debug,
+      bool sync)
     {
       return gnuradio::get_initial_sptr
         (new su_sample_receiver_cb_impl(
@@ -65,7 +66,8 @@ namespace gr {
           max_rate_deviation,
           osps,
           cos_order,
-          debug));
+          debug,
+          sync));
     }
 
     enum SuRxState{
@@ -94,7 +96,8 @@ namespace gr {
       float max_rate_deviation,
       int osps,
       int cos_order,
-      bool debug)
+      bool debug,
+      bool sync)
       : gr::block("su_sample_receiver_cb",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(0, 0, 0)),
@@ -104,7 +107,8 @@ namespace gr {
         d_osps(osps),
         d_error(0),
         d_out_idx(0),
-        d_cos_order(cos_order)
+        d_cos_order(cos_order),
+        d_cos_error(0)
     {
       d_hdr_sptr = hdr_const->base();
       d_pld_sptr = pld_const->base();
@@ -122,14 +126,15 @@ namespace gr {
       d_cap = 1024*64;
       d_byte_count = 0;
   
-      set_max_noutput_items(d_cap);
+      //set_max_noutput_items(d_cap);
       if(!set_accesscode(accesscode)){
         throw std::runtime_error("SU Receiver: Setting access code failed");
       }
       d_byte_reg = new unsigned char[d_cap];
       d_symbol_to_bytes = new unsigned char[d_cap];
       d_debug = debug;
-
+      d_use_sync = sync;
+      set_min_noutput_items(512);
       message_port_register_out(d_msg_port);
       message_port_register_out(d_pkt_port);
       message_port_register_out(d_debug_port); //debug
@@ -155,27 +160,18 @@ namespace gr {
         d_diff_filters[i] = new gr::filter::kernel::fir_filter_ccf(1, vtaps);
       }
 
-      std::vector<float> dtaps;
-      create_diff_taps(taps, dtaps);
-      set_taps(taps, d_taps, d_filters);
-      set_taps(dtaps, d_dtaps, d_diff_filters);
-
-      d_old_in=0;
-      d_new_in =0;
-      d_last_out = 0;
-
       //update gains
       float denom = (1.0 + 2.0*d_damping*d_loop_bw +d_loop_bw*d_loop_bw);
       d_alpha = (4*d_damping*d_loop_bw) / denom;
       d_beta = (4*d_loop_bw*d_loop_bw) / denom;
 
-      const size_t max_size = 4096;
+      const size_t max_size = 8192;
       d_plf_symbols = new gr_complex[max_size];
       d_plf_size = 0;
 
       // costas loop
       d_cos_symbols = new gr_complex[max_size];
-      d_cos_damping = sqrt(2.0)/2.0f;
+      d_cos_damping = sqrt(2.0f)/2.0f;
       denom = (1.0 + 2.0*d_cos_damping*d_loop_bw+d_loop_bw * d_loop_bw);
       d_cos_alpha = (4* d_cos_damping*d_loop_bw)/ denom;
       d_cos_beta = (4*d_loop_bw*d_loop_bw)/denom;
@@ -192,6 +188,13 @@ namespace gr {
         default:
           throw std::invalid_argument("order must be 2 or 4");
         break;
+      }
+      if(d_use_sync){
+        set_relative_rate((float)d_osps/(float)d_sps);
+        std::vector<float> dtaps;
+        create_diff_taps(taps, dtaps);
+        set_taps(taps, d_taps, d_filters);
+        set_taps(dtaps, d_dtaps, d_diff_filters);
       }
     }
 
@@ -260,16 +263,16 @@ namespace gr {
 
         d_cos_freq = d_cos_freq + d_cos_error * d_cos_beta;
         d_cos_phase = d_cos_phase + d_cos_error * d_cos_alpha + d_cos_freq;
-        while(d_cos_phase >= M_TWOPI){
+        while(d_cos_phase > M_TWOPI){
           d_cos_phase -= M_TWOPI;
         }
-        while(d_cos_phase<0){
+        while(d_cos_phase< -M_TWOPI){
           d_cos_phase += M_TWOPI;
         }
         if(d_cos_freq > 1.0){
           d_cos_freq = 1.0;
         }
-        if(d_cos_freq< -1.0){
+        else if(d_cos_freq< -1.0){
           d_cos_freq = -1.0;
         }
         if(output_error){
@@ -304,7 +307,7 @@ namespace gr {
       }
       difftaps.push_back(0);
 
-      for(int i=0;i< difftaps.size();i++){
+      for(unsigned int i=0;i< difftaps.size();i++){
         difftaps[i]*= d_nfilters/pwr;
         if(difftaps[i] != difftaps[i]){
           throw std::runtime_error("SU_RX::create_diff_taps produced NaN");
@@ -324,13 +327,12 @@ namespace gr {
       d_taps_per_filter = (unsigned int) ceil((double)ntaps/(double)d_nfilters);
 
       ourtaps.resize(d_nfilters);
-      std::vector<float> tmp_taps;
-      tmp_taps = newtaps;
+      std::vector<float> tmp_taps = newtaps;
       while((float)(tmp_taps.size()) < d_nfilters*d_taps_per_filter){
         tmp_taps.push_back(0);
       }
 
-      for(i=0;i<d_nfilters;++i){
+      for(i=0;i<d_nfilters;i++){
         ourtaps[i] = std::vector<float>(d_taps_per_filter,0);
         for(j=0; j<d_taps_per_filter;j++){
           ourtaps[i][j] = tmp_taps[i+ j*d_nfilters];
@@ -358,6 +360,7 @@ namespace gr {
       float error_r,error_i;
       int state_copy = d_state;
       // NOTE::if there are time_est tags, refer to original code and shift d_k here
+
       std::vector<tag_t> tags;
       get_tags_in_window(tags, 0,0,d_sps*noutput_items, d_sensing_tag_id);
       while(i < noutput_items) {
@@ -377,6 +380,7 @@ namespace gr {
               state_copy = !state_copy;
             }
             else if((!pmt::to_bool(tags[0].value)) && (state_copy == INTERFERING)){
+              //GR_LOG_DEBUG(d_logger,"ERROR: should not enter this case");
               d_k = d_prev_k;
               d_rate_f = d_prev_rate_f;
               d_filtnum = d_prev_filtnum;
@@ -406,6 +410,7 @@ namespace gr {
           out[i+d_out_idx] = d_filters[d_filtnum]->filter(&in[count+d_out_idx]);
           d_k = d_k + d_rate_i + d_rate_f;
 
+          d_out_idx++;
           if(output_error){
             error[i] = d_error;
             outf[i] = d_rate_f;
@@ -424,7 +429,7 @@ namespace gr {
         error_i = out[i].imag() * diff.imag();
         d_error = (error_i + error_r)/2.0 ;
 
-        for(int s=0;s<d_sps;++s){
+        for(int s=0;s<d_sps;s++){
           d_rate_f = d_rate_f + d_beta*d_error;
           d_k = d_k +d_alpha*d_error + d_rate_f;
         }
@@ -619,34 +624,16 @@ namespace gr {
       return false;
     }
 
-    void
-    su_sample_receiver_cb_impl::check_tags(std::vector<tag_t>& out_tags, const std::vector<tag_t>& in_tags)
-    {
-      bool sensing;
-      for(int i=0;i<in_tags.size();++i){
-        if(in_tags[i].key == d_sensing_tag_id){
-          sensing = pmt::to_bool(in_tags[i].value);
-            out_tags.push_back(in_tags[i]);            
-        }
-      }
-    }
     int
     su_sample_receiver_cb_impl::general_work (int noutput_items,
                        gr_vector_int &ninput_items,
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
-      //noutput_items = ninput_items[0];
       const gr_complex *in = (const gr_complex *) input_items[0];
-      std::vector<tag_t> intf_idx;
-      std::vector<tag_t> tags;
-      get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items);
-      check_tags(intf_idx,tags);
-      uint64_t sense_offset=-1;
-      bool sense_state;
-      int count = 0;
-      int nin;
-      tag_t check_tag;
+      const gr_complex *out = (const gr_complex *) input_items[0];
+      int count = ninput_items[0];
+      int nin = ninput_items[0];
       float* plf_error;
       float* plf_outk;
       float* plf_outf;
@@ -654,11 +641,23 @@ namespace gr {
       float* cos_phase;
       float* cos_freq;
       std::vector<tag_t> plf_tags, state_handle;
-      d_plf_size = plf_core(d_plf_symbols, in, noutput_items, plf_error, plf_outf, plf_outk, 
-        false, ninput_items[0], count, plf_tags);
-      state_handle = plf_tags;
-      nin = costas_core(d_cos_symbols, d_plf_symbols, d_plf_size, cos_error, cos_phase, cos_freq, false, plf_tags);
+      
 
+      if(d_use_sync){
+        d_plf_size = plf_core(d_plf_symbols, in, noutput_items, plf_error, plf_outf, plf_outk, 
+          false, ninput_items[0], count, plf_tags);  
+        state_handle = plf_tags;
+        nin = costas_core(d_cos_symbols, d_plf_symbols, d_plf_size, cos_error, cos_phase, cos_freq, false, plf_tags);
+        out = d_cos_symbols;
+      }
+      
+
+      if(d_debug){
+        std::stringstream ss;
+        ss<<"polyphase output:"<<d_plf_size<< ",consume:"<<count<<", nin="<<nin;
+        GR_LOG_DEBUG(d_logger, ss.str());
+      }
+      
 
       for(int i=0;i<nin;++i){
         if(!state_handle.empty()){
@@ -672,7 +671,7 @@ namespace gr {
         switch(d_state)
         {
           case SU_ONLY:
-          if(insert_parse_byte(d_cos_symbols[i])){
+          if(insert_parse_byte(out[i])){
             feedback_info(false);
             data_reg_reset();
           }
@@ -686,55 +685,7 @@ namespace gr {
       }
       consume_each(count);
       return noutput_items;
-      /*
-
-      while(count < noutput_items)
-      {
-        if(!intf_idx.empty()){
-          check_tag = intf_idx.front();
-          sense_offset = check_tag.offset-nitems_read(0);
-          sense_state = to_bool(check_tag.value);
-          intf_idx.erase(intf_idx.begin());
-        }
-        if(count == sense_offset){
-          d_state = (sense_state)? INTERFERING: SU_ONLY;
-          if(sense_state){
-            feedback_info(true);
-            data_reg_reset();
-            if(d_debug){
-              std::stringstream ss;
-              ss<<"Interfering tag reply: "<< ((sense_state)? "Interfering":"Clear,");
-              ss<<" original offset--->"<<sense_offset + nitems_read(0);
-              GR_LOG_DEBUG(d_logger, ss.str());
-            }
-          }
-        }
-        switch(d_state)
-        {
-          case SU_ONLY:
-            if(insert_parse_byte(in[count])){
-              feedback_info(false);
-              data_reg_reset();
-              if(d_debug){
-                std::stringstream ss;
-                ss<<"Interfering tag reply: "<< ((sense_state)? "Interfering":"Clear,");
-                ss<<" original offset--->"<<sense_offset + nitems_read(0);
-                GR_LOG_DEBUG(d_logger, ss.str());
-              }
-            }
-          break;
-          case INTERFERING:
-            //do nothing?
-          break;
-          default:
-            std::runtime_error("SU RX:entering wrong state");
-          break;
-        }
-        count++;
-      }*/
       
-      //consume_each (noutput_items);
-      //return noutput_items;
     }
 
   } /* namespace lsa */

@@ -5,7 +5,7 @@
   <category>[lsa]</category>
   <import>import lsa</import>
   <import>from gnuradio import digital</import>
-  <make>lsa.su_sample_receiver_cb($sen_tag,$accesscode,$hdr_const,$pld_const,$debug, $sps, $loop_bw, $taps, $filter_size, $init_phase, $max_dev, $osps)</make>
+  <make>lsa.su_sample_receiver_cb($sen_tag,$accesscode,$hdr_const,$pld_const, $sps, $loop_bw, $taps, $filter_size, $init_phase, $max_dev, $osps, $cos_order, $debug, $sync)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -33,20 +33,6 @@
     <name>Payload Constellation Object</name>
     <key>pld_const</key>
     <type>raw</type>
-  </param>
-  <param>
-    <name>Debug Mode</name>
-    <key>debug</key>
-    <value>False</value>
-    <type>bool</type>
-    <option>
-      <name>Yes</name>
-      <key>True</key>
-    </option>
-    <option>
-      <name>No</name>
-      <key>False</key>
-    </option>
   </param>
   <param>
     <name>Samples/Symbol</name>
@@ -86,6 +72,39 @@
     <key>osps</key>
     <value>1</value>
     <type>int</type>
+  </param>
+  <param>
+    <name>Order</name>
+    <key>cos_order</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Debug Mode</name>
+    <key>debug</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Use Sync</name>
+    <key>sync</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:

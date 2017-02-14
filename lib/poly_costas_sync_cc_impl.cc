@@ -32,6 +32,7 @@
 #include <cstdio>
 #include <cmath>
 #include <algorithm>
+#include <sstream>
 
 namespace gr {
   namespace lsa {
@@ -332,6 +333,10 @@ namespace gr {
       //float error[8192];
       true_output = plf_core(d_time_sync_symbol, d_error, in, noutput_items, true_consume);
       costas_nout = costas_core(out,d_error, d_time_sync_symbol,true_output);
+
+      //std::stringstream ss;
+      //ss<< "polyphase output:"  << true_output << " ,consume:"<<true_consume<< ", costas_nout"<<costas_nout;
+      //GR_LOG_DEBUG(d_logger, ss.str());
 
       // Tell runtime system how many input items we consumed on
       // each input stream.

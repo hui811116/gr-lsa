@@ -70,6 +70,7 @@ namespace gr {
 
       //debug
       bool d_debug;
+      bool d_use_sync;
       
       bool parse_header();
       uint16_t _get_bit16(int begin_idx);
@@ -82,13 +83,11 @@ namespace gr {
 
       bool insert_parse_byte(const gr_complex& sample);
 
-      void check_tags(std::vector<tag_t>& out_tags, const std::vector<tag_t>& in_tags);
-
       //synchronizer integration
       gr_complex* d_plf_symbols;
       size_t d_plf_size;
       double d_sps;
-      double d_sample_num;
+      //double d_sample_num;
       float d_loop_bw;
       float d_damping;
       float d_alpha;
@@ -117,7 +116,7 @@ namespace gr {
       float d_prev_error;
       int d_prev_out_idx;
 
-      uint64_t d_old_in, d_new_in, d_last_out;
+      //uint64_t d_old_in, d_new_in, d_last_out;
 
       void create_diff_taps(const std::vector<float>& newtaps, std::vector<float>& difftaps);
 
@@ -159,7 +158,8 @@ namespace gr {
         float max_rate_deviation,
         int osps,
         int cos_order,
-        bool debug);
+        bool debug,
+        bool sync);
       ~su_sample_receiver_cb_impl();
 
       // Where all the action really happens

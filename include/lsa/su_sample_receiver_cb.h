@@ -61,7 +61,8 @@ namespace gr {
         float max_rate_deviation,
         int osps,
         int cos_order,
-        bool debug);
+        bool debug,
+        bool sync);
     };
 
   } // namespace lsa
