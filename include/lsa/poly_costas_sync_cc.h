@@ -55,7 +55,8 @@ namespace gr {
         const std::vector<float>& plf_taps,
         int plf_nfilts,
         float costas_loop_bw,
-        int costas_order);
+        int costas_order,
+        const std::string& snese_tagname);
     };
 
   } // namespace lsa

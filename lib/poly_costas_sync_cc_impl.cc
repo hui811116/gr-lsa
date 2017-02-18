@@ -44,7 +44,8 @@ namespace gr {
       const std::vector<float> &plf_taps,
       int plf_nfilts,
       float costas_loop_bw,
-      int costas_order
+      int costas_order,
+      const std::string& sense_tagname
       )
     {
       return gnuradio::get_initial_sptr
@@ -54,7 +55,8 @@ namespace gr {
           plf_taps,
           plf_nfilts,
           costas_loop_bw,
-          costas_order));
+          costas_order,
+          sense_tagname));
     }
 
     /*
@@ -66,7 +68,8 @@ namespace gr {
       const std::vector<float>& plf_taps,
       int plf_nfilts,
       float costas_loop_bw,
-      int costas_order)
+      int costas_order,
+      const std::string& sense_tagname)
       : gr::block("poly_costas_sync_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
@@ -131,6 +134,8 @@ namespace gr {
           std::runtime_error("SYNC:invalid order, should be 2,4 or 8");
         break;
       }
+      d_sensing_tag = pmt::string_to_symbol(sense_tagname);
+      d_sensing_state = false;
     }
 
     /*
@@ -213,11 +218,39 @@ namespace gr {
       float* error,
       const gr_complex* in,
       int nsample,
-      int& nconsume)
+      int& nconsume,
+      std::vector<tag_t>& tags)
     {
       int i=0, count=0;
       float error_r,error_i;
+      bool state = d_sensing_state;
       while(i<nsample){
+        if(!tags.empty()){
+          size_t offset = tags[0].offset-nitems_read(0);
+          if( (offset >=(size_t)count) && (offset<(size_t)(count + d_plf_sps))){
+            if(pmt::to_bool(tags[0].value) && (state==false)){
+              d_prev_plf_k = d_plf_k;
+              d_prev_plf_rate_f = d_plf_rate_f;
+              //d_prev_plf_error = d_plf_error;
+              //d_prev_plf_filtnum = d_plf_filtnum;
+              tag_t tmp_tag;
+              tmp_tag.offset = i;
+              tmp_tag.value = pmt::from_bool(true);
+              tags.push_back(tmp_tag);
+              state = !state;
+            }
+            else if( !(pmt::to_bool(tags[0].value)) && (state==true)){
+              d_plf_k = d_prev_plf_k;
+              d_plf_rate_f = d_prev_plf_rate_f;
+              //d_plf_error = d_prev_plf_error;
+              tag_t tmp_tag;
+              tmp_tag.offset = i;
+              tmp_tag.value = pmt::from_bool(false);
+              tags.push_back(tmp_tag);
+              state = !state;
+            }
+          }
+        }
         while(d_plf_out_idx<d_plf_osps){
           d_plf_filtnum = (int) floor(d_plf_k);
           while(d_plf_filtnum >= d_plf_nfilts){
@@ -291,11 +324,27 @@ namespace gr {
       gr_complex* out,
       float* error,
       const gr_complex* in,
-      int nsample)
+      int nsample,
+      std::vector<tag_t>& tags)
     {
       gr_complex nco_out;
       for(int i=0;i<nsample;++i)
       {
+        if(!tags.empty()){
+          if(tags[0].offset == (size_t)i){
+            d_sensing_state = pmt::to_bool(tags[0].value);
+            if(d_sensing_state){
+              d_prev_cos_phase = d_phase;
+              d_prev_cos_freq = d_freq;
+            }
+            else{
+              d_phase = d_prev_cos_phase;
+              d_freq = d_prev_cos_freq;
+            }
+            add_item_tag(0,nitems_written(0)+i,d_sensing_tag, pmt::from_bool(d_sensing_state));
+            tags.erase(tags.begin());
+          }
+        }
         nco_out= gr_expj(-d_phase);
         out[i]=nco_out*in[i];
         d_costas_error = (*this.*d_costas_phase_detector)(out[i]);
@@ -330,9 +379,11 @@ namespace gr {
       int true_output=0;
       int true_consume=0;
       int costas_nout;
+      std::vector<tag_t> tags;
+      get_tags_in_window(tags, 0,0,d_plf_sps*noutput_items, d_sensing_tag);
       //float error[8192];
-      true_output = plf_core(d_time_sync_symbol, d_error, in, noutput_items, true_consume);
-      costas_nout = costas_core(out,d_error, d_time_sync_symbol,true_output);
+      true_output = plf_core(d_time_sync_symbol, d_error, in, noutput_items, true_consume, tags);
+      costas_nout = costas_core(out,d_error, d_time_sync_symbol,true_output, tags);
 
       //std::stringstream ss;
       //ss<< "polyphase output:"  << true_output << " ,consume:"<<true_consume<< ", costas_nout"<<costas_nout;

@@ -4,7 +4,7 @@
   <key>lsa_poly_costas_sync_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.poly_costas_sync_cc($plf_sps,$plf_loop_bw,$plf_taps, $plf_nfilts,$costas_loop_bw,$costas_order)</make>
+  <make>lsa.poly_costas_sync_cc($plf_sps,$plf_loop_bw,$plf_taps, $plf_nfilts,$costas_loop_bw,$costas_order,$sense_tag)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -39,6 +39,11 @@
     <name>Costas Loop Order</name>
     <key>costas_order</key>
     <type>int</type>
+  </param>
+  <param>
+    <name>Sense Tag Name</name>
+    <key>sense_tag</key>
+    <type>string</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:

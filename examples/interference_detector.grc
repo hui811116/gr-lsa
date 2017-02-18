@@ -241,6 +241,33 @@
     </param>
   </block>
   <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(448, 252)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>qam_samp</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>num*8/4*4</value>
+    </param>
+  </block>
+  <block>
     <key>variable_rrc_filter_taps</key>
     <param>
       <key>comment</key>
@@ -307,7 +334,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>20000</value>
+      <value>10000</value>
     </param>
   </block>
   <block>
@@ -601,6 +628,53 @@
     </param>
   </block>
   <block>
+    <key>blocks_null_sink</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>bus_conns</key>
+      <value>[[0,],]</value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1136, 872)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_null_sink_0</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>num_inputs</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
     <key>blocks_repack_bits_bb</key>
     <param>
       <key>k</key>
@@ -691,7 +765,7 @@
     </param>
     <param>
       <key>lengths</key>
-      <value>1800,num*8/4*2</value>
+      <value>qam_samp*4,qam_samp</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -758,7 +832,7 @@
     </param>
     <param>
       <key>packet_len</key>
-      <value>num*8/4*2</value>
+      <value>qam_samp</value>
     </param>
     <param>
       <key>type</key>
@@ -935,7 +1009,7 @@
     </param>
     <param>
       <key>vector</key>
-      <value>np.zeros(1800)</value>
+      <value>np.zeros(qam_samp*4)</value>
     </param>
   </block>
   <block>
@@ -1120,7 +1194,7 @@
     </param>
     <param>
       <key>samples_per_symbol</key>
-      <value>2</value>
+      <value>4</value>
     </param>
     <param>
       <key>verbose</key>
@@ -1782,7 +1856,7 @@
     </param>
     <param>
       <key>update_time</key>
-      <value>0.5</value>
+      <value>0.25</value>
     </param>
     <param>
       <key>ylabel</key>
@@ -2105,7 +2179,7 @@
     </param>
     <param>
       <key>nconnections</key>
-      <value>4</value>
+      <value>3</value>
     </param>
     <param>
       <key>size</key>
@@ -2256,9 +2330,9 @@
   </connection>
   <connection>
     <source_block_id>digital_pfb_clock_sync_xxx_0</source_block_id>
-    <sink_block_id>qtgui_time_sink_x_1</sink_block_id>
+    <sink_block_id>blocks_null_sink_0</sink_block_id>
     <source_key>3</source_key>
-    <sink_key>3</sink_key>
+    <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>digital_pfb_clock_sync_xxx_0</source_block_id>

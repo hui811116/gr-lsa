@@ -31,6 +31,18 @@ namespace gr {
     {
      private:
       // Nothing to declare in this block.
+
+      pmt::pmt_t d_sensing_tag;
+      bool d_sensing_state;
+      float d_prev_plf_k;
+      float d_prev_plf_rate_f;
+      //float d_prev_plf_error;
+      //int d_prev_plf_filtnum;
+
+      float d_prev_cos_phase;
+      float d_prev_cos_freq;
+      //float d_prev_cos_error;
+
       gr_complex* d_time_sync_symbol;
       float* d_error;
 
@@ -71,7 +83,8 @@ namespace gr {
         float* error,
         const gr_complex* in,
         int nsample,
-        int& nconsume);
+        int& nconsume,
+        std::vector<tag_t>& tags);
 
       //Costas loop
       int d_costas_order;
@@ -85,7 +98,8 @@ namespace gr {
         gr_complex* out,
         float* error,
         const gr_complex* in,
-        int nsample);
+        int nsample,
+        std::vector<tag_t>& tags);
       //function pointer;
       float (poly_costas_sync_cc_impl::*d_costas_phase_detector)(const gr_complex& sample) const;
 
@@ -97,7 +111,8 @@ namespace gr {
         const std::vector<float>& plf_taps,
         int plf_nfilts,
         float costas_loop_bw,
-        int costas_order);
+        int costas_order,
+        const std::string& sense_tagname);
       ~poly_costas_sync_cc_impl();
 
       // Where all the action really happens

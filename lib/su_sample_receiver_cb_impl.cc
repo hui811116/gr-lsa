@@ -171,7 +171,7 @@ namespace gr {
 
       // costas loop
       d_cos_symbols = new gr_complex[max_size];
-      d_cos_damping = sqrt(2.0f)/2.0f;
+      d_cos_damping = sqrtf(2.0f)/2.0f;
       denom = (1.0 + 2.0*d_cos_damping*d_loop_bw+d_loop_bw * d_loop_bw);
       d_cos_alpha = (4* d_cos_damping*d_loop_bw)/ denom;
       d_cos_beta = (4*d_loop_bw*d_loop_bw)/denom;
@@ -649,13 +649,6 @@ namespace gr {
         state_handle = plf_tags;
         nin = costas_core(d_cos_symbols, d_plf_symbols, d_plf_size, cos_error, cos_phase, cos_freq, false, plf_tags);
         out = d_cos_symbols;
-      }
-      
-
-      if(d_debug){
-        std::stringstream ss;
-        ss<<"polyphase output:"<<d_plf_size<< ",consume:"<<count<<", nin="<<nin;
-        GR_LOG_DEBUG(d_logger, ss.str());
       }
       
 
