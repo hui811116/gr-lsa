@@ -31,6 +31,8 @@ namespace gr {
      private:
       // Nothing to declare in this block.
       float* d_energy_reg;
+      float* v_stddev;
+      float* v_mean;
       int d_blocklength;
       float d_ed_thres_db;
       float d_voe_thres_db;
@@ -41,6 +43,8 @@ namespace gr {
       pmt::pmt_t d_debug_port;
 
       bool d_debug;
+      int d_mode;
+      bool d_state;
 
       void print(float var_db,float ed_db);
 
@@ -51,6 +55,7 @@ namespace gr {
         float ed_threshold,
         float voe_threshold,
         size_t blocklength,
+        int mode,
         bool debug);
       ~interference_energy_detector_cc_impl();
 

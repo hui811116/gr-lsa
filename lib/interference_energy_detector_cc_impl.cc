@@ -30,6 +30,11 @@
 namespace gr {
   namespace lsa {
 
+    enum detMode{
+      BLOCK,
+      SLIDE
+    };
+
     interference_energy_detector_cc::sptr
     interference_energy_detector_cc::make(
       const std::string& ed_tagname,
@@ -37,6 +42,7 @@ namespace gr {
       float ed_threshold,
       float voe_threshold,
       size_t blocklength,
+      int mode,
       bool debug)
     {
       return gnuradio::get_initial_sptr
@@ -46,6 +52,7 @@ namespace gr {
           ed_threshold,
           voe_threshold,
           blocklength,
+          mode,
           debug));
     }
 
@@ -58,6 +65,7 @@ namespace gr {
       float ed_threshold,
       float voe_threshold,
       size_t blocklength,
+      int mode,
       bool debug)
       : gr::block("interference_energy_detector_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
@@ -83,6 +91,19 @@ namespace gr {
 
       d_debug_port = pmt::mp("debug");
       message_port_register_out(d_debug_port);
+      d_mode = mode;
+      switch(d_mode){
+        case BLOCK:
+        break;
+        case SLIDE:
+          set_history(d_blocklength);
+        break;
+        default:
+        break;
+      }
+      d_state = false;
+      v_stddev = (float*) volk_malloc(sizeof(float),volk_get_alignment());
+      v_mean = (float*) volk_malloc(sizeof(float),volk_get_alignment());
     }
 
     /*
@@ -91,6 +112,9 @@ namespace gr {
     interference_energy_detector_cc_impl::~interference_energy_detector_cc_impl()
     {
       volk_free(d_energy_reg);
+
+      volk_free(v_stddev);
+      volk_free(v_mean);
     }
 
     void
@@ -143,7 +167,19 @@ namespace gr {
     interference_energy_detector_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      ninput_items_required[0] = d_blocklength * (noutput_items/d_blocklength);
+      switch(d_mode)
+      {
+        case BLOCK:
+          ninput_items_required[0] = d_blocklength * (noutput_items/d_blocklength);
+        break;
+        case SLIDE:
+          ninput_items_required[0] = noutput_items + history();
+        break;
+        default:
+          std::runtime_error("Entering wrong mode");
+        break;
+      }
+      
       if(d_debug){
         std::stringstream ss;
         ss<<"<forecast>"<<"ninput_items_required[0]="<<ninput_items_required[0];
@@ -159,40 +195,68 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      noutput_items = ((noutput_items < ninput_items[0]) ? noutput_items:ninput_items[0]);
-      int iter = noutput_items /d_blocklength;
-      noutput_items = iter*d_blocklength;
       float* ed_val=NULL;
       if(output_items.size()==2){
         ed_val = (float*) output_items[1];
       }
       // Do <+signal processing+>
+      int iter=0;
+      bool tmp_state =false;
       //cal energy val
-      float * v_stddev = (float*) volk_malloc(sizeof(float),volk_get_alignment());
-      float * v_mean = (float*) volk_malloc(sizeof(float),volk_get_alignment());
-      volk_32fc_magnitude_squared_32f(d_energy_reg, in, noutput_items);
-      if(ed_val!=NULL){
+      
+      float var =0;
+      switch(d_mode)
+      {
+        case BLOCK:
+        noutput_items = ((noutput_items < ninput_items[0]) ? noutput_items:ninput_items[0]);
+        iter = noutput_items /d_blocklength;
+        noutput_items = iter*d_blocklength;
+          volk_32fc_magnitude_squared_32f(d_energy_reg, in, noutput_items);
+        if(ed_val!=NULL){
           for(int i=0;i<noutput_items;++i){
             ed_val[i] = 10.0 * log10(d_energy_reg[i]);
           }
         }
-      for(int i=0; i < iter ; ++i){
-        //cal mean and std of energy
-        volk_32f_stddev_and_mean_32f_x2(v_stddev, v_mean, d_energy_reg + i*d_blocklength, d_blocklength);
-        float var = pow(*(v_stddev),2) ; // variance
+        for(int i=0; i < iter ; ++i){
+          //cal mean and std of energy
+          volk_32f_stddev_and_mean_32f_x2(v_stddev, v_mean, d_energy_reg + i*d_blocklength, d_blocklength);
+          var = pow(*(v_stddev),2) ; // variance
         
           add_item_tag(0,nitems_written(0)+i*d_blocklength,pmt::intern("ed_val"),pmt::from_float(10.0f*log10(*v_mean)),d_src_id);
           add_item_tag(0,nitems_written(0)+i*d_blocklength,d_ed_tagname,pmt::from_bool(10.0*log10(*v_mean) >= d_ed_thres_db),d_src_id);
 
           add_item_tag(0,nitems_written(0)+i*d_blocklength,pmt::intern("intf_val"),pmt::from_float(10.0f*log10(var)),d_src_id);
-          add_item_tag(0,nitems_written(0)+i*d_blocklength,d_voe_tagname,pmt::from_bool(10.0*log10(var) >= d_voe_thres_db),d_src_id);
-          //if(d_debug){
-            //print(10.0*log10(var),10.0*log10(*v_mean));
-          //}
+          add_item_tag(0,nitems_written(0)+i*d_blocklength,d_voe_tagname,pmt::from_bool(10.0*log10(var) >= d_voe_thres_db),d_src_id); 
+         }
+        break;
+        case SLIDE:
+          noutput_items = ((noutput_items + d_blocklength)<= ninput_items[0] ? noutput_items : ninput_items[0]-d_blocklength);
+          iter = (noutput_items<0)? 0 : noutput_items;
+          volk_32fc_magnitude_squared_32f(d_energy_reg, in, iter+d_blocklength);
+          for(int i=0;i<iter;++i){
+            volk_32f_stddev_and_mean_32f_x2(v_stddev, v_mean, d_energy_reg+i,d_blocklength);
+            var = pow(*(v_stddev),2);
+            tmp_state = (10.0*log10(*v_mean)>= d_ed_thres_db) && (10.0*log10(var) >= d_voe_thres_db);
+            if(tmp_state != d_state){
+              add_item_tag(0,nitems_written(0)+i,pmt::intern("ed_val"),pmt::from_float(10.0f*log10(*v_mean)),d_src_id);
+              add_item_tag(0,nitems_written(0)+i,d_ed_tagname,pmt::from_bool(10.0*log10(*v_mean) >= d_ed_thres_db),d_src_id);
+
+              add_item_tag(0,nitems_written(0)+i,pmt::intern("intf_val"),pmt::from_float(10.0f*log10(var)),d_src_id);
+              add_item_tag(0,nitems_written(0)+i,d_voe_tagname,pmt::from_bool(10.0*log10(var) >= d_voe_thres_db),d_src_id);     
+              d_state = tmp_state;
+            }
+            if(ed_val!=NULL){
+              ed_val[i] = 10.0 * log10(*v_mean);
+            }
+          }
+        break;
+        default:
+          std::runtime_error("Entering wrong state");
+        break;
       }
       
-      volk_free(v_stddev);
-      volk_free(v_mean);
+      
+      
       // Tell runtime system how many input items we consumed on
       memcpy(out, in, sizeof(gr_complex) * noutput_items);
       // each input stream.

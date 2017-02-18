@@ -278,7 +278,8 @@ namespace gr {
         gr_complex diff = d_plf_diff_filters[d_plf_filtnum]->filter(&in[count]);
         error_r = out[i].real() * diff.real();
         error_i = out[i].imag() * diff.imag();
-        d_plf_error = (error_i+error_r)/2.0;
+        //d_plf_error = (error_i+error_r)/2.0;
+        d_plf_error = (state? 0 : (error_i+error_r)/2.0);
 
         for(int s=0;s<d_plf_sps;s++){
           d_plf_rate_f = d_plf_rate_f + d_plf_beta* d_plf_error;//first order loop filter
@@ -348,7 +349,8 @@ namespace gr {
         nco_out= gr_expj(-d_phase);
         out[i]=nco_out*in[i];
         d_costas_error = (*this.*d_costas_phase_detector)(out[i]);
-        d_costas_error = branchless_clip(d_costas_error,1.0);
+        //d_costas_error = branchless_clip(d_costas_error,1.0);
+        d_costas_error = (d_sensing_state? 0 : (branchless_clip(d_costas_error,1.0)));
 
         advance_loop(d_costas_error);
         phase_wrap();

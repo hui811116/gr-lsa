@@ -55,6 +55,7 @@ namespace gr {
         float ed_threshold,
         float voe_threshold,
         size_t blocklength,
+        int mode,
         bool debug);
     };
 

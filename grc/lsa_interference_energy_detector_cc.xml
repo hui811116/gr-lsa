@@ -4,7 +4,7 @@
   <key>lsa_interference_energy_detector_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.interference_energy_detector_cc($ed_tagname, $voe_tagname,  $ed_thres, $voe_thres,$blocklength,$debug)</make>
+  <make>lsa.interference_energy_detector_cc($ed_tagname, $voe_tagname,  $ed_thres, $voe_thres,$blocklength,$mode,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -39,6 +39,20 @@
     <type>int</type>
   </param>
   <param>
+    <name>Mode</name>
+    <key>mode</key>
+    <value>0</value>
+    <type>int</type>
+      <option>
+        <name>Block</name>
+        <key>0</key>
+      </option>
+      <option>
+        <name>Sliding window</name>
+        <key>1</key>
+      </option>
+  </param>
+  <param>
     <name>Debug</name>
     <key>debug</key>
     <value>False</value>
@@ -52,7 +66,7 @@
         <key>False</key>
       </option>
   </param>
-
+  
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type
