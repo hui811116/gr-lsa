@@ -366,6 +366,11 @@ namespace gr {
       while(i < noutput_items) {
         if(!tags.empty()){
           size_t offset = tags[0].offset-nitems_read(0);
+          //if(d_debug){
+            //std::stringstream ss;
+            //ss <<"offset"<< tags[0].offset<<"key="<<tags[0].key<< " value="<<tags[0].value;
+            //GR_LOG_DEBUG(d_logger,ss.str());  
+          //}
           if((offset >= (size_t)count) && (offset<(size_t)(count + d_sps))) {
             if(pmt::to_bool(tags[0].value) && (state_copy == SU_ONLY)){
               d_prev_k = d_k;
@@ -485,12 +490,12 @@ namespace gr {
         sen_back = pmt::dict_add(sen_back,pmt::intern("queue_index"),pmt::from_long(d_qidx));
         sen_back = pmt::dict_add(sen_back,pmt::intern("queue_size"),pmt::from_long(d_qsize));
         sen_back = pmt::dict_add(sen_back,pmt::intern("counter"),pmt::from_long(d_counter));
-        if(d_debug){
+      }
+      if(d_debug){
           std::stringstream ss;
-          ss<<"SU_RX_feedback----->"<<((type)? "INTERFERING":"CLEAR_TO_SEND");
+          ss<<"SU_RX_feedback----->"<<((type)? "INTERFERING":"CLEAR");
           GR_LOG_DEBUG(d_logger, ss.str());
         }
-      }
       message_port_pub(d_msg_port,sen_back);
     }
 
@@ -650,16 +655,33 @@ namespace gr {
         nin = costas_core(d_cos_symbols, d_plf_symbols, d_plf_size, cos_error, cos_phase, cos_freq, false, plf_tags);
         out = d_cos_symbols;
       }
+      else{
+        get_tags_in_window(plf_tags, 0,0,count, d_sensing_tag_id);
+        for(int i=0;i<plf_tags.size();++i){
+          tag_t tmp_tag = plf_tags[i];
+          tmp_tag.offset  = tmp_tag.offset - nitems_read(0);
+          state_handle.push_back(tmp_tag);
+          /*if(d_debug){
+            std::stringstream ss;  
+            ss<<"offset="<<tmp_tag.offset<<" key="<<tmp_tag.key << " value="<<tmp_tag.value;
+            GR_LOG_DEBUG(d_logger,ss.str());
+          }*/           
+        }
+      }
       
+      int idx_count;
 
       for(int i=0;i<nin;++i){
         if(!state_handle.empty()){
-          d_state = (pmt::to_bool(state_handle[0].value) ? INTERFERING : SU_ONLY);
-          if(d_state == INTERFERING){
-            feedback_info(true);
-            data_reg_reset();
+          idx_count = state_handle[0].offset;
+          if(idx_count == i){
+            d_state = (pmt::to_bool(state_handle[0].value) ? INTERFERING : SU_ONLY);
+            if(d_state == INTERFERING){
+              feedback_info(true);
+              data_reg_reset();
+            }
+            state_handle.erase(state_handle.begin());
           }
-          state_handle.erase(state_handle.begin());
         }
         switch(d_state)
         {

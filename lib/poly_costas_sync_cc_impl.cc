@@ -219,36 +219,35 @@ namespace gr {
       const gr_complex* in,
       int nsample,
       int& nconsume,
-      std::vector<tag_t>& tags)
+      std::vector<tag_t>& tags,
+      std::vector<tag_t>& out_tags)
     {
       int i=0, count=0;
       float error_r,error_i;
       bool state = d_sensing_state;
       while(i<nsample){
         if(!tags.empty()){
-          size_t offset = tags[0].offset-nitems_read(0);
+          size_t offset = tags[0].offset - nitems_read(0);
           if( (offset >=(size_t)count) && (offset<(size_t)(count + d_plf_sps))){
             if(pmt::to_bool(tags[0].value) && (state==false)){
               d_prev_plf_k = d_plf_k;
               d_prev_plf_rate_f = d_plf_rate_f;
-              //d_prev_plf_error = d_plf_error;
-              //d_prev_plf_filtnum = d_plf_filtnum;
               tag_t tmp_tag;
               tmp_tag.offset = i;
               tmp_tag.value = pmt::from_bool(true);
-              tags.push_back(tmp_tag);
+              out_tags.push_back(tmp_tag);
               state = !state;
             }
             else if( !(pmt::to_bool(tags[0].value)) && (state==true)){
               d_plf_k = d_prev_plf_k;
               d_plf_rate_f = d_prev_plf_rate_f;
-              //d_plf_error = d_prev_plf_error;
               tag_t tmp_tag;
               tmp_tag.offset = i;
               tmp_tag.value = pmt::from_bool(false);
-              tags.push_back(tmp_tag);
+              out_tags.push_back(tmp_tag);
               state = !state;
             }
+            tags.erase(tags.begin());
           }
         }
         while(d_plf_out_idx<d_plf_osps){
@@ -381,15 +380,11 @@ namespace gr {
       int true_output=0;
       int true_consume=0;
       int costas_nout;
-      std::vector<tag_t> tags;
-      get_tags_in_window(tags, 0,0,d_plf_sps*noutput_items, d_sensing_tag);
-      //float error[8192];
-      true_output = plf_core(d_time_sync_symbol, d_error, in, noutput_items, true_consume, tags);
+      std::vector<tag_t> plf_tags,tags;
+      get_tags_in_window(plf_tags, 0,0,d_plf_sps*noutput_items, d_sensing_tag);
+      
+      true_output = plf_core(d_time_sync_symbol, d_error, in, noutput_items, true_consume, plf_tags, tags);
       costas_nout = costas_core(out,d_error, d_time_sync_symbol,true_output, tags);
-
-      //std::stringstream ss;
-      //ss<< "polyphase output:"  << true_output << " ,consume:"<<true_consume<< ", costas_nout"<<costas_nout;
-      //GR_LOG_DEBUG(d_logger, ss.str());
 
       // Tell runtime system how many input items we consumed on
       // each input stream.

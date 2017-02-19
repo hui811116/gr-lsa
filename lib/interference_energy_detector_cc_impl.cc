@@ -86,7 +86,7 @@ namespace gr {
       const size_t max_size = 32*1024;
       d_energy_reg = (float*) volk_malloc( sizeof(float)*max_size, volk_get_alignment());
 
-      set_tag_propagation_policy(TPP_DONT);
+      //set_tag_propagation_policy(TPP_DONT);
       set_output_multiple(d_blocklength);
 
       d_debug_port = pmt::mp("debug");

@@ -990,7 +990,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1027,6 +1027,10 @@
     <param>
       <key>plf_taps</key>
       <value>rx_rrc_taps</value>
+    </param>
+    <param>
+      <key>sense_tag</key>
+      <value>"interference_tag"</value>
     </param>
   </block>
   <block>
@@ -1204,7 +1208,7 @@
     </param>
     <param>
       <key>sync</key>
-      <value>True</value>
+      <value>False</value>
     </param>
   </block>
   <block>
@@ -1298,7 +1302,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1648,12 +1652,6 @@
   <connection>
     <source_block_id>channels_channel_model_0_0</source_block_id>
     <sink_block_id>lsa_prou_sample_receiver_cb_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>channels_channel_model_0_0</source_block_id>
-    <sink_block_id>lsa_su_sample_receiver_cb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

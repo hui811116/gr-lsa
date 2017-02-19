@@ -161,6 +161,7 @@ namespace gr {
         tag_vals.push_back(pmt::cdr(this_item));
         dict_items = pmt::cdr(dict_items);
       }
+      //std::cout << "SU_TX:received message:" << msg<<std::endl;;
       for(int i=0;i<tag_keys.size();++i){        
         if(pmt::eqv(tag_keys[i],d_sensingtagname)){
           rx_sensing_info = pmt::to_bool(tag_vals[i]);
@@ -175,13 +176,27 @@ namespace gr {
         case CLEAR_TO_SEND:
           if(rx_sensing_info){
             d_qiter = 0;
-            assert(!d_counter_buffer.empty());
+            //assert(!d_counter_buffer.empty());
+            //BUG here?
+            if(d_counter_buffer.empty()){
+              //throw std::runtime_error("No elements been transmitted, but rx report causing interference");
+              if(d_debug)
+              GR_LOG_CRIT(d_logger, "No elements been transmitted, but rx report causing interference");
+              return;
+            }
             d_retx_counter_buffer = d_counter_buffer;
             d_qsize = d_pld_len_buffer.size();
             d_state = RETRANSMISSION;
           }
           else{
-            assert(!d_counter_buffer.empty());
+            //assert(!d_counter_buffer.empty());
+            if(d_counter_buffer.empty()){
+              //BUG here
+              //throw std::runtime_error("Receiving ACK while no elements been transmitted");
+              if(d_debug)
+                GR_LOG_CRIT(d_logger, "Receiving ACK while no elements been transmitted");
+              return;
+            }
             int offset = d_counter_buffer[0];
             int o_size = rx_counter - offset;
             if( (rx_counter>=offset) && (o_size < d_counter_buffer.size())){
@@ -203,6 +218,11 @@ namespace gr {
               }
             }
           }
+          if(d_debug){
+            std::stringstream ss;
+            ss<< "SUTX:intf_queue--" << "size:"<<(int)d_counter_buffer.size()<< " removed:"<<(int)(d_counter_buffer.size()-d_retx_counter_buffer.size());
+            GR_LOG_DEBUG(d_logger, ss.str());
+          }
           if(d_retx_counter_buffer.empty()){
             d_state = CLEAR_TO_SEND;
             d_counter_buffer.clear();
@@ -213,12 +233,6 @@ namespace gr {
         default:
           std::runtime_error("SUTX: Entering wrong state");
         break;
-      }
-      if(d_debug){
-        std::stringstream ss;
-        ss<<"SUTX::receiver_msg_handler"<<" sensing_info:"<<(rx_sensing_info)? "TRUE":"FALSE";
-        ss<<" rx_counter:"<<rx_counter<< " queue_size:"<< d_buffer_ptr->size();
-        GR_LOG_DEBUG(d_logger, ss.str());
       }
       
     }
@@ -249,7 +263,6 @@ namespace gr {
     void
     su_transmitter_bc_impl::generate_hdr(int pld_len, bool type)
     {
-      //GR_LOG_DEBUG(d_logger, "SU Queued Transmitter::gen_hdr");
       uint16_t pld_len16 = (uint16_t)pld_len;
       unsigned char* pkt_len= (unsigned char*)& pld_len16;
       unsigned char* pkt_counter= (unsigned char*)& d_pkt_counter;
@@ -265,7 +278,9 @@ namespace gr {
         d_hdr_buffer[ac_len+2]=pkt_len[1];
         d_hdr_buffer[ac_len+3]=pkt_len[0];
         if(type){
-          assert(d_pld_len_buffer.size()!=0);
+          if(d_pld_len_buffer.empty()){
+            throw std::runtime_error("Retransmission with no elements in queue");
+          }
           pkt_counter = (unsigned char*)& d_counter_buffer[d_qiter];
         }
         d_hdr_buffer[ac_len+7] = d_qsize;
@@ -287,7 +302,6 @@ namespace gr {
     void
     su_transmitter_bc_impl::_repack(unsigned char* out, const unsigned char* in, int size, int const_m)
     {
-      //GR_LOG_DEBUG(d_logger, "SU Queued Transmitter::_repack");
       int out_idx = 0, out_written = 0;
       int in_read = 0, in_idx = 0;
       while(in_read<size){
@@ -313,7 +327,6 @@ namespace gr {
       int size, 
       const std::vector<gr_complex>& mapper)
     {
-      //GR_LOG_DEBUG(d_logger, "SU Queued Transmitter::_map_sample");
       for(int i=0;i<size;++i){
         out[i] = mapper[in[i]];
       }
@@ -335,7 +348,7 @@ namespace gr {
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
-      gr::thread::scoped_lock guard(d_setlock);
+      //gr::thread::scoped_lock guard(d_setlock);
       const unsigned char *in = (const unsigned char *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
       int payload_len = ninput_items[0];
@@ -371,7 +384,6 @@ namespace gr {
           _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points);
           _repack(d_pld_symbol_buffer, in, payload_len, (int)log2(d_pld_points.size()));
           _map_sample(out+d_hdr_samp_len, d_pld_symbol_buffer, pld_symbol_samp_len, d_pld_points);
-          
           store_to_queue(out+d_hdr_samp_len, pld_symbol_samp_len, payload_len);
           d_pkt_counter++;
         break;

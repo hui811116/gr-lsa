@@ -84,7 +84,8 @@ namespace gr {
         const gr_complex* in,
         int nsample,
         int& nconsume,
-        std::vector<tag_t>& tags);
+        std::vector<tag_t>& tags,
+        std::vector<tag_t>& out_tags);
 
       //Costas loop
       int d_costas_order;
