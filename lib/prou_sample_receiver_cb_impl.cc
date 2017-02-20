@@ -449,39 +449,24 @@ namespace gr {
     {
       int nleft = floor(d_sample_size/divider);
       int nleft_symbol = floor(d_process_size/divider);
-      //std::stringstream ss;
-      //ss<< "nleft="<<nleft<<" nleft_symbol="<<nleft_symbol;
-      //ss<< " sample size="<<d_sample_size << " d_symbol_size=" << d_process_size;
-      //GR_LOG_DEBUG(d_logger,ss.str());
+      
       gr_complex tmp;
       for(int i=0;i<nleft;++i){
-        //std::stringstream aa;
-        //aa<<i;
-        //GR_LOG_DEBUG(d_logger,aa.str());
+        
         tmp = d_sample_buffer[d_sample_size - nleft+i];
         d_sample_buffer[i]=tmp;
       }
-      //for(int i=0;i<nleft;++i){
-        //d_sample_buffer[i] = tmp[i];
-      //}
-      //memcpy(tmp,d_sample_buffer+(d_sample_size-nleft),sizeof(gr_complex)*(nleft));
-      //memcpy(d_sample_buffer, tmp, sizeof(gr_complex)*(nleft));
+      
       int sample_removed = d_sample_size-nleft;
       d_sample_idx -= sample_removed;
       d_sample_idx = (d_sample_idx < 0? 0:d_sample_idx);
       d_sample_size = nleft;
       
-
-      //gr_complex tmp_symbol[d_process_size];
-      //memcpy(tmp_symbol, d_process_buffer+ (d_sample_size-nleft_symbol),sizeof(gr_complex)*(nleft_symbol));
-      //memcpy(d_process_buffer, tmp_symbol, sizeof(gr_complex)*(nleft_symbol));
       for(int i=0;i<nleft_symbol;++i){
         tmp= d_process_buffer[d_process_size-nleft_symbol+i];
         d_process_buffer[i] = tmp;
       }
-      //for(int i=0;i<nleft_symbol;++i){
-        //d_process_buffer[i] = tmp_symbol[i];
-      //}
+      
       int symbol_removed = d_process_size - nleft_symbol;
       d_process_idx -= -symbol_removed;
       d_process_idx = (d_process_idx <0 ? 0 : d_process_idx);
@@ -517,8 +502,7 @@ namespace gr {
     {
       if(d_process_buffer!=NULL){
         free(d_process_buffer);
-      }
-      //d_process_buffer = new gr_complex[d_cap_init];
+      }  
       d_process_buffer = (gr_complex*)malloc(sizeof(gr_complex)* d_cap_init);
       d_process_cap = d_cap_init;
       d_process_size = 0;
@@ -527,7 +511,6 @@ namespace gr {
       if(d_sample_buffer!=NULL){
         free(d_sample_buffer);
       }
-      //d_sample_buffer = new gr_complex[d_sample_cap_init];
       d_sample_buffer = (gr_complex*)malloc(sizeof(gr_complex)* d_sample_cap_init);
       d_sample_cap = d_sample_cap_init;
       d_sample_size = 0;
@@ -655,7 +638,6 @@ namespace gr {
         GR_LOG_CRIT(d_logger,"No clear header info found. Interferencec cancellation failed");
         return;
       }
-      //assert(!d_cei_buf_idx.empty());
       int total_len = 0;
       int max_len = d_retx_pkt_len[0];
       for(int i=0;i<d_retx_pkt_len.size();++i){
@@ -756,7 +738,6 @@ namespace gr {
       if(d_output_buffer_cap == d_cap_init){
         return;
       }
-      //assert(d_output_buffer_size < d_cap_init);
       if(d_output_buffer_size > d_cap_init){
         std::runtime_error("output buffer size is greater than capacity");
       }
@@ -795,10 +776,7 @@ namespace gr {
       {
         case CLEAR:
           if(d_qsize!=0x00){
-            //std::stringstream ss;
-            //ss<< "Qsize!=0-->"<<(int)d_qsize;
             d_intf_state = RETRANSMISSION;
-            //GR_LOG_DEBUG(d_logger,ss.str());
             reset_intf_reg();
             d_retx_buf_idx.resize(d_qsize);
             d_retx_pkt_len.resize(d_qsize,0);
@@ -950,14 +928,6 @@ namespace gr {
           }
         break;
         case RETRANSMISSION:
-          //while(d_sample_size +size > d_sample_cap){
-            //BUG here
-            //double_cap(); // sample and symbol both update
-            //if(d_sample_cap > 64*d_sample_cap_init){
-              //failed, force reset
-              //return false;
-            //}
-          //}
           if(d_sample_size +size > d_sample_cap){
             GR_LOG_CRIT(d_logger, "Reaching maximum capacity, force reset");
             return false;
@@ -982,8 +952,6 @@ namespace gr {
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
-      //std::stringstream ss;
-      //ss<< "noutput_items" << noutput_items;
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
       int true_output = 0;
@@ -1008,9 +976,6 @@ namespace gr {
             reset_buffer();
             reset_intf_reg();
             d_state = SEARCH_ACCESSCODE;
-            //std::stringstream ss;
-            //ss<<"consume:"<<noutput_items<< "inputs:"<<ninput_items[0];
-            //GR_LOG_DEBUG(d_logger,ss.str());
             consume_each(noutput_items);
             return 0;
           }
@@ -1028,10 +993,6 @@ namespace gr {
       }
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      //ss<<"sample size:"<<d_sample_size << " symbol size" << d_process_size;
-      //ss << "sample idx:"<<d_sample_idx << " symbol_idx " << d_process_idx;
-      //ss<<"ninputs "<<ninput_items[0]<< "consume:"<<consume;
-      //GR_LOG_DEBUG(d_logger, ss.str());
       consume_each (consume);
 
       // Tell runtime system how many output items we produced.
