@@ -29,17 +29,33 @@
 namespace gr {
   namespace lsa {
 
+    enum prefixMode{
+      CLEAR,
+      INTERFERING,
+      CLEAR_LOOP,
+      INTERFERING_LOOP,
+      ALTER_LOOP
+    };
+
     su_header_prefix::sptr
-    su_header_prefix::make(const std::string& accesscode, const std::string & lengthtagname, bool mode)
+    su_header_prefix::make(
+      const std::string& accesscode, 
+      const std::string & lengthtagname, 
+      int mode,
+      int length)
     {
       return gnuradio::get_initial_sptr
-        (new su_header_prefix_impl(accesscode,lengthtagname,mode));
+        (new su_header_prefix_impl(accesscode,lengthtagname,mode,length));
     }
 
     /*
      * The private constructor
      */
-    su_header_prefix_impl::su_header_prefix_impl(const std::string & accesscode, const std::string& lengthtagname,bool mode)
+    su_header_prefix_impl::su_header_prefix_impl(
+      const std::string & accesscode, 
+      const std::string& lengthtagname,
+      int mode,
+      int length)
       : gr::tagged_stream_block("su_header_prefix",
               gr::io_signature::make(1, 1, sizeof(unsigned char)),
               gr::io_signature::make(1, 1, sizeof(unsigned char)), lengthtagname),
@@ -49,6 +65,9 @@ namespace gr {
         throw std::runtime_error("SU header prefix:setting accesscode failed");
       }
       set_tag_propagation_policy(TPP_DONT);
+      d_counter = 0;
+      d_length = ((length <=0)? 1: length);
+      d_state = false;
     }
 
     /*
@@ -115,9 +134,34 @@ namespace gr {
       unsigned char re_size=0x00;
       unsigned char re_indx=0x00;
       uint16_t count=0xffff;
-      if(d_mode){
-        re_size=0xff;
-        re_indx=0x11;
+      switch(d_mode)
+      {
+        case CLEAR:
+        break;
+        case INTERFERING:
+          re_size = 0xff;
+          re_indx = 0x11;
+        break;
+        case INTERFERING_LOOP:
+          re_size = (uint8_t)d_length;
+          re_indx = (uint8_t)d_counter;
+        case CLEAR_LOOP:
+          count = (uint16_t) d_counter++;
+          d_counter %= d_length;
+        break;
+        //break;
+        case ALTER_LOOP:
+        if(d_state){
+          re_size = (uint8_t)d_length;
+          re_indx = (uint8_t)d_counter;
+        }
+          count = (uint16_t)d_counter++;
+          d_counter %= d_length;
+          d_state = ((d_counter ==0)? (!d_state): d_state);
+        break;
+        default:
+          throw std::invalid_argument("Using undefined prefix mode");
+        break;
       }
 
       unsigned char * count_u8=(unsigned char*)&count;
@@ -137,8 +181,6 @@ namespace gr {
       unsigned char*out = (unsigned char *) output_items[0];
 
       // Do <+signal processing+>
-      //memcpy(out,d_accessbytes,sizeof(unsigned char)*d_prefix_bytes);
-      //memcpy(out+d_prefix_bytes,in,sizeof(unsigned char)*ninput_items[0]);
       gen_header(out, (uint16_t)ninput_items[0]);
       memcpy(out+header_nbytes(),in,sizeof(char)*ninput_items[0]);
 
@@ -147,7 +189,6 @@ namespace gr {
       for(int i=0;i<tags.size();++i){        
         tags[i].offset -= nitems_read(0);
         add_item_tag(0, nitems_written(0)+tags[i].offset, tags[i].key, tags[i].value);
-        //add_item_tag(0, nitems_written(0)+tags[i].offset, pmt::intern("mode"),pmt::from_bool(d_mode));
       }
       // Tell runtime system how many output items we produced.
       //return noutput_items;

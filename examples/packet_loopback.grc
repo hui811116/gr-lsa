@@ -1113,7 +1113,7 @@
     </param>
     <param>
       <key>su_nfilts</key>
-      <value>nfilts*sps*11</value>
+      <value>nfilts</value>
     </param>
   </block>
   <block>

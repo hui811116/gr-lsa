@@ -1062,7 +1062,11 @@
     </param>
     <param>
       <key>mode</key>
-      <value>False</value>
+      <value>0</value>
+    </param>
+    <param>
+      <key>rlength</key>
+      <value>1</value>
     </param>
   </block>
   <block>

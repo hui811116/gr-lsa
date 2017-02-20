@@ -46,7 +46,11 @@ namespace gr {
        * class. lsa::su_header_prefix::make is the public interface for
        * creating new instances.
        */
-      static sptr make(const std::string & accesscode="1110010010110011",const std::string& lengthtagname="packet_len", bool mode=false);
+      static sptr make(
+        const std::string & accesscode="1110010010110011",
+        const std::string& lengthtagname="packet_len", 
+        int mode=0,
+        int size=0);
     };
 
   } // namespace lsa

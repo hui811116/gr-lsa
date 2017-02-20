@@ -43,7 +43,7 @@
     <type>real_vector</type>
   </param>
   <param>
-    <name>number of taps (SU)</name>
+    <name>number of filters (SU)</name>
     <key>su_nfilts</key>
     <type>int</type>
   </param>

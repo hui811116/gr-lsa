@@ -4,7 +4,7 @@
   <key>lsa_su_header_prefix</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_header_prefix($accesscode, $lengthtagname, $mode)</make>
+  <make>lsa.su_header_prefix($accesscode, $lengthtagname, $mode, $rlength)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -23,20 +23,37 @@
     <type>string</type>
   </param>
   <param>
-    <name>Retransmission Mode</name>
+    <name>Prefix Mode</name>
     <key>mode</key>
-    <value>False</value>
-    <type>bool</type>
+    <value>0</value>
+    <type>int</type>
     <option>
-      <name>Yes</name>
-      <key>True</key>
+      <name>Clear constant</name>
+      <key>0</key>
     </option>
     <option>
-      <name>No</name>
-      <key>False</key>
+      <name>Interfering constant</name>
+      <key>1</key>
+    </option>
+    <option>
+      <name>Clear loop</name>
+      <key>2</key>
+    </option>
+    <option>
+      <name>Interfering loop</name>
+      <key>3</key>
+    </option>
+    <option>
+      <name>Alter loop</name>
+      <key>4</key>
     </option>
   </param>
-
+  <param>
+    <name>Round up length</name>
+    <key>rlength</key>
+    <value>1</value>
+    <type>int</type>
+  </param>
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type

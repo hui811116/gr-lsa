@@ -30,7 +30,10 @@ namespace gr {
     {
      private:
       // Nothing to declare in this block.
-      bool d_mode;
+      uint64_t d_counter;
+      int d_mode;
+      int d_length;
+      bool d_state;
       uint64_t d_accesscode;
       unsigned long long d_mask;
       size_t d_accesscode_len;
@@ -48,7 +51,11 @@ namespace gr {
 
       size_t header_nbits() const;
 
-      su_header_prefix_impl(const std::string& accesscode, const std::string& lengthtagname, bool mode);
+      su_header_prefix_impl(
+        const std::string& accesscode, 
+        const std::string& lengthtagname, 
+        int mode,
+        int length);
       ~su_header_prefix_impl();
 
       // Where all the action really happens
