@@ -101,7 +101,7 @@ namespace gr {
 
       // buffer helper functions
       void reduce_sample(int divider);
-      void double_cap();
+      //void double_cap();
       void reset_buffer();
       bool append_samples (const gr_complex* in, int size, int& consume);
       void su_sample_sync(const std::vector<bool>& sensing_result, int window);
@@ -128,7 +128,7 @@ namespace gr {
       int d_plf_history;
 
       double d_plf_sps;
-      double d_plf_sample_num;
+      //double d_plf_sample_num;
       float d_plf_loop_bw;
       float d_plf_damping;
       float d_plf_alpha;
@@ -168,7 +168,7 @@ namespace gr {
       //su sync---costas loop
       int d_costas_order;
       float d_costas_error;
-      float d_costas_noise;
+      //float d_costas_noise;
       float d_costas_loop_bw;
 
       float phase_detector_8(const gr_complex& sample) const;

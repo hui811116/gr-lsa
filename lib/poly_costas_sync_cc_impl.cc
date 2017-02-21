@@ -80,8 +80,8 @@ namespace gr {
       }
       set_tag_propagation_policy(TPP_DONT);
 
-      d_error = new float[8192];
-      d_time_sync_symbol = new gr_complex[8192];
+      d_error = new float[16*1024];
+      d_time_sync_symbol = new gr_complex[16*1024];
 
       d_plf_nfilts = plf_nfilts;
       d_plf_sps = floor(plf_sps);
@@ -109,16 +109,18 @@ namespace gr {
       plf_set_taps(plf_taps, d_plf_taps, d_plf_filters);
       plf_set_taps(dtaps, d_plf_dtaps, d_plf_diff_filters);
 
+      //float costas_damping = sqrtf(2.0)/2.0;
       float denum = (1.0+2.0*d_plf_damping*d_plf_loop_bw+d_plf_loop_bw*d_plf_loop_bw);
       d_plf_alpha = (4*d_plf_damping*d_plf_loop_bw) / denum;
       d_plf_beta = (4*d_plf_loop_bw*d_plf_loop_bw)/denum;
       d_plf_out_idx = 0;
       d_plf_error =0;
-      set_relative_rate((float)d_plf_osps/(float)d_plf_sps);
+      //set_relative_rate((float)d_plf_osps/(float)d_plf_sps);
       //Costas loop setup
+
       d_costas_order = costas_order;
       d_costas_error = 0;
-      d_costas_noise = 1.0;
+      //d_costas_noise = 1.0;
       switch(d_costas_order)
       {
         case 2:
@@ -277,8 +279,8 @@ namespace gr {
         gr_complex diff = d_plf_diff_filters[d_plf_filtnum]->filter(&in[count]);
         error_r = out[i].real() * diff.real();
         error_i = out[i].imag() * diff.imag();
-        //d_plf_error = (error_i+error_r)/2.0;
-        d_plf_error = (state? 0 : (error_i+error_r)/2.0);
+        d_plf_error = (error_i+error_r)/2.0;
+        //d_plf_error = (state? 0 : (error_i+error_r)/2.0);
 
         for(int s=0;s<d_plf_sps;s++){
           d_plf_rate_f = d_plf_rate_f + d_plf_beta* d_plf_error;//first order loop filter
@@ -348,8 +350,8 @@ namespace gr {
         nco_out= gr_expj(-d_phase);
         out[i]=nco_out*in[i];
         d_costas_error = (*this.*d_costas_phase_detector)(out[i]);
-        //d_costas_error = branchless_clip(d_costas_error,1.0);
-        d_costas_error = (d_sensing_state? 0 : (branchless_clip(d_costas_error,1.0)));
+        d_costas_error = branchless_clip(d_costas_error,1.0);
+        //d_costas_error = (d_sensing_state? 0 : (branchless_clip(d_costas_error,1.0)));
 
         advance_loop(d_costas_error);
         phase_wrap();
@@ -364,6 +366,9 @@ namespace gr {
     poly_costas_sync_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
+      //std::stringstream ss;
+      //ss<< "noutput_items=" <<noutput_items;
+      //GR_LOG_DEBUG(d_logger, ss.str());
       ninput_items_required[0] = (noutput_items + history()) * (d_plf_sps/d_plf_osps);
     }
 
@@ -384,8 +389,11 @@ namespace gr {
       get_tags_in_window(plf_tags, 0,0,d_plf_sps*noutput_items, d_sensing_tag);
       
       true_output = plf_core(d_time_sync_symbol, d_error, in, noutput_items, true_consume, plf_tags, tags);
+      //possible bug: d_time_sync_symbols?
       costas_nout = costas_core(out,d_error, d_time_sync_symbol,true_output, tags);
-
+      //true_output = plf_core(out, d_error, in, noutput_items,true_consume, plf_tags, tags);
+      //true_output = costas_core(out, d_error, in, noutput_items,tags);
+      //true_consume = noutput_items;
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (true_consume);

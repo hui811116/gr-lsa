@@ -187,7 +187,7 @@ namespace gr {
       d_costas_loop_bw = costas_loop_bw;
       d_costas_order = costas_order;
       d_costas_error = 0.0;
-      d_costas_noise = 1.0;
+      //d_costas_noise = 1.0;
       switch(d_costas_order)
       {
         case 2:
@@ -475,7 +475,7 @@ namespace gr {
       
     }
 
-    void
+    /*void
     prou_sample_receiver_cb_impl::double_cap()
     {
       gr_complex* tmp_sample = new gr_complex[d_sample_size];
@@ -495,7 +495,7 @@ namespace gr {
       delete [] tmp_sample;
       delete [] tmp;
 
-    }
+    }*/
 
     void
     prou_sample_receiver_cb_impl::reset_buffer()
@@ -756,11 +756,28 @@ namespace gr {
     prou_sample_receiver_cb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      if(d_sample_cap < d_sample_size){
-        throw std::runtime_error("Sample size exceed sample capacities");
+      int max_symbol;
+      switch(d_mode)
+      {
+        case STANDARD:
+          ninput_items_required[0] = noutput_items;
+        break;
+        case INTERFERENCE_CANCELLATION:
+          if(d_sample_cap < d_sample_size){
+            throw std::runtime_error("Sample size exceed sample capacities");
+          }
+          max_symbol = d_process_cap - d_process_size;
+          if(max_symbol > 4096/d_plf_sps){
+            max_symbol = 4096/d_plf_sps;
+          }
+          ninput_items_required[0] = (max_symbol + d_plf_history) * d_plf_sps;
+          //from plf clock sync  
+        break;
+        default:
+          throw std::runtime_error("Entering wrong state");
+        break;
       }
-        int max_sample = d_sample_cap - d_sample_size;
-        ninput_items_required[0] = ((noutput_items > max_sample) ? max_sample: noutput_items);  
+      
     }
 
 
@@ -823,8 +840,9 @@ namespace gr {
         {
           case SEARCH_ACCESSCODE:
             for(int i=0;i<d_su_bps;++i){
+              //check_bits = ~(0ULL); //
               d_su_sync_reg = (d_su_sync_reg << 1) | ((symbol >> (d_su_bps-1-i) ) & 0x01);
-            }
+            
             check_bits = (d_su_sync_reg ^ d_su_accesscode) & d_su_code_mask;
             if(check_bits == 0){
               d_state = HEADER_WAIT;
@@ -833,6 +851,7 @@ namespace gr {
               //       to find the actual begin index
               d_su_pkt_begin = (d_process_idx) - (d_su_code_len)/d_su_bps;
             }
+          }
           break;
           case HEADER_WAIT:
             for(int i=0;i<d_su_bps;++i){
@@ -891,12 +910,17 @@ namespace gr {
       int plf_consume;
       int c_count=0, p_count=0;
       //in original design, noutput_items meant for output buffer size!!!!
-      int nsample = (sensing_result.size() * window)/d_plf_sps; // equivalent available output size
-      if(nsample==0){
+      //int nsample = (sensing_result.size() * window)/d_plf_sps; // equivalent available output size
+      int ninputs = d_sample_size - d_sample_idx;
+      int nsample = d_process_cap - d_process_size;
+      nsample = ((nsample > 4096) ? 4096 : nsample); //truncate to valid samples
+      int ava_out = ninputs / d_plf_sps -d_plf_history;
+      nsample = (nsample< ava_out? nsample : ava_out);
+      if(nsample< d_plf_history){
         return;
       }
-      int sample_start = (d_sample_idx >= d_plf_history)? d_sample_idx - d_plf_history : 0;
-      p_count = plf_core(d_plf_symbol_buffer, d_plf_time_error, d_sample_buffer+sample_start,nsample, plf_consume);
+      //int sample_start = (d_sample_idx >= d_plf_history)? d_sample_idx - d_plf_history : 0;
+      p_count = plf_core(d_plf_symbol_buffer, d_plf_time_error, d_sample_buffer+d_sample_idx,nsample, plf_consume);
       c_count = costas_core(d_process_buffer+d_process_size,d_costas_phase_error, d_plf_symbol_buffer, p_count);
       d_sample_idx += plf_consume;
       d_process_size += c_count;
@@ -955,7 +979,7 @@ namespace gr {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
       int true_output = 0;
-      noutput_items = ((noutput_items > ninput_items[0])? ninput_items[0] : noutput_items);
+      //noutput_items = ((noutput_items > ninput_items[0])? ninput_items[0] : noutput_items);
       // Do <+signal processing+>
       int consume=0;
       std::vector<bool> sensing_result;
@@ -967,11 +991,12 @@ namespace gr {
           //do nothing
           memcpy(out, in, sizeof(gr_complex)*noutput_items);
           true_output = noutput_items;
+          consume = noutput_items;
         break;
 
         case INTERFERENCE_CANCELLATION:
           // append samples to process_buffer
-          if(!append_samples(in, noutput_items, consume)){
+          if(!append_samples(in, ninput_items[0], consume)){
             //avoid memory overflow, force reset
             reset_buffer();
             reset_intf_reg();
@@ -979,7 +1004,7 @@ namespace gr {
             consume_each(noutput_items);
             return 0;
           }
-            interference_detector(sensing_result,window);
+            //interference_detector(sensing_result,window);
             su_sample_sync(sensing_result,window);
             process_symbols();
           if(d_output_buffer_size > d_output_buffer_idx){

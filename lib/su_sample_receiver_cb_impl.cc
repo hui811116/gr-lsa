@@ -449,6 +449,7 @@ namespace gr {
     void
     su_sample_receiver_cb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
+       
       ninput_items_required[0]= (noutput_items + history()) * (d_sps/d_osps);
     }
 

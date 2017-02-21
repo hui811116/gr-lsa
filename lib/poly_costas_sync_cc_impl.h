@@ -90,7 +90,7 @@ namespace gr {
       //Costas loop
       int d_costas_order;
       float d_costas_error;
-      float d_costas_noise;
+      //float d_costas_noise;
       float costas_phase_detector_2(const gr_complex& sample) const;
       float costas_phase_detector_4(const gr_complex& sample) const;
       float costas_phase_detector_8(const gr_complex& sample) const;
