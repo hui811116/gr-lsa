@@ -468,7 +468,7 @@ namespace gr {
       }
       
       int symbol_removed = d_process_size - nleft_symbol;
-      d_process_idx -= -symbol_removed;
+      d_process_idx -= symbol_removed;
       d_process_idx = (d_process_idx <0 ? 0 : d_process_idx);
       d_process_size = nleft_symbol;
       
