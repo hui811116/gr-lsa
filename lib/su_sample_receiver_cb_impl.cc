@@ -134,7 +134,7 @@ namespace gr {
       d_symbol_to_bytes = new unsigned char[d_cap];
       d_debug = debug;
       d_use_sync = sync;
-      set_min_noutput_items(512);
+      //set_min_noutput_items(512);
       message_port_register_out(d_msg_port);
       message_port_register_out(d_pkt_port);
       message_port_register_out(d_debug_port); //debug
@@ -143,7 +143,8 @@ namespace gr {
       d_nfilters = filter_size;
       d_sps = floor(sps);
 
-      d_damping = 2*d_nfilters;
+      //d_damping = 2*d_nfilters;
+      d_damping = sqrtf(2.0f)/2.0f;
       d_loop_bw = loop_bw;
       d_k = d_nfilters/2.0;
       d_rate = (sps-floor(sps))*(double)d_nfilters;
@@ -165,7 +166,7 @@ namespace gr {
       d_alpha = (4*d_damping*d_loop_bw) / denom;
       d_beta = (4*d_loop_bw*d_loop_bw) / denom;
 
-      const size_t max_size = 8192;
+      const size_t max_size = 32*1024;
       d_plf_symbols = new gr_complex[max_size];
       d_plf_size = 0;
 
@@ -340,7 +341,7 @@ namespace gr {
         ourfilter[i]->set_taps(ourtaps[i]);
       }
       set_history(d_taps_per_filter + d_sps + d_sps);
-      set_output_multiple(d_osps);
+      //set_output_multiple(d_osps);
     }
 
     int
