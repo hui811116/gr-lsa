@@ -293,6 +293,7 @@ namespace gr {
     su_transmitter_bc_impl::queue_size_adapt()
     {
       int erase_size = d_qmax/2;
+        if(d_debug)
         GR_LOG_CRIT(d_logger, "SU Queued Transmitter: Reaching maximum capacity, removing contents.");
         d_buffer_ptr->erase(d_buffer_ptr->begin(), d_buffer_ptr->begin()+erase_size);
         d_counter_buffer.erase(d_counter_buffer.begin(), d_counter_buffer.begin()+erase_size);
