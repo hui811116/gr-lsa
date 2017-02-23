@@ -22,6 +22,7 @@
 #define INCLUDED_LSA_MODIFIED_COSTAS_LOOP_CC_IMPL_H
 
 #include <lsa/modified_costas_loop_cc.h>
+#include <pmt/pmt.h>
 
 namespace gr {
   namespace lsa {
@@ -32,6 +33,13 @@ namespace gr {
       int d_order;
       float d_error;
       float d_noise;
+
+      float d_prev_phase;
+      float d_prev_freq;
+      uint64_t d_prev_time_count;
+      bool d_intf_state;
+
+      pmt::pmt_t d_intf_tagname;
 
        /*! \brief the phase detector circuit for 8th-order PSK loops.
        *
@@ -85,7 +93,7 @@ namespace gr {
 
       float (modified_costas_loop_cc_impl::*d_phase_detector)(gr_complex sample) const;
      public:
-      modified_costas_loop_cc_impl(float loop_bw, int order, bool use_snr=false);
+      modified_costas_loop_cc_impl(float loop_bw, int order, bool use_snr, const std::string& intf_tagname);
       ~modified_costas_loop_cc_impl();
 
       float error() const;

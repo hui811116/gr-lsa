@@ -32,22 +32,28 @@ namespace gr {
   namespace lsa {
 
     modified_costas_loop_cc::sptr
-    modified_costas_loop_cc::make(float loop_bw, int order, bool use_snr)
+    modified_costas_loop_cc::make(float loop_bw, int order, bool use_snr, const std::string& intf_tagname)
     {
       return gnuradio::get_initial_sptr
-        (new modified_costas_loop_cc_impl(loop_bw, order,use_snr));
+        (new modified_costas_loop_cc_impl(loop_bw, order,use_snr,intf_tagname));
     }
 
     /*
      * The private constructor
      */
-    modified_costas_loop_cc_impl::modified_costas_loop_cc_impl(float loop_bw, int order, bool use_snr)
+    modified_costas_loop_cc_impl::modified_costas_loop_cc_impl(float loop_bw, int order, bool use_snr, const std::string& intf_tagname)
       : gr::block("modified_costas_loop_cc",
-              gr::io_signature::make(2, 2, sizeof(gr_complex)),
-              gr::io_signature::make(2, 2, sizeof(gr_complex))),
+              gr::io_signature::make(1, 1, sizeof(gr_complex)),
+              gr::io_signature::make(1, 1, sizeof(gr_complex))),
       blocks::control_loop(loop_bw, 1.0, -1.0),
   d_order(order), d_error(0), d_noise(1.0), d_phase_detector(NULL)
     {
+      d_intf_tagname = pmt::string_to_symbol(intf_tagname);
+      d_prev_phase = 0;
+      d_prev_freq = 0;
+      d_prev_time_count =0;
+      d_intf_state = false;
+
       switch(d_order) {
       case 2:
         if(use_snr)
@@ -178,6 +184,8 @@ namespace gr {
     modified_costas_loop_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
+      ninput_items_required[0] = noutput_items;
+      //ninput_items_required[1] = noutput_items;
     }
 
     int
@@ -187,19 +195,22 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *iptr = (gr_complex *) input_items[0];
+      //const gr_complex *samples = (gr_complex *) input_items[1];
       gr_complex *optr = (gr_complex *) output_items[0];
-      float *foptr = (float *) output_items[1];
-
-      bool write_foptr = output_items.size() >= 2;
+      //float *foptr = (float *) output_items[1];
+      //GR_LOG_DEBUG(d_logger, "BUG1?");
+      //bool write_foptr = output_items.size() >= 2;
 
       gr_complex nco_out;
+      std::vector<tag_t> intf_tags;
+      //get_tags_in_range(tags_s1, 1, nitems_read(1), nitems_read(1)+noutput_items);
+      get_tags_in_range(intf_tags, 0, nitems_read(0), nitems_read(0)+noutput_items, d_intf_tagname);
 
       std::vector<tag_t> tags;
       get_tags_in_range(tags, 0, nitems_read(0),
                         nitems_read(0)+noutput_items,
                         pmt::intern("phase_est"));
-
-      if(write_foptr) {
+      //if(write_foptr) {
         for(int i = 0; i < noutput_items; i++) {
           if(tags.size() > 0) {
             if(tags[0].offset-nitems_read(0) == (size_t)i) {
@@ -207,6 +218,22 @@ namespace gr {
               tags.erase(tags.begin());
             }
           }
+          if(!intf_tags.empty()){
+            if(intf_tags[0].offset-nitems_read(0) == (size_t)i) {
+            if(!d_intf_state && pmt::to_bool(intf_tags[0].value)){
+              d_prev_phase = d_phase;
+              d_prev_freq = d_freq;
+              d_prev_time_count =0;
+            }
+            else if(d_intf_state && pmt::to_bool(intf_tags[0].value)){
+              //d_phase = d_prev_phase + d_prev_freq * d_prev_time_count;
+              phase_wrap();
+              //d_freq = d_prev_freq;
+            }
+            intf_tags.erase(intf_tags.begin());
+            }
+          }
+          
 
           nco_out = gr_expj(-d_phase);
           optr[i] = iptr[i] * nco_out;
@@ -217,10 +244,12 @@ namespace gr {
           advance_loop(d_error);
           phase_wrap();
           frequency_limit();
-
-          foptr[i] = d_freq;
+          d_prev_time_count++;
+          //foptr[i] = d_freq;
         }
-      }
+        //GR_LOG_DEBUG(d_logger, "BUG?");
+      //}
+        /*
       else {
         for(int i = 0; i < noutput_items; i++) {
           if(tags.size() > 0) {
@@ -240,8 +269,8 @@ namespace gr {
           phase_wrap();
           frequency_limit();
         }
-      }
-
+      }*/
+      consume_each(noutput_items);
       return noutput_items;
     }
 

@@ -161,7 +161,6 @@ namespace gr {
         tag_vals.push_back(pmt::cdr(this_item));
         dict_items = pmt::cdr(dict_items);
       }
-      //std::cout << "SU_TX:received message:" << msg<<std::endl;;
       for(int i=0;i<tag_keys.size();++i){        
         if(pmt::eqv(tag_keys[i],d_sensingtagname)){
           rx_sensing_info = pmt::to_bool(tag_vals[i]);
@@ -218,11 +217,7 @@ namespace gr {
               }
             }
           }
-          if(d_debug){
-            std::stringstream ss;
-            ss<< "SUTX:intf_queue--" << "size:"<<(int)d_counter_buffer.size()<< " removed:"<<(int)(d_counter_buffer.size()-d_retx_counter_buffer.size());
-            GR_LOG_DEBUG(d_logger, ss.str());
-          }
+          
           if(d_retx_counter_buffer.empty()){
             d_state = CLEAR_TO_SEND;
             d_counter_buffer.clear();
@@ -282,6 +277,11 @@ namespace gr {
             throw std::runtime_error("Retransmission with no elements in queue");
           }
           pkt_counter = (unsigned char*)& d_counter_buffer[d_qiter];
+          /*if(d_debug){
+            std::stringstream ss;
+            ss<< "RETX_COUNTER:"<<d_counter_buffer[d_qiter];
+            GR_LOG_DEBUG(d_logger, ss.str());
+          }*/
         }
         d_hdr_buffer[ac_len+7] = d_qsize;
         d_hdr_buffer[ac_len+6] = d_qiter;

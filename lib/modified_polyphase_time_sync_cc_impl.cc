@@ -39,14 +39,16 @@ namespace gr {
            unsigned int filter_size,
            float init_phase,
            float max_rate_deviation,
-           int osps)
+           int osps,
+           const std::string& intf_tagname)
     {
       return gnuradio::get_initial_sptr
         (new modified_polyphase_time_sync_cc_impl(sps, loop_bw, taps,
              filter_size,
              init_phase,
              max_rate_deviation,
-             osps));
+             osps,
+             intf_tagname));
     }
 
     /*
@@ -57,16 +59,23 @@ namespace gr {
            unsigned int filter_size,
            float init_phase,
            float max_rate_deviation,
-           int osps)
+           int osps,
+           const std::string& intf_tagname)
       : gr::block("modified_polyphase_time_sync_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(2, 2, sizeof(gr_complex))),
+              gr::io_signature::make(1, 1, sizeof(gr_complex))),
   d_updated(false), d_nfilters(filter_size),
   d_max_dev(max_rate_deviation),
   d_osps(osps), d_error(0), d_out_idx(0)
     {
       if(taps.size() == 0)
         throw std::runtime_error("pfb_clock_sync_ccf: please specify a filter.\n");
+
+      d_intf_tagname = pmt::string_to_symbol(intf_tagname);
+      d_prev_k = 0;
+      d_prev_f = 0;
+      d_prev_time_count = 0;
+      d_intf_state = false;
 
       // Let scheduler adjust our relative_rate.
       //enable_update_rate(true);
@@ -132,9 +141,13 @@ namespace gr {
     modified_polyphase_time_sync_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      unsigned ninputs = ninput_items_required.size ();
-      for(unsigned i = 0; i < ninputs; i++)
-        ninput_items_required[i] = (noutput_items + history()) * (d_sps/d_osps);
+      //unsigned ninputs = ninput_items_required.size ();
+      //for(unsigned i = 0; i < ninputs; i++)
+        //ninput_items_required[i] = (noutput_items + history()) * (d_sps/d_osps);
+      // samples to be consumed
+      ninput_items_required[0] = (noutput_items + history()) * (d_sps/d_osps);
+      // for samples
+      
     }
 
 void
@@ -217,7 +230,16 @@ void
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
+      // for samples
+      //gr_complex *samp = (gr_complex*) output_items[1]; 
       gr_complex *out = (gr_complex *) output_items[0];
+
+      /*std::vector<tag_t> tags_s1;
+      get_tags_in_range(tags_s1,1,nitems_read(1),nitems_read(1)+noutput_items);
+      for(int i=0;i<tags_s1.size();++i){
+        add_item_tag(1,tags_s1[i]);
+      }*/
+
 
       if(d_updated) {
         std::vector<float> dtaps;
@@ -239,6 +261,10 @@ void
       get_tags_in_window(tags, 0, 0,
                         d_sps*noutput_items,
                         pmt::intern("time_est"));
+      std::vector<tag_t> intf_tags;
+      get_tags_in_window(intf_tags, 0,0,
+                        d_sps*noutput_items,
+                        d_intf_tagname);
 
       int i = 0, count = 0;
       float error_r, error_i;
@@ -252,6 +278,25 @@ void
             d_k = d_nfilters*(center + (offset - count));
 
             tags.erase(tags.begin());
+          }
+        }
+        if(tags.size() > 0) {
+          size_t offset = intf_tags[0].offset-nitems_read(0);
+          if((offset >= (size_t)count) && (offset < (size_t)(count + d_sps))) {
+            if(pmt::to_bool(intf_tags[0].value) && !d_intf_state){
+              //should add condition for interference detection
+              d_prev_k = d_k;
+              d_prev_f = d_rate_f;
+              d_prev_time_count=0;
+              d_intf_state = true;
+            }
+            else if(!pmt::to_bool(intf_tags[0].value) && d_intf_state){
+              //should add condition for interference detection
+              //reapply phase and freq before interference
+              d_intf_state = false;
+              //d_k = d_prev_k + d_prev_f * d_prev_time_count;
+            }
+            intf_tags.erase(intf_tags.begin());
           }
         }
 
@@ -275,7 +320,8 @@ void
 
     out[i+d_out_idx] = d_filters[d_filtnum]->filter(&in[count+d_out_idx]);
     d_k = d_k + d_rate_i + d_rate_f; // update phase
-
+    //
+    d_prev_time_count++;
 
           // Manage Tags
           std::vector<tag_t> xtags;
@@ -286,7 +332,7 @@ void
             tag_t new_tag = *itags;
             //new_tag.offset = d_last_out + d_taps_per_filter/(2*d_sps) - 2;
             new_tag.offset = d_last_out + d_taps_per_filter/4 - 2;
-            add_item_tag(0, new_tag);
+            add_item_tag(0, new_tag);            
           }
           d_old_in = d_new_in;
           d_last_out = nitems_written(0) + i + d_out_idx;
@@ -301,7 +347,10 @@ void
 
     // We've run out of output items we can create; return now.
     if(i+d_out_idx >= noutput_items) {
+      //memcpy(samp, in, sizeof(gr_complex)*count);
       consume_each(count);
+      //produce(0,i);
+      //produce(1,i);
       return i;
     }
   }
@@ -329,10 +378,17 @@ void
 
   i+=d_osps;
   count += (int)floor(d_sps);
+  //
+  d_prev_time_count += (int)floor(d_sps);
       }
-
+      //pass samples to next block
+      //memcpy(samp, in, sizeof(gr_complex)*count);
+      //consume_each(count);
+      //produce(0,i);
+      //produce(1,i);
       consume_each(count);
       return i;
+      //return WORK_CALLED_PRODUCE;
     }
 
   } /* namespace lsa */

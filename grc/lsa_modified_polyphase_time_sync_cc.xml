@@ -4,7 +4,7 @@
   <key>lsa_modified_polyphase_time_sync_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.modified_polyphase_time_sync_cc($sps, $loop_bw, $taps, $filter_size, $init_phase, $max_dev, $osps)</make>
+  <make>lsa.modified_polyphase_time_sync_cc($sps, $loop_bw, $taps, $filter_size, $init_phase, $max_dev, $osps, $tagname)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -49,6 +49,12 @@
     <value>1</value>
     <type>int</type>
   </param>
+  <param>
+    <name>Interference tag</name>
+    <key>tagname</key>
+    <value>"sensing"</value>
+    <type>string</type>
+  </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
@@ -69,8 +75,5 @@
     <name>out</name>
     <type>complex</type>
   </source>
-  <source>
-    <name>samples</name>
-    <type>complex</type>
-  </source>
+  
 </block>

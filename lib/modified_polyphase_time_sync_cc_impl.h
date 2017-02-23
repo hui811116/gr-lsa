@@ -31,6 +31,8 @@ namespace gr {
     class modified_polyphase_time_sync_cc_impl : public modified_polyphase_time_sync_cc
     {
      private:
+
+      pmt::pmt_t d_intf_tagname;
       // Nothing to declare in this block.
       bool   d_updated;
       double d_sps;
@@ -58,6 +60,11 @@ namespace gr {
       float d_error;
       int   d_out_idx;
 
+      float d_prev_k;
+      float d_prev_f;
+      uint64_t d_prev_time_count;
+      bool d_intf_state;
+
       uint64_t d_old_in, d_new_in, d_last_out;
 
       void create_diff_taps(const std::vector<float> &newtaps,
@@ -73,7 +80,8 @@ namespace gr {
             unsigned int filter_size,
             float init_phase,
             float max_rate_deviation,
-            int osps);
+            int osps,
+            const std::string& intf_tagname);
       ~modified_polyphase_time_sync_cc_impl();
 
       // Where all the action really happens
