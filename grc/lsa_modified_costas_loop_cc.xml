@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<block>
+  <name>modified_costas_loop_cc</name>
+  <key>lsa_modified_costas_loop_cc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.modified_costas_loop_cc($w, $order, $use_snr)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Loop Bandwidth</name>
+    <key>w</key>
+    <type>real</type>
+  </param>
+
+  <param>
+    <name>Order</name>
+    <key>order</key>
+    <type>int</type>
+  </param>
+
+  <param>
+    <name>Use SNR</name>
+    <key>use_snr</key>
+    <value>False</value>
+    <type>enum</type>
+    <hide>part</hide>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+  <sink>
+    <name>sample_in</name>
+    <type>complex</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+  <source>
+    <name>sample_out</name>
+    <type>complex</type>
+  </source>
+</block>

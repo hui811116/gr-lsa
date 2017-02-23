@@ -33,7 +33,8 @@ list(APPEND lsa_sources
     prou_sample_receiver_cb_impl.cc
     interference_energy_detector_cc_impl.cc
     poly_costas_sync_cc_impl.cc
-)
+    modified_polyphase_time_sync_cc_impl.cc
+    modified_costas_loop_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

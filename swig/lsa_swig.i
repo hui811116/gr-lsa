@@ -21,6 +21,8 @@
 #include "lsa/prou_sample_receiver_cb.h"
 #include "lsa/interference_energy_detector_cc.h"
 #include "lsa/poly_costas_sync_cc.h"
+#include "lsa/modified_polyphase_time_sync_cc.h"
+#include "lsa/modified_costas_loop_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -42,3 +44,8 @@ GR_SWIG_BLOCK_MAGIC2(lsa, prou_sample_receiver_cb);
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_energy_detector_cc);
 %include "lsa/poly_costas_sync_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, poly_costas_sync_cc);
+%include "lsa/modified_polyphase_time_sync_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, modified_polyphase_time_sync_cc);
+
+%include "lsa/modified_costas_loop_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, modified_costas_loop_cc);

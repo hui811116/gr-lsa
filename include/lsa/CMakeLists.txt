@@ -29,5 +29,7 @@ install(FILES
     su_transmitter_bc.h
     prou_sample_receiver_cb.h
     interference_energy_detector_cc.h
-    poly_costas_sync_cc.h DESTINATION include/lsa
+    poly_costas_sync_cc.h
+    modified_polyphase_time_sync_cc.h
+    modified_costas_loop_cc.h DESTINATION include/lsa
 )
