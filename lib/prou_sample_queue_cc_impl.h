@@ -34,7 +34,7 @@ namespace gr {
       pmt::pmt_t d_sensing_tagname;
 
       gr_complex* d_sample_buffer;
-      std::vector<tag_t> d_pkt_info;
+      std::vector<pmt::pmt_t> d_pkt_info;
       std::vector<pmt::pmt_t> d_buffer_info;
 
       unsigned int d_sample_idx;
@@ -60,7 +60,7 @@ namespace gr {
         int noutput_items, 
         int ninput_items);
 
-      void append_samples(const gr_complex* in, int ninput_items, int& consume_count, long int time);
+      void append_samples(const gr_complex* in, int ninput_items,int noutput_items, int& consume_count, long int time);
       void reduce_samples();
 
      public:

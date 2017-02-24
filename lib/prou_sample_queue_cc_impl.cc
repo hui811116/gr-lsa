@@ -85,16 +85,13 @@ namespace gr {
       long int time;
       int counter=0, qidx, qsize, offset;
       bool sensing_state=false;
+      pmt::pmt_t tag_info;
       if(pmt::dict_has_key(msg, d_sensing_tagname)){
         sensing_state = pmt::to_bool(pmt::dict_ref(msg, d_sensing_tagname, pmt::PMT_NIL));
       }
       if(pmt::dict_has_key(msg, pmt::intern("ctime")))
       {
         time = pmt::to_long(pmt::dict_ref(msg, pmt::intern("ctime"), pmt::PMT_NIL));
-      }
-      if(pmt::dict_has_key(msg, pmt::intern("counter")))
-      {
-        counter = pmt::to_long(pmt::dict_ref(msg, pmt::intern("counter"), pmt::PMT_NIL));
       }
       if(pmt::dict_has_key(msg, pmt::intern("queue_index")))
       {
@@ -108,6 +105,8 @@ namespace gr {
       {
         offset = pmt::to_long(pmt::dict_ref(msg, pmt::intern("index_offset"), pmt::PMT_NIL));
       }
+      long int tmp_time;
+      int tmp_idx;
       switch(d_state)
       {
         case LOAD_SAMPLE:
@@ -119,19 +118,39 @@ namespace gr {
           }
         break;
         case WAIT_INFO:
+          //Job for prou queue:
+          // 1. labeling the header info from downstream on sample index
+          // 2. try to detect the availability of interference cancellation 
+      
           // wait here until timeout
+          if(time < d_update_time){
+            //outdated info, skip
+            return;
+          }
           if(qsize != d_retx_index_counter.size()){
             GR_LOG_DEBUG(d_logger, "receiving queue size of different length");
           }
           if(d_retx_count != 0 && qsize == 0){
             GR_LOG_DEBUG(d_logger, "receiving new data, retransmission ends");
           }
-          if(!sensing_state && (qsize == d_retx_status.size())){
-            if(d_retx_status[qidx] == false){
-              d_retx_status[qidx] =true;
-              d_retx_count++;
-              //d_retx_index_counter[qidx] = index_offset;
-              //handle index in buffer
+
+          if(!sensing_state){
+            for(int i=0;i<d_buffer_info.size();++i){
+              tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("ctime"),pmt::PMT_NIL));
+              tmp_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("qindex"),pmt::PMT_NIL));
+              if(time == tmp_time){
+                //found corresponding time index
+                // attach header info on sample
+                pmt::pmt_t info_tag = msg;
+                int info_index = tmp_idx + offset;
+                info_tag = pmt::dict_add(info_tag, pmt::intern("index_offset"), pmt::from_long(info_index));
+                if(qsize!=0 &&(qsize == d_retx_status.size()) && (d_retx_status[qidx] == false) ){
+                  d_retx_status[qidx] = true;
+                  d_retx_count++;
+                  info_tag = pmt::dict_add(info_tag, pmt::intern("retx_idx"), pmt::from_long(qidx));
+                }
+                d_pkt_info.push_back(info_tag);
+              }
             }
           }
           if(!d_retx_status.empty() && d_retx_count==d_retx_status.size()){
@@ -149,11 +168,14 @@ namespace gr {
     void 
     prou_sample_queue_cc_impl::append_samples(
       const gr_complex* in, 
-      int ninput_items, 
+      int ninput_items,
+      int noutput_items, 
       int& consume_count, 
       long int time)
     {
       int space_left = d_sample_cap - d_sample_size;
+      std::vector<tag_t> tags;
+      get_tags_in_range(tags, 0, nitems_read(0),nitems_read(0)+noutput_items, d_sensing_tagname);
       pmt::pmt_t mark_sample = pmt::make_dict();
       switch(d_state)
       {
@@ -169,7 +191,7 @@ namespace gr {
             memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)*space_left);
             consume_count = space_left;
           }
-            mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_uint64(time));
+            mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_long(time));
             mark_sample = pmt::dict_add(mark_sample, pmt::intern("qindex"), pmt::from_long(d_sample_size));
             d_sample_size+= consume_count;
             d_buffer_info.push_back(mark_sample);
@@ -191,7 +213,7 @@ namespace gr {
             memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)*space_left);
             consume_count = space_left;
           }
-            mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_uint64(time));
+            mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_long(time));
             mark_sample = pmt::dict_add(mark_sample, pmt::intern("qindex"), pmt::from_long(d_sample_size));
             d_sample_size+= consume_count;
             consume_count = ninput_items;
@@ -209,35 +231,42 @@ namespace gr {
     void
     prou_sample_queue_cc_impl::reduce_samples()
     {
-      int samples_left = d_sample_size/2;
-      int samples_rm = d_sample_size - samples_left;
-      int idx; 
-      uint64_t time;
-      std::vector<pmt::pmt_t> new_buf_info;
-      for(int i=0;i<d_buffer_info.size();++i){
-        pmt::pmt_t tmp = pmt::make_dict();
-        idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("qindex"),pmt::from_long(0)));
-        time = pmt::to_uint64(pmt::dict_ref(d_buffer_info[i], pmt::intern("ctime"),pmt::from_uint64(0)));
-        if(idx >= samples_rm){
-          tmp = pmt::dict_add(tmp, pmt::intern("ctime"), pmt::from_uint64(time));
-          tmp = pmt::dict_add(tmp, pmt::intern("qindex"), pmt::from_long(idx - samples_rm));
-          new_buf_info.push_back(tmp);
+      int samples_left;
+      int samples_rm;
+      int idx;
+      long int time;
+      //
+      int sample_count =0;
+      while(sample_count < d_sample_size/2){
+        d_buffer_info.erase(d_buffer_info.begin());
+        if(!d_buffer_info.empty()){
+          sample_count = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("qindex"),pmt::PMT_NIL));
+        }
+        else{
+          //this case means no info found and sample count cannot be updated
+          sample_count = d_sample_size; //remove all
+          d_buffer_info.clear();
         }
       }
-      d_buffer_info = new_buf_info;
+      samples_left = d_sample_size - sample_count;
+      samples_rm = sample_count;
+      for(int i=0;i<d_buffer_info.size();++i){
+        pmt::pmt_t tmp = pmt::make_dict();
+        idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("qindex"),pmt::PMT_NIL));
+        time = pmt::to_uint64(pmt::dict_ref(d_buffer_info[i], pmt::intern("ctime"),pmt::PMT_NIL));
+        tmp = pmt::dict_add(tmp, pmt::intern("ctime"), pmt::from_long(time));
+        tmp = pmt::dict_add(tmp, pmt::intern("qindex"), pmt::from_long(idx - samples_rm));
+        d_buffer_info[i] = tmp;
+        if(i==0){
+          d_update_time = time;
+        }
+      }
       for(int i=0;i<samples_left;++i){
         d_sample_buffer[i] = d_sample_buffer[samples_rm+i];
       }
       d_sample_idx = (d_sample_idx <samples_rm) ? 0 : (d_sample_idx - samples_rm);
       d_sample_size = samples_left;
-      d_update_time = std::clock();
     }
-
-    //void
-    //prou_sample_queue_cc_impl::consume_handler(int noutput_items, int ninput_items)
-    //{
-
-    //}
 
     void
     prou_sample_queue_cc_impl::out_items_handler(
@@ -251,23 +280,47 @@ namespace gr {
       switch(d_state)
       {
         case LOAD_SAMPLE:
-          memcpy(out,in,sizeof(gr_complex)*noutput_items);
-          produce(0,noutput_items);
+          memcpy(out,in,sizeof(gr_complex)*ninput_items);
+          produce(0,ninput_items);
         break;
         case WAIT_INFO:
-          memcpy(out,in,sizeof(gr_complex)*noutput_items);
-          produce(0,noutput_items);
+          memcpy(out,in,sizeof(gr_complex)*ninput_items);
+          produce(0,ninput_items);
         break;
         case OUTPUT_SAMPLE:
           if(noutput_items > (d_sample_size-d_sample_idx))
           {
             for(d_sample_idx;d_sample_idx<d_sample_size;++d_sample_idx){
+              if(!d_pkt_info.empty()){
+                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("index_offset"),pmt::PMT_NIL));
+                if(offset == d_sample_idx){
+                  pmt::pmt_t dict_items(pmt::dict_items(d_pkt_info[0]));
+                  while(!pmt::is_null(dict_items)){
+                    pmt::pmt_t this_dict(pmt::car(dict_items));
+                    add_item_tag(1,nitems_written(1)+count,pmt::car(this_dict),pmt::cdr(this_dict));
+                    dict_items = pmt::cdr(dict_items);
+                  }
+                  d_pkt_info.erase(d_pkt_info.begin());
+                }
+              }
               out[count++] = d_sample_buffer[d_sample_idx];
             }
             produce(1,count);
           }
           else{
             for(count;count < noutput_items;++count){
+              if(!d_pkt_info.empty()){
+                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("index_offset"),pmt::PMT_NIL));
+                if(offset == d_sample_idx){
+                  pmt::pmt_t dict_items(pmt::dict_items(d_pkt_info[0]));
+                  while(!pmt::is_null(dict_items)){
+                    pmt::pmt_t this_dict(pmt::car(dict_items));
+                    add_item_tag(1,nitems_written(1)+count,pmt::car(this_dict),pmt::cdr(this_dict));
+                    dict_items = pmt::cdr(dict_items);
+                  }
+                  d_pkt_info.erase(d_pkt_info.begin());
+                }
+              }
               out[count] = d_sample_buffer[d_sample_idx + count];
             }
             produce(1,count);
@@ -327,12 +380,9 @@ namespace gr {
       long int cur_time = std::clock();
       int consume_count =0;
 
-
-      append_samples(in,ninput_items[0],consume_count,cur_time);
+      append_samples(in,ninput_items[0],noutput_items,consume_count,cur_time);
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      //consume_each (noutput_items);
-      //consume_handler(noutput_items,ninput_items[0]);
       out_items_handler(out,sample,in,noutput_items, consume_count);
 
       // Tell runtime system how many output items we produced.
