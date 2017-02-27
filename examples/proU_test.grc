@@ -911,7 +911,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(816, 532)</value>
+      <value>(816, 540)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -971,6 +971,10 @@
     <param>
       <key>affinity</key>
       <value></value>
+    </param>
+    <param>
+      <key>debug</key>
+      <value>True</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1112,7 +1116,7 @@
     </param>
     <param>
       <key>debug</key>
-      <value>True</value>
+      <value>False</value>
     </param>
     <param>
       <key>sense_tag</key>
@@ -1190,5 +1194,11 @@
     <sink_block_id>blocks_repack_bits_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_symbol_receiver_c_0</source_block_id>
+    <sink_block_id>lsa_prou_sample_queue_cc_0</sink_block_id>
+    <source_key>info</source_key>
+    <sink_key>info</sink_key>
   </connection>
 </flow_graph>

@@ -37,16 +37,16 @@ namespace gr {
     };
 
     prou_sample_queue_cc::sptr
-    prou_sample_queue_cc::make(const std::string& sensing_tagname)
+    prou_sample_queue_cc::make(const std::string& sensing_tagname, bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new prou_sample_queue_cc_impl(sensing_tagname));
+        (new prou_sample_queue_cc_impl(sensing_tagname, debug));
     }
 
     /*
      * The private constructor
      */
-    prou_sample_queue_cc_impl::prou_sample_queue_cc_impl(const std::string& sensing_tagname)
+    prou_sample_queue_cc_impl::prou_sample_queue_cc_impl(const std::string& sensing_tagname, bool debug)
       : gr::block("prou_sample_queue_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(2, 2, sizeof(gr_complex))),
@@ -61,13 +61,13 @@ namespace gr {
       message_port_register_in(d_info_port);
       set_msg_handler(d_info_port, boost::bind(&prou_sample_queue_cc_impl::info_msg_handler, this, _1));
 
-
       d_update_time = std::clock();
       d_timeout = 10.0;
       d_retx_count = 0;
+      d_last_retx_idx = 0;
       d_sensing_tagname = pmt::string_to_symbol(sensing_tagname);
       
-      //set_message_port_register_in(d_info_port);
+      d_debug = debug;
     }
 
     /*
@@ -81,9 +81,8 @@ namespace gr {
     void
     prou_sample_queue_cc_impl::info_msg_handler(pmt::pmt_t msg)
     {
-      //pmt::pmt_t tmp;
       long int time;
-      int counter=0, qidx, qsize, offset;
+      int counter=0, qidx, qsize, offset, sample_len;
       bool sensing_state=false;
       pmt::pmt_t tag_info;
       if(pmt::dict_has_key(msg, d_sensing_tagname)){
@@ -104,6 +103,10 @@ namespace gr {
       if(pmt::dict_has_key(msg, pmt::intern("buffer_offset")))
       {
         offset = pmt::to_long(pmt::dict_ref(msg, pmt::intern("buffer_offset"), pmt::PMT_NIL));
+      }
+      if(pmt::dict_has_key(msg, pmt::intern("payload")))
+      {
+        sample_len = pmt::to_long(pmt::dict_ref(msg, pmt::intern("payload"), pmt::PMT_NIL));
       }
       long int tmp_time;
       int tmp_idx;
@@ -129,9 +132,13 @@ namespace gr {
           }
           if(qsize != d_retx_index_counter.size()){
             GR_LOG_DEBUG(d_logger, "receiving queue size of different length");
+            //FIXME
+            //should handle this case properly
           }
           if(d_retx_count != 0 && qsize == 0){
             GR_LOG_DEBUG(d_logger, "receiving new data, retransmission ends");
+            //FIXME
+            //interference cancellation possibly failed
           }
 
           if(!sensing_state){
@@ -143,18 +150,27 @@ namespace gr {
                 // attach header info on sample
                 pmt::pmt_t info_tag = msg;
                 int info_index = tmp_idx + offset;
-                info_tag = pmt::dict_add(info_tag, pmt::intern("buffer_offset"), pmt::from_long(info_index));
-                if(qsize!=0 &&(qsize == d_retx_status.size()) && (d_retx_status[qidx] == false) ){
+                //FIXME
+                //this tag should be different from feedback, since it will be used by down stream
+                info_tag = pmt::dict_add(info_tag, pmt::intern("header_found"), pmt::from_long(info_index));
+                info_tag = pmt::dict_add(info_tag, pmt::intern("payload_len"), pmt::from_long(sample_len));
+                if(qsize!=0 &&(qsize == d_retx_status.size()) && 
+                  (qidx < qsize) && (d_retx_status[qidx] == false) ){
                   d_retx_status[qidx] = true;
                   d_retx_count++;
+                  d_last_retx_idx = info_index;
+                  d_last_retx_samples = sample_len;
                   info_tag = pmt::dict_add(info_tag, pmt::intern("retx_idx"), pmt::from_long(qidx));
                 }
                 d_pkt_info.push_back(info_tag);
               }
             }
           }
-          if(!d_retx_status.empty() && d_retx_count==d_retx_status.size()){
+          if(!d_retx_status.empty() && d_retx_count==d_retx_status.size() && 
+            (d_sample_size >=  (d_last_retx_idx + d_last_retx_samples) )){
             //retransmission complete
+            d_last_retx_idx=0;
+            d_last_retx_samples=0;
             d_retx_count =0;
             d_retx_status.clear();
             d_state = OUTPUT_SAMPLE;
@@ -202,6 +218,9 @@ namespace gr {
             d_sample_idx = 0;
             d_sample_size = 0;
             d_state = LOAD_SAMPLE;
+            if(d_debug){
+              GR_LOG_DEBUG(d_logger,"timeout, resetting sample buffer");
+            }
           }
           // clear queue
           // back to LOAD_SAMPLE;
@@ -265,6 +284,7 @@ namespace gr {
         d_sample_buffer[i] = d_sample_buffer[samples_rm+i];
       }
       d_sample_idx = (d_sample_idx <samples_rm) ? 0 : (d_sample_idx - samples_rm);
+      d_last_retx_idx = (d_last_retx_idx < samples_rm) ? 0 : (d_last_retx_idx - samples_rm);
       d_sample_size = samples_left;
     }
 
@@ -294,7 +314,7 @@ namespace gr {
           {
             for(d_sample_idx;d_sample_idx<d_sample_size;++d_sample_idx){
               if(!d_pkt_info.empty()){
-                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("buffer_offset"),pmt::PMT_NIL));
+                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("header_found"),pmt::PMT_NIL));
                 if(offset == d_sample_idx){
                   pmt::pmt_t dict_items(pmt::dict_items(d_pkt_info[0]));
                   while(!pmt::is_null(dict_items)){
@@ -310,9 +330,9 @@ namespace gr {
             produce(1,count);
           }
           else{
-            for(count;count < noutput_items;++count){
+            for(count=0;count < noutput_items;++count){
               if(!d_pkt_info.empty()){
-                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("buffer_offset"),pmt::PMT_NIL));
+                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("header_found"),pmt::PMT_NIL));
                 if(offset == d_sample_idx){
                   pmt::pmt_t dict_items(pmt::dict_items(d_pkt_info[0]));
                   while(!pmt::is_null(dict_items)){
@@ -323,10 +343,10 @@ namespace gr {
                   d_pkt_info.erase(d_pkt_info.begin());
                 }
               }
-              out[count] = d_sample_buffer[d_sample_idx + count];
+              out[count] = d_sample_buffer[d_sample_idx++];
             }
             produce(1,count);
-            d_sample_idx += count;
+            //d_sample_idx += count;
           }
           if(d_sample_idx == d_sample_size){
             d_sample_idx = 0;
@@ -355,9 +375,8 @@ namespace gr {
           items_reqd = noutput_items;
         break;
         case OUTPUT_SAMPLE:
-          if(noutput_items >= d_sample_size){
-            items_reqd = noutput_items - d_sample_size;
-          }
+          //FIXME
+          items_reqd = 0;
         break;
         default:
           std::runtime_error("Entering wrong state");

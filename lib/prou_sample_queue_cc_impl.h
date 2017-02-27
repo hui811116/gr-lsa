@@ -51,7 +51,10 @@ namespace gr {
       std::vector<int> d_retx_index_counter;
       std::vector<bool> d_retx_status;
       int d_retx_count;
+      int d_last_retx_idx;
+      int d_last_retx_samples;
 
+      bool d_debug;
       //helper function
       //void consume_handler(int noutput_items, int ninput_items);
       void out_items_handler(
@@ -68,7 +71,7 @@ namespace gr {
       // message handler
       void info_msg_handler(pmt::pmt_t msg);
       
-      prou_sample_queue_cc_impl(const std::string& sensing_tagname);
+      prou_sample_queue_cc_impl(const std::string& sensing_tagname, bool debug);
       ~prou_sample_queue_cc_impl();
 
       // Where all the action really happens

@@ -253,11 +253,17 @@ namespace gr {
       if(!type)
       {
         //su pkt received
-        sen_back = pmt::dict_add(sen_back,pmt::intern("payload"),pmt::from_long(d_payload_len));
+        //FIXME
+        //payload length for feedback only matters in samples!!
+        //sen_back = pmt::dict_add(sen_back,pmt::intern("payload"),pmt::from_long(d_payload_len));
+        int sample_length = d_payload_len*8/ d_pld_bps *d_sps;
+        sen_back = pmt::dict_add(sen_back,pmt::intern("payload"),pmt::from_long(sample_length));
         sen_back = pmt::dict_add(sen_back,pmt::intern("queue_index"),pmt::from_long(d_qidx));
         sen_back = pmt::dict_add(sen_back,pmt::intern("queue_size"),pmt::from_long(d_qsize));
         sen_back = pmt::dict_add(sen_back,pmt::intern("counter"),pmt::from_long(d_counter));
         //time index for feedback labeling in queue
+        //FIXME
+        // this index meant for the end of header
         sen_back = pmt::dict_add(sen_back,pmt::intern("buffer_offset"),pmt::from_long(d_symbol_count*d_sps));
         sen_back = pmt::dict_add(sen_back,pmt::intern("ctime"),pmt::from_long(d_current_time));
       }
@@ -282,10 +288,13 @@ namespace gr {
         if(!tags.empty()){
           //handling interference detection
           int offset = tags[0].offset- nitems_read(0);
+          bool sense_result = pmt::to_bool(tags[0].value);
           if(offset==i){
-            feedback_info(true);
-            d_byte_count = 0;
-            d_state = SEARCH;
+            if(sense_result){
+              feedback_info(true);
+              d_byte_count = 0;
+              d_state = SEARCH;
+            }
             tags.erase(tags.begin());
           }
         }
