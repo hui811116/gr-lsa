@@ -280,7 +280,7 @@ namespace gr {
       // Do <+signal processing+>
       std::vector<tag_t> time_tags;
       std::vector<tag_t> tags;
-      std::vector<tag_t> qindex_tags;
+      //std::vector<tag_t> qindex_tags;
       get_tags_in_window(tags, 0,0,noutput_items, d_sensing_tagname);
       get_tags_in_window(time_tags, 0,0,noutput_items, d_time_tagname);
       

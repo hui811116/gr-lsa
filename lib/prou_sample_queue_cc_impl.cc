@@ -50,7 +50,7 @@ namespace gr {
       : gr::block("prou_sample_queue_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(2, 2, sizeof(gr_complex))),
-      d_sample_cap(1024*1024)
+      d_sample_cap(4096*1024)
     {
       d_sample_idx = 0;
       d_sample_size =0;
@@ -130,13 +130,13 @@ namespace gr {
             //outdated info, skip
             return;
           }
-          if(qsize != d_retx_index_counter.size()){
-            GR_LOG_DEBUG(d_logger, "receiving queue size of different length");
+          if(qsize!=0 && qsize != d_retx_index_counter.size()){
+            //GR_LOG_DEBUG(d_logger, "receiving queue size of different length");
             //FIXME
             //should handle this case properly
           }
           if(d_retx_count != 0 && qsize == 0){
-            GR_LOG_DEBUG(d_logger, "receiving new data, retransmission ends");
+            //GR_LOG_DEBUG(d_logger, "receiving new data, retransmission ends");
             //FIXME
             //interference cancellation possibly failed
           }
@@ -152,9 +152,10 @@ namespace gr {
                 int info_index = tmp_idx + offset;
                 //FIXME
                 //this tag should be different from feedback, since it will be used by down stream
+                info_tag = pmt::dict_delete(info_tag, pmt::intern("ctime"));
+                info_tag = pmt::dict_delete(info_tag, pmt::intern("buffer_offset"));
                 info_tag = pmt::dict_add(info_tag, pmt::intern("header_found"), pmt::from_long(info_index));
-                info_tag = pmt::dict_add(info_tag, pmt::intern("payload_len"), pmt::from_long(sample_len));
-                if(qsize!=0 &&(qsize == d_retx_status.size()) && 
+                if((qsize!=0) &&(qsize == d_retx_status.size()) && 
                   (qidx < qsize) && (d_retx_status[qidx] == false) ){
                   d_retx_status[qidx] = true;
                   d_retx_count++;
@@ -166,9 +167,17 @@ namespace gr {
               }
             }
           }
-          if(!d_retx_status.empty() && d_retx_count==d_retx_status.size() && 
+          if((!d_retx_status.empty()) && (d_retx_count==d_retx_status.size()) && 
             (d_sample_size >=  (d_last_retx_idx + d_last_retx_samples) )){
             //retransmission complete
+            //FIXME
+            //require a stopping index for output
+            if(d_debug){
+              std::stringstream ss;
+              ss<<"status size:"<<d_retx_status.size()<<" ,d_retx_count:"<<d_retx_count;
+              GR_LOG_DEBUG(d_logger, "cancellation enabling information available!");
+              GR_LOG_DEBUG(d_logger, ss.str());
+            }
             d_last_retx_idx=0;
             d_last_retx_samples=0;
             d_retx_count =0;
@@ -334,6 +343,9 @@ namespace gr {
               if(!d_pkt_info.empty()){
                 size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("header_found"),pmt::PMT_NIL));
                 if(offset == d_sample_idx){
+                  if(d_debug){
+                    std::cout << "<DEBUG> output tags"<<d_pkt_info[0]<<std::endl;
+                  }
                   pmt::pmt_t dict_items(pmt::dict_items(d_pkt_info[0]));
                   while(!pmt::is_null(dict_items)){
                     pmt::pmt_t this_dict(pmt::car(dict_items));
