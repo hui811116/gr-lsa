@@ -101,9 +101,9 @@ namespace gr {
       {
         qsize = pmt::to_long(pmt::dict_ref(msg, pmt::intern("queue_size"), pmt::PMT_NIL));
       }
-      if(pmt::dict_has_key(msg, pmt::intern("index_offset")))
+      if(pmt::dict_has_key(msg, pmt::intern("buffer_offset")))
       {
-        offset = pmt::to_long(pmt::dict_ref(msg, pmt::intern("index_offset"), pmt::PMT_NIL));
+        offset = pmt::to_long(pmt::dict_ref(msg, pmt::intern("buffer_offset"), pmt::PMT_NIL));
       }
       long int tmp_time;
       int tmp_idx;
@@ -137,13 +137,13 @@ namespace gr {
           if(!sensing_state){
             for(int i=0;i<d_buffer_info.size();++i){
               tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("ctime"),pmt::PMT_NIL));
-              tmp_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("qindex"),pmt::PMT_NIL));
+              tmp_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("buffer_offset"),pmt::PMT_NIL));
               if(time == tmp_time){
                 //found corresponding time index
                 // attach header info on sample
                 pmt::pmt_t info_tag = msg;
                 int info_index = tmp_idx + offset;
-                info_tag = pmt::dict_add(info_tag, pmt::intern("index_offset"), pmt::from_long(info_index));
+                info_tag = pmt::dict_add(info_tag, pmt::intern("buffer_offset"), pmt::from_long(info_index));
                 if(qsize!=0 &&(qsize == d_retx_status.size()) && (d_retx_status[qidx] == false) ){
                   d_retx_status[qidx] = true;
                   d_retx_count++;
@@ -192,7 +192,7 @@ namespace gr {
             consume_count = space_left;
           }
             mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_long(time));
-            mark_sample = pmt::dict_add(mark_sample, pmt::intern("qindex"), pmt::from_long(d_sample_size));
+            mark_sample = pmt::dict_add(mark_sample, pmt::intern("buffer_offset"), pmt::from_long(d_sample_size));
             d_sample_size+= consume_count;
             d_buffer_info.push_back(mark_sample);
         break;
@@ -214,7 +214,7 @@ namespace gr {
             consume_count = space_left;
           }
             mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_long(time));
-            mark_sample = pmt::dict_add(mark_sample, pmt::intern("qindex"), pmt::from_long(d_sample_size));
+            mark_sample = pmt::dict_add(mark_sample, pmt::intern("buffer_offset"), pmt::from_long(d_sample_size));
             d_sample_size+= consume_count;
             consume_count = ninput_items;
             d_buffer_info.push_back(mark_sample);
@@ -240,7 +240,7 @@ namespace gr {
       while(sample_count < d_sample_size/2){
         d_buffer_info.erase(d_buffer_info.begin());
         if(!d_buffer_info.empty()){
-          sample_count = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("qindex"),pmt::PMT_NIL));
+          sample_count = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("buffer_offset"),pmt::PMT_NIL));
         }
         else{
           //this case means no info found and sample count cannot be updated
@@ -252,10 +252,10 @@ namespace gr {
       samples_rm = sample_count;
       for(int i=0;i<d_buffer_info.size();++i){
         pmt::pmt_t tmp = pmt::make_dict();
-        idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("qindex"),pmt::PMT_NIL));
+        idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("buffer_offset"),pmt::PMT_NIL));
         time = pmt::to_uint64(pmt::dict_ref(d_buffer_info[i], pmt::intern("ctime"),pmt::PMT_NIL));
         tmp = pmt::dict_add(tmp, pmt::intern("ctime"), pmt::from_long(time));
-        tmp = pmt::dict_add(tmp, pmt::intern("qindex"), pmt::from_long(idx - samples_rm));
+        tmp = pmt::dict_add(tmp, pmt::intern("buffer_offset"), pmt::from_long(idx - samples_rm));
         d_buffer_info[i] = tmp;
         if(i==0){
           d_update_time = time;
@@ -280,10 +280,12 @@ namespace gr {
       switch(d_state)
       {
         case LOAD_SAMPLE:
+          add_item_tag(0,nitems_written(0),pmt::intern("ctime"),pmt::from_long(d_current_time));
           memcpy(out,in,sizeof(gr_complex)*ninput_items);
           produce(0,ninput_items);
         break;
         case WAIT_INFO:
+          add_item_tag(0,nitems_written(0),pmt::intern("ctime"),pmt::from_long(d_current_time));
           memcpy(out,in,sizeof(gr_complex)*ninput_items);
           produce(0,ninput_items);
         break;
@@ -292,7 +294,7 @@ namespace gr {
           {
             for(d_sample_idx;d_sample_idx<d_sample_size;++d_sample_idx){
               if(!d_pkt_info.empty()){
-                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("index_offset"),pmt::PMT_NIL));
+                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("buffer_offset"),pmt::PMT_NIL));
                 if(offset == d_sample_idx){
                   pmt::pmt_t dict_items(pmt::dict_items(d_pkt_info[0]));
                   while(!pmt::is_null(dict_items)){
@@ -310,7 +312,7 @@ namespace gr {
           else{
             for(count;count < noutput_items;++count){
               if(!d_pkt_info.empty()){
-                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("index_offset"),pmt::PMT_NIL));
+                size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("buffer_offset"),pmt::PMT_NIL));
                 if(offset == d_sample_idx){
                   pmt::pmt_t dict_items(pmt::dict_items(d_pkt_info[0]));
                   while(!pmt::is_null(dict_items)){
@@ -376,15 +378,15 @@ namespace gr {
       gr_complex *sample = (gr_complex *) output_items[1];
 
       // Do <+signal processing+>
-      //int process_samples = noutput_items;
-      long int cur_time = std::clock();
+      d_current_time = std::clock();
       int consume_count =0;
 
-      append_samples(in,ninput_items[0],noutput_items,consume_count,cur_time);
+      append_samples(in,ninput_items[0],noutput_items,consume_count,d_current_time);
       // Tell runtime system how many input items we consumed on
       // each input stream.
       out_items_handler(out,sample,in,noutput_items, consume_count);
 
+      consume_each(consume_count);
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;
     }

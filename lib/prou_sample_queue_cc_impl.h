@@ -44,6 +44,7 @@ namespace gr {
 
       //std::vector<long int> d_sample_time;
       long int d_update_time;
+      long int d_current_time;
       float d_timeout;
 
       //for sensing and retransmission
