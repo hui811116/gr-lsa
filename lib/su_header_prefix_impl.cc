@@ -155,9 +155,12 @@ namespace gr {
           re_size = (uint8_t)d_length;
           re_indx = (uint8_t)d_counter;
         }
-          count = (uint16_t)d_counter++;
-          d_counter %= d_length;
-          d_state = ((d_counter ==0)? (!d_state): d_state);
+          count = (uint16_t)d_counter;
+          d_counter = (d_counter+1) % d_length;
+          //d_state = ((d_counter ==0)? (!d_state): d_state);
+          if(d_counter == 0){
+            d_state = !d_state;
+          }
         break;
         default:
           throw std::invalid_argument("Using undefined prefix mode");

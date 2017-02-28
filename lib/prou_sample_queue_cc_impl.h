@@ -53,9 +53,13 @@ namespace gr {
       int d_retx_count;
       int d_last_retx_idx;
       int d_last_retx_samples;
+      int d_end_retx_sample_size;
+      //bool d_end_of_retx;
 
       bool d_debug;
       //helper function
+      void tags_offset_handler(int offset);
+      void clear_queue_index_fix();
       //void consume_handler(int noutput_items, int ninput_items);
       void out_items_handler(
         gr_complex* out, 
