@@ -25,5 +25,6 @@ install(FILES
     lsa_modified_polyphase_time_sync_cc.xml
     lsa_modified_costas_loop_cc.xml
     lsa_prou_sample_queue_cc.xml
-    lsa_symbol_receiver_c.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_symbol_receiver_c.xml
+    lsa_interference_canceller_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

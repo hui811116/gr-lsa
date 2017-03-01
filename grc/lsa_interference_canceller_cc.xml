@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<block>
+  <name>LSA Interference Canceller</name>
+  <key>lsa_interference_canceller_cc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.interference_canceller_cc($preamble, $sense)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>clean preamble</name>
+    <key>preamble</key>
+    <type>complex_vector</type>
+  </param>
+  <param>
+    <name>sensing tagname</name>
+    <key>sense</key>
+    <value>"sensing"</value>
+    <type>string</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+  <source>
+    <name>energy</name>
+    <type>float</type>
+  </source>
+</block>

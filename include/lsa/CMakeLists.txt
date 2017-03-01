@@ -30,5 +30,6 @@ install(FILES
     modified_polyphase_time_sync_cc.h
     modified_costas_loop_cc.h
     prou_sample_queue_cc.h
-    symbol_receiver_c.h DESTINATION include/lsa
+    symbol_receiver_c.h
+    interference_canceller_cc.h DESTINATION include/lsa
 )
