@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <block>
-  <name>modified_polyphase_time_sync_cc</name>
+  <name>Modified polyphase clock sync</name>
   <key>lsa_modified_polyphase_time_sync_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>

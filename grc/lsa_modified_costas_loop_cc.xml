@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <block>
-  <name>modified_costas_loop_cc</name>
+  <name>Modified Costas loop</name>
   <key>lsa_modified_costas_loop_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
