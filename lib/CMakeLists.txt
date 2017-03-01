@@ -28,11 +28,8 @@ list(APPEND lsa_sources
     eng_det_cc_impl.cc
     header_payload_parser_cb_impl.cc
     su_header_prefix_impl.cc
-    su_sample_receiver_cb_impl.cc
     su_transmitter_bc_impl.cc
-    prou_sample_receiver_cb_impl.cc
     interference_energy_detector_cc_impl.cc
-    poly_costas_sync_cc_impl.cc
     modified_polyphase_time_sync_cc_impl.cc
     modified_costas_loop_cc_impl.cc
     prou_sample_queue_cc_impl.cc

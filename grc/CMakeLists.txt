@@ -20,11 +20,8 @@ install(FILES
     lsa_eng_det_cc.xml
     lsa_header_payload_parser_cb.xml
     lsa_su_header_prefix.xml
-    lsa_su_sample_receiver_cb.xml
     lsa_su_transmitter_bc.xml
-    lsa_prou_sample_receiver_cb.xml
     lsa_interference_energy_detector_cc.xml
-    lsa_poly_costas_sync_cc.xml
     lsa_modified_polyphase_time_sync_cc.xml
     lsa_modified_costas_loop_cc.xml
     lsa_prou_sample_queue_cc.xml

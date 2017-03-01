@@ -685,7 +685,7 @@
     </param>
   </block>
   <block>
-    <key>lsa_poly_costas_sync_cc</key>
+    <key>lsa_modified_costas_loop_cc</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -699,20 +699,12 @@
       <value></value>
     </param>
     <param>
-      <key>costas_loop_bw</key>
-      <value>6.28/100</value>
-    </param>
-    <param>
-      <key>costas_order</key>
-      <value>mod.arity()</value>
-    </param>
-    <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>True</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(416, 540)</value>
+      <value>(784, 512)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -720,7 +712,15 @@
     </param>
     <param>
       <key>id</key>
-      <value>lsa_poly_costas_sync_cc_0</value>
+      <value>lsa_modified_costas_loop_cc_0</value>
+    </param>
+    <param>
+      <key>tagname</key>
+      <value>"sensing"</value>
+    </param>
+    <param>
+      <key>w</key>
+      <value>6.28/200</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -731,32 +731,16 @@
       <value>0</value>
     </param>
     <param>
-      <key>plf_loop_bw</key>
-      <value>6.28/200</value>
+      <key>order</key>
+      <value>mod.arity()</value>
     </param>
     <param>
-      <key>plf_nfilts</key>
-      <value>nfilts</value>
-    </param>
-    <param>
-      <key>plf_sps</key>
-      <value>sps</value>
-    </param>
-    <param>
-      <key>plf_taps</key>
-      <value>rx_rrc_taps</value>
-    </param>
-    <param>
-      <key>sense_tag</key>
-      <value>"interference_tag"</value>
+      <key>use_snr</key>
+      <value>False</value>
     </param>
   </block>
   <block>
-    <key>lsa_su_sample_receiver_cb</key>
-    <param>
-      <key>accesscode</key>
-      <value>accesscode</value>
-    </param>
+    <key>lsa_modified_polyphase_time_sync_cc</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -770,12 +754,8 @@
       <value></value>
     </param>
     <param>
-      <key>debug</key>
-      <value>True</value>
-    </param>
-    <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>True</value>
     </param>
     <param>
       <key>filter_size</key>
@@ -783,23 +763,23 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(776, 556)</value>
+      <value>(504, 516)</value>
     </param>
     <param>
       <key>_rotation</key>
       <value>0</value>
     </param>
     <param>
-      <key>hdr_const</key>
-      <value>mod</value>
-    </param>
-    <param>
       <key>id</key>
-      <value>lsa_su_sample_receiver_cb_0</value>
+      <value>lsa_modified_polyphase_time_sync_cc_0</value>
     </param>
     <param>
       <key>init_phase</key>
       <value>nfilts/2</value>
+    </param>
+    <param>
+      <key>tagname</key>
+      <value>"sensing"</value>
     </param>
     <param>
       <key>loop_bw</key>
@@ -818,32 +798,16 @@
       <value>0</value>
     </param>
     <param>
-      <key>cos_order</key>
-      <value>mod.arity()</value>
-    </param>
-    <param>
       <key>osps</key>
       <value>1</value>
-    </param>
-    <param>
-      <key>pld_const</key>
-      <value>mod</value>
     </param>
     <param>
       <key>sps</key>
       <value>sps</value>
     </param>
     <param>
-      <key>sen_tag</key>
-      <value>sensing</value>
-    </param>
-    <param>
       <key>taps</key>
       <value>rx_rrc_taps</value>
-    </param>
-    <param>
-      <key>sync</key>
-      <value>False</value>
     </param>
   </block>
   <block>
@@ -914,6 +878,69 @@
     </param>
   </block>
   <block>
+    <key>lsa_symbol_receiver_c</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1056, 440)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>hdr</key>
+      <value>mod</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_symbol_receiver_c_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>pld</key>
+      <value>mod</value>
+    </param>
+    <param>
+      <key>sps</key>
+      <value>sps</value>
+    </param>
+    <param>
+      <key>accesscode</key>
+      <value>accesscode</value>
+    </param>
+    <param>
+      <key>debug</key>
+      <value>False</value>
+    </param>
+    <param>
+      <key>sense_tag</key>
+      <value>"sensing"</value>
+    </param>
+  </block>
+  <block>
     <key>qtgui_const_sink_x</key>
     <param>
       <key>autoscale</key>
@@ -941,7 +968,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(776, 476)</value>
+      <value>(824, 380)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -3740,22 +3767,22 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_poly_costas_sync_cc_0</source_block_id>
-    <sink_block_id>lsa_su_sample_receiver_cb_0</sink_block_id>
+    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
+    <sink_block_id>lsa_symbol_receiver_c_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_poly_costas_sync_cc_0</source_block_id>
+    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
     <sink_block_id>qtgui_const_sink_x_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_su_sample_receiver_cb_0</source_block_id>
-    <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
-    <source_key>info</source_key>
-    <sink_key>sensing_info</sink_key>
+    <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
+    <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_su_transmitter_bc_0</source_block_id>
@@ -3764,8 +3791,14 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>lsa_symbol_receiver_c_0</source_block_id>
+    <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
+    <source_key>info</source_key>
+    <sink_key>sensing_info</sink_key>
+  </connection>
+  <connection>
     <source_block_id>uhd_usrp_source_0</source_block_id>
-    <sink_block_id>lsa_poly_costas_sync_cc_0</sink_block_id>
+    <sink_block_id>lsa_modified_polyphase_time_sync_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

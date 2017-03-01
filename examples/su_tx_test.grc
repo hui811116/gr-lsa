@@ -852,101 +852,6 @@
     </param>
   </block>
   <block>
-    <key>lsa_su_sample_receiver_cb</key>
-    <param>
-      <key>accesscode</key>
-      <value>accesscode</value>
-    </param>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>debug</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>filter_size</key>
-      <value>nfilts</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(832, 448)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>hdr_const</key>
-      <value>mod</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>lsa_su_sample_receiver_cb_0</value>
-    </param>
-    <param>
-      <key>init_phase</key>
-      <value>nfilts/2</value>
-    </param>
-    <param>
-      <key>loop_bw</key>
-      <value>6.28/200</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>max_dev</key>
-      <value>1.5</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>cos_order</key>
-      <value>mod.arity()</value>
-    </param>
-    <param>
-      <key>osps</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>pld_const</key>
-      <value>mod</value>
-    </param>
-    <param>
-      <key>sps</key>
-      <value>sps</value>
-    </param>
-    <param>
-      <key>sen_tag</key>
-      <value>sensing</value>
-    </param>
-    <param>
-      <key>taps</key>
-      <value>rx_rrc_taps</value>
-    </param>
-    <param>
-      <key>sync</key>
-      <value>False</value>
-    </param>
-  </block>
-  <block>
     <key>lsa_su_transmitter_bc</key>
     <param>
       <key>accesscode</key>
@@ -1010,6 +915,69 @@
     </param>
     <param>
       <key>sensing_tag</key>
+      <value>"sensing"</value>
+    </param>
+  </block>
+  <block>
+    <key>lsa_symbol_receiver_c</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(968, 440)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>hdr</key>
+      <value>mod</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_symbol_receiver_c_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>pld</key>
+      <value>mod</value>
+    </param>
+    <param>
+      <key>sps</key>
+      <value>sps</value>
+    </param>
+    <param>
+      <key>accesscode</key>
+      <value>accesscode</value>
+    </param>
+    <param>
+      <key>debug</key>
+      <value>False</value>
+    </param>
+    <param>
+      <key>sense_tag</key>
       <value>"sensing"</value>
     </param>
   </block>
@@ -1755,7 +1723,7 @@
   </connection>
   <connection>
     <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_su_sample_receiver_cb_0</sink_block_id>
+    <sink_block_id>lsa_symbol_receiver_c_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -1778,15 +1746,15 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_su_sample_receiver_cb_0</source_block_id>
-    <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
-    <source_key>info</source_key>
-    <sink_key>sensing_info</sink_key>
-  </connection>
-  <connection>
     <source_block_id>lsa_su_transmitter_bc_0</source_block_id>
     <sink_block_id>interp_fir_filter_xxx_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_symbol_receiver_c_0</source_block_id>
+    <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
+    <source_key>info</source_key>
+    <sink_key>sensing_info</sink_key>
   </connection>
 </flow_graph>

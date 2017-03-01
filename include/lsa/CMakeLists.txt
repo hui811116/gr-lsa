@@ -25,11 +25,8 @@ install(FILES
     eng_det_cc.h
     header_payload_parser_cb.h
     su_header_prefix.h
-    su_sample_receiver_cb.h
     su_transmitter_bc.h
-    prou_sample_receiver_cb.h
     interference_energy_detector_cc.h
-    poly_costas_sync_cc.h
     modified_polyphase_time_sync_cc.h
     modified_costas_loop_cc.h
     prou_sample_queue_cc.h
