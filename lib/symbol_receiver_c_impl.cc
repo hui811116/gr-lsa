@@ -56,6 +56,8 @@ namespace gr {
     /*
      * The private constructor
      */
+    static int ios[] = {sizeof(gr_complex), sizeof(float), sizeof(float), sizeof(float), sizeof(float)};
+    static std::vector<int> iosig(ios, ios+ sizeof(ios)/sizeof(int));
     symbol_receiver_c_impl::symbol_receiver_c_impl(const std::string& accesscode,
         const gr::digital::constellation_sptr& hdr_const,
         const gr::digital::constellation_sptr& pld_const,
@@ -63,7 +65,7 @@ namespace gr {
         int sps,
         bool debug)
       : gr::sync_block("symbol_receiver_c",
-              gr::io_signature::make(1, 1, sizeof(gr_complex)),
+              gr::io_signature::makev(1, 5, iosig),
               gr::io_signature::make(0, 0, 0))
     {
       d_hdr_const = hdr_const->base();
@@ -245,17 +247,20 @@ namespace gr {
     }
 
     void
-    symbol_receiver_c_impl::feedback_info(bool type)
+    symbol_receiver_c_impl::feedback_info(bool type,
+      const float* poly_freq, 
+      const float* poly_phase, 
+      const float* cos_freq, 
+      const float* cos_phase, 
+      int index,
+      bool have_sync)
     {
       pmt::pmt_t sen_back = pmt::make_dict();
       //interfering case
       sen_back = pmt::dict_add(sen_back,d_sensing_tagname,pmt::from_bool(type));
       if(!type)
       {
-        //su pkt received
-        //FIXME
         //payload length for feedback only matters in samples!!
-        //sen_back = pmt::dict_add(sen_back,pmt::intern("payload"),pmt::from_long(d_payload_len));
         int sample_length = d_payload_len*8/ d_pld_bps *d_sps;
         sen_back = pmt::dict_add(sen_back,pmt::intern("payload"),pmt::from_long(sample_length));
         sen_back = pmt::dict_add(sen_back,pmt::intern("queue_index"),pmt::from_long(d_qidx));
@@ -264,8 +269,18 @@ namespace gr {
         //time index for feedback labeling in queue
         //FIXME
         // this index meant for the end of header
+        // can shift to the begin of preamble, but samples may not be adequate...
         sen_back = pmt::dict_add(sen_back,pmt::intern("buffer_offset"),pmt::from_long(d_symbol_count*d_sps));
         sen_back = pmt::dict_add(sen_back,pmt::intern("ctime"),pmt::from_long(d_current_time));
+
+        if(have_sync){
+          //FIXME
+          //another method is to average time and freq estimate over (preamble + header length)
+          sen_back = pmt::dict_add(sen_back, pmt::intern("time_rate_f_est"),pmt::from_float(poly_freq[index]));
+          sen_back = pmt::dict_add(sen_back, pmt::intern("time_k_est"),pmt::from_float(poly_phase[index]));
+          sen_back = pmt::dict_add(sen_back, pmt::intern("freq_est"),pmt::from_float(cos_freq[index]));
+          sen_back = pmt::dict_add(sen_back, pmt::intern("phase_est"),pmt::from_float(cos_phase[index]));
+        }
       }
       message_port_pub(d_hdr_port,sen_back);
     }
@@ -276,11 +291,19 @@ namespace gr {
         gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
+      const float* poly_freq=NULL,*poly_phase = NULL, *cos_freq=NULL,*cos_phase=NULL;
       //should be symbol
+      bool have_sync = input_items.size() >= 5;
+      if(have_sync){
+        poly_freq = (const float*)input_items[3];
+        poly_phase = (const float*)input_items[4];
+        cos_freq = (const float*)input_items[1];
+        cos_phase = (const float*)input_items[2];
+      }
       // Do <+signal processing+>
       std::vector<tag_t> time_tags;
       std::vector<tag_t> tags;
-      //std::vector<tag_t> qindex_tags;
+      
       get_tags_in_window(tags, 0,0,noutput_items, d_sensing_tagname);
       get_tags_in_window(time_tags, 0,0,noutput_items, d_time_tagname);
       
@@ -291,7 +314,7 @@ namespace gr {
           bool sense_result = pmt::to_bool(tags[0].value);
           if(offset==i){
             if(sense_result){
-              feedback_info(true);
+              feedback_info(true,poly_freq,poly_phase,cos_freq,cos_phase,i,have_sync);
               d_byte_count = 0;
               d_state = SEARCH;
             }
@@ -308,7 +331,7 @@ namespace gr {
           }
         }
         if(insert_symbol(in[i])){
-          feedback_info(false);
+          feedback_info(false,poly_freq,poly_phase,cos_freq,cos_phase,i,have_sync);
           d_byte_count =0;
           d_state = SEARCH;
           if(d_debug){

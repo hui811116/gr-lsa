@@ -70,7 +70,13 @@ namespace gr {
       uint16_t _get_bit16(int begin_idx);
       uint8_t _get_bit8(int begin_idx);
       bool parse_header();
-      void feedback_info(bool type);
+      void feedback_info(bool type, 
+        const float* plf_freq, 
+        const float* plf_phase,
+        const float* cos_freq,
+        const float* cos_phase,
+        int index,
+        bool have_sync);
 
       //feedback to queue mechanism
       long int d_prev_time;

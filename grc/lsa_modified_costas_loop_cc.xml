@@ -54,6 +54,16 @@
     <type>complex</type>
   </sink>
   <sink>
+    <name>poly freq</name>
+    <type>float</type>
+    <optional>1</optional>
+  </sink>
+  <sink>
+    <name>poly phase</name>
+    <type>float</type>
+    <optional>1</optional>
+  </sink>
+  <sink>
     <name>noise</name>
     <type>message</type>
     <optional>1</optional>
@@ -68,5 +78,24 @@
     <name>out</name>
     <type>complex</type>
   </source>
-  
+  <source>
+    <name>freq</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>phase</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>poly freq</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>poly phase</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
 </block>

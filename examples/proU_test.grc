@@ -1080,7 +1080,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1168, 696)</value>
+      <value>(1408, 832)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1168,14 +1168,50 @@
   <connection>
     <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
     <sink_block_id>lsa_symbol_receiver_c_0</sink_block_id>
+    <source_key>1</source_key>
+    <sink_key>1</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
+    <sink_block_id>lsa_symbol_receiver_c_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
+    <sink_block_id>lsa_symbol_receiver_c_0</sink_block_id>
+    <source_key>2</source_key>
+    <sink_key>2</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
+    <sink_block_id>lsa_symbol_receiver_c_0</sink_block_id>
+    <source_key>3</source_key>
+    <sink_key>3</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
+    <sink_block_id>lsa_symbol_receiver_c_0</sink_block_id>
+    <source_key>4</source_key>
+    <sink_key>4</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
+    <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
+    <source_key>1</source_key>
+    <sink_key>1</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
     <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
+    <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
+    <source_key>2</source_key>
+    <sink_key>2</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_prou_sample_queue_cc_0</source_block_id>

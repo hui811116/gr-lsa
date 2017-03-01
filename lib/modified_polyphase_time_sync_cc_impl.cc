@@ -54,6 +54,8 @@ namespace gr {
     /*
      * The private constructor
      */
+    static int ios[]={sizeof(gr_complex), sizeof(float), sizeof(float)};
+    static std::vector<int> iosig(ios, ios+sizeof(ios)/sizeof(int));
     modified_polyphase_time_sync_cc_impl::modified_polyphase_time_sync_cc_impl(double sps, float loop_bw,
            const std::vector<float> &taps,
            unsigned int filter_size,
@@ -63,7 +65,7 @@ namespace gr {
            const std::string& intf_tagname)
       : gr::block("modified_polyphase_time_sync_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(1, 1, sizeof(gr_complex))),
+              gr::io_signature::makev(1, 3, iosig)),
   d_updated(false), d_nfilters(filter_size),
   d_max_dev(max_rate_deviation),
   d_osps(osps), d_error(0), d_out_idx(0)
@@ -141,9 +143,7 @@ namespace gr {
     modified_polyphase_time_sync_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      //unsigned ninputs = ninput_items_required.size ();
-      //for(unsigned i = 0; i < ninputs; i++)
-        //ninput_items_required[i] = (noutput_items + history()) * (d_sps/d_osps);
+      
       // samples to be consumed
       ninput_items_required[0] = (noutput_items + history()) * (d_sps/d_osps);
       // for samples
@@ -231,7 +231,6 @@ void
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       // for samples
-      //gr_complex *samp = (gr_complex*) output_items[1]; 
       gr_complex *out = (gr_complex *) output_items[0];
 
       /*std::vector<tag_t> tags_s1;
@@ -251,10 +250,10 @@ void
       }
 
       float *err = NULL, *outrate = NULL, *outk = NULL;
-      if(output_items.size() == 4) {
-  err = (float *) output_items[1];
-  outrate = (float*)output_items[2];
-  outk = (float*)output_items[3];
+      if(output_items.size() == 3) {
+  //err = (float *) output_items[1];
+  outrate = (float*)output_items[1];
+  outk = (float*)output_items[2];
       }
 
       std::vector<tag_t> tags;
@@ -339,18 +338,15 @@ void
 
           d_out_idx++;
 
-    if(output_items.size() == 4) {
-      err[i] = d_error;
+    if(output_items.size() == 3) {
+      //err[i] = d_error;
       outrate[i] = d_rate_f;
       outk[i] = d_k;
     }
 
     // We've run out of output items we can create; return now.
     if(i+d_out_idx >= noutput_items) {
-      //memcpy(samp, in, sizeof(gr_complex)*count);
       consume_each(count);
-      //produce(0,i);
-      //produce(1,i);
       return i;
     }
   }
@@ -382,13 +378,8 @@ void
   d_prev_time_count += (int)floor(d_sps);
       }
       //pass samples to next block
-      //memcpy(samp, in, sizeof(gr_complex)*count);
-      //consume_each(count);
-      //produce(0,i);
-      //produce(1,i);
       consume_each(count);
       return i;
-      //return WORK_CALLED_PRODUCE;
     }
 
   } /* namespace lsa */

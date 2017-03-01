@@ -41,10 +41,12 @@ namespace gr {
     /*
      * The private constructor
      */
+    static int ios[]  = {sizeof(gr_complex), sizeof(float), sizeof(float), sizeof(float), sizeof(float)};
+    static std::vector<int> iosig(ios, ios + sizeof(ios)/sizeof(int));
     modified_costas_loop_cc_impl::modified_costas_loop_cc_impl(float loop_bw, int order, bool use_snr, const std::string& intf_tagname)
       : gr::block("modified_costas_loop_cc",
-              gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(1, 1, sizeof(gr_complex))),
+              gr::io_signature::make3(1,3, sizeof(gr_complex), sizeof(float), sizeof(float)),
+              gr::io_signature::makev(1,5,iosig)),
       blocks::control_loop(loop_bw, 1.0, -1.0),
   d_order(order), d_error(0), d_noise(1.0), d_phase_detector(NULL)
     {
@@ -184,8 +186,9 @@ namespace gr {
     modified_costas_loop_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      ninput_items_required[0] = noutput_items;
-      //ninput_items_required[1] = noutput_items;
+      for(int i=0;i<ninput_items_required.size();++i){
+        ninput_items_required[i] = noutput_items;
+      }
     }
 
     int
@@ -195,22 +198,32 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *iptr = (gr_complex *) input_items[0];
-      //const gr_complex *samples = (gr_complex *) input_items[1];
-      gr_complex *optr = (gr_complex *) output_items[0];
-      //float *foptr = (float *) output_items[1];
-      //GR_LOG_DEBUG(d_logger, "BUG1?");
-      //bool write_foptr = output_items.size() >= 2;
 
+      const float* plf_freq = NULL;
+      const float* plf_phase = NULL;
+
+      gr_complex *optr = (gr_complex *) output_items[0];
+      
+      float *foptr = (float*) output_items[1];
+      float *poptr = (float*) output_items[2];
+      float *poly_freq = (float*) output_items[3];
+      float *poly_phase = (float*) output_items[4];
+      bool write_foptr = output_items.size() >= 5;
+      bool have_poly = input_items.size() >=3;
+      if(have_poly){
+        plf_freq = (float*)input_items[1];
+        plf_phase = (float*)input_items[2];
+      }
       gr_complex nco_out;
       std::vector<tag_t> intf_tags;
-      //get_tags_in_range(tags_s1, 1, nitems_read(1), nitems_read(1)+noutput_items);
+      
       get_tags_in_range(intf_tags, 0, nitems_read(0), nitems_read(0)+noutput_items, d_intf_tagname);
 
       std::vector<tag_t> tags;
       get_tags_in_range(tags, 0, nitems_read(0),
                         nitems_read(0)+noutput_items,
                         pmt::intern("phase_est"));
-      //if(write_foptr) {
+      if(write_foptr && have_poly) {
         for(int i = 0; i < noutput_items; i++) {
           if(tags.size() > 0) {
             if(tags[0].offset-nitems_read(0) == (size_t)i) {
@@ -245,17 +258,36 @@ namespace gr {
           phase_wrap();
           frequency_limit();
           d_prev_time_count++;
-          //foptr[i] = d_freq;
+          foptr[i] = d_freq;
+          poptr[i] = d_phase;
+          // direct copy
+          poly_freq[i] = plf_freq[i];
+          poly_phase[i] = plf_phase[i];
         }
-        //GR_LOG_DEBUG(d_logger, "BUG?");
-      //}
-        /*
+        
+      }
+        
       else {
         for(int i = 0; i < noutput_items; i++) {
           if(tags.size() > 0) {
             if(tags[0].offset-nitems_read(0) == (size_t)i) {
               d_phase = (float)pmt::to_double(tags[0].value);
               tags.erase(tags.begin());
+            }
+          }
+          if(!intf_tags.empty()){
+            if(intf_tags[0].offset-nitems_read(0) == (size_t)i) {
+            if(!d_intf_state && pmt::to_bool(intf_tags[0].value)){
+              d_prev_phase = d_phase;
+              d_prev_freq = d_freq;
+              d_prev_time_count =0;
+            }
+            else if(d_intf_state && pmt::to_bool(intf_tags[0].value)){
+              //d_phase = d_prev_phase + d_prev_freq * d_prev_time_count;
+              phase_wrap();
+              //d_freq = d_prev_freq;
+            }
+            intf_tags.erase(intf_tags.begin());
             }
           }
 
@@ -269,7 +301,7 @@ namespace gr {
           phase_wrap();
           frequency_limit();
         }
-      }*/
+      }
       consume_each(noutput_items);
       return noutput_items;
     }
