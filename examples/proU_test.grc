@@ -241,6 +241,68 @@
     </param>
   </block>
   <block>
+    <key>variable_modulate_vector</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>data</key>
+      <value>preamble_ac</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>taps</key>
+      <value>[1]</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(336, 800)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>preamble</value>
+    </param>
+    <param>
+      <key>mod</key>
+      <value>digital.generic_mod(mod, False, sps, True, eb, False, False)</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(112, 756)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>preamble_ac</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[0xf0,0xca,0x53,0x69]</value>
+    </param>
+  </block>
+  <block>
     <key>variable_rrc_filter_taps</key>
     <param>
       <key>comment</key>
@@ -463,7 +525,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(736, 720)</value>
+      <value>(992, 824)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -833,6 +895,61 @@
     </param>
   </block>
   <block>
+    <key>lsa_interference_canceller_cc</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>debug</key>
+      <value>False</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(744, 824)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_interference_canceller_cc_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>sps</key>
+      <value>sps</value>
+    </param>
+    <param>
+      <key>preamble</key>
+      <value></value>
+    </param>
+    <param>
+      <key>sense</key>
+      <value>"sensing"</value>
+    </param>
+  </block>
+  <block>
     <key>lsa_modified_costas_loop_cc</key>
     <param>
       <key>alias</key>
@@ -974,7 +1091,7 @@
     </param>
     <param>
       <key>debug</key>
-      <value>True</value>
+      <value>False</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1166,6 +1283,12 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>lsa_interference_canceller_cc_0</source_block_id>
+    <sink_block_id>blocks_null_sink_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
     <sink_block_id>lsa_symbol_receiver_c_0</sink_block_id>
     <source_key>1</source_key>
@@ -1221,7 +1344,7 @@
   </connection>
   <connection>
     <source_block_id>lsa_prou_sample_queue_cc_0</source_block_id>
-    <sink_block_id>blocks_null_sink_0</sink_block_id>
+    <sink_block_id>lsa_interference_canceller_cc_0</sink_block_id>
     <source_key>1</source_key>
     <sink_key>0</sink_key>
   </connection>

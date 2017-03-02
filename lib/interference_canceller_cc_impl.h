@@ -34,20 +34,40 @@ namespace gr {
       pmt::pmt_t d_sensing_tagname;
       std::vector<gr_complex> d_clean_preamble;
 
+      int d_state;
+      bool d_debug;
+
+      int d_sps;
+
       gr_complex* d_sample_buffer;
+      gr_complex* d_output_buffer;
+      int d_output_size;
+      int d_output_idx;
+
       int d_sample_size;
       int d_sample_idx;
 
       //for retransmission
       std::vector<gr_complex*> d_retx_buffer;
+      std::vector<int> d_retx_pkt_size;
+      int d_retx_count;
+
+      std::vector<pmt::pmt_t> d_buffer_info;
+      std::vector<int> d_info_index;
 
       int d_cei_pkt_counter;
       int d_cei_sample_counter;
 
+      void retx_handler(pmt::pmt_t hdr_info, const gr_complex* in);
+      void header_handler(pmt::pmt_t hdr_info, int index);
+      void do_interference_cancellation();
+      void output_result(int noutput_items, gr_complex* out);
      public:
       interference_canceller_cc_impl(
         const std::vector<gr_complex>& clean_preamble, 
-        const std::string& sensing_tagname);
+        const std::string& sensing_tagname,
+        int sps,
+        bool debug);
       ~interference_canceller_cc_impl();
 
       // Where all the action really happens

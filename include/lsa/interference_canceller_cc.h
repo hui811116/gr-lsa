@@ -47,7 +47,9 @@ namespace gr {
        * creating new instances.
        */
       static sptr make(const std::vector<gr_complex>& clean_preamble,
-        const std::string& sensing_tagname);
+        const std::string& sensing_tagname,
+        int sps,
+        bool debug);
     };
 
   } // namespace lsa

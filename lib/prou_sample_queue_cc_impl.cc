@@ -254,6 +254,7 @@ namespace gr {
         case LOAD_SAMPLE:
           if(d_sample_size == d_sample_cap){
             reduce_samples();
+            space_left = d_sample_cap - d_sample_size;
           }
           if(ninput_items <= space_left){
             memcpy(d_sample_buffer+d_sample_size, in , sizeof(gr_complex)*ninput_items);
@@ -282,6 +283,8 @@ namespace gr {
             if(d_debug){
               GR_LOG_DEBUG(d_logger,"timeout, resetting sample buffer");
             }
+            consume_count = 0;
+            return;
           }
           if(ninput_items <= space_left){
             memcpy(d_sample_buffer+d_sample_size, in , sizeof(gr_complex)*ninput_items);
@@ -297,7 +300,7 @@ namespace gr {
             mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_long(time));
             mark_sample = pmt::dict_add(mark_sample, pmt::intern("buffer_index"), pmt::from_long(d_sample_size));
             d_sample_size+= consume_count;
-            consume_count = ninput_items;
+            //consume_count = ninput_items;
             d_buffer_info.push_back(mark_sample);
         break;
         case OUTPUT_SAMPLE:
@@ -392,11 +395,13 @@ namespace gr {
           add_item_tag(0,nitems_written(0),pmt::intern("ctime"),pmt::from_long(d_current_time));
           memcpy(out,in,sizeof(gr_complex)*ninput_items);
           produce(0,ninput_items);
+          produce(1,0);
         break;
         case WAIT_INFO:
           add_item_tag(0,nitems_written(0),pmt::intern("ctime"),pmt::from_long(d_current_time));
           memcpy(out,in,sizeof(gr_complex)*ninput_items);
           produce(0,ninput_items);
+          produce(1,0);
         break;
         case OUTPUT_SAMPLE:
           output_size = d_end_retx_sample_size - d_sample_idx;
@@ -429,6 +434,7 @@ namespace gr {
               out[count++] = d_sample_buffer[d_sample_idx];
             }
             produce(1,count);
+            produce(0,0);
           
           if(d_sample_idx == d_end_retx_sample_size){
             //FIXME

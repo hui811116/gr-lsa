@@ -4,7 +4,7 @@
   <key>lsa_interference_canceller_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.interference_canceller_cc($preamble, $sense)</make>
+  <make>lsa.interference_canceller_cc($preamble, $sense,$sps, $debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -21,7 +21,25 @@
     <value>"sensing"</value>
     <type>string</type>
   </param>
-
+  <param>
+    <name>Debug mode</name>
+    <key>debug</key>
+    <value>False</value>
+    <type>string</type>
+    <option>
+      <name>On</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Off</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Sample/symbol</name>
+    <key>sps</key>
+    <type>int</type>
+  </param>
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type
@@ -44,5 +62,6 @@
   <source>
     <name>energy</name>
     <type>float</type>
+    <optional>1</optional>
   </source>
 </block>
