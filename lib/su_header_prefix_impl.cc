@@ -128,8 +128,8 @@ namespace gr {
       }
       unsigned char* pay_size=(unsigned char*)&payload_size;
       for(int i=0;i<2;++i){
-        out[acc_bytes+i]=pay_size[1-i];
         out[acc_bytes+2+i]=pay_size[1-i];
+        out[acc_bytes+4+i]=pay_size[1-i];
       }
       unsigned char re_size=0x00;
       unsigned char re_indx=0x00;
@@ -168,10 +168,10 @@ namespace gr {
       }
 
       unsigned char * count_u8=(unsigned char*)&count;
-      out[acc_bytes+4]=count_u8[1];
-      out[acc_bytes+5]=count_u8[0];
-      out[acc_bytes+7]=re_size;
-      out[acc_bytes+6]=re_indx;
+      out[acc_bytes+6]=count_u8[1];
+      out[acc_bytes+7]=count_u8[0];
+      out[acc_bytes+1]=re_size;
+      out[acc_bytes]=re_indx;
     }
 
     int

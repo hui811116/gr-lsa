@@ -4,7 +4,7 @@
   <key>lsa_interference_canceller_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.interference_canceller_cc($preamble, $sense,$sps, $debug)</make>
+  <make>lsa.interference_canceller_cc($preamble, $sense,$sps, $bps, $hdr_bits,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -38,6 +38,16 @@
   <param>
     <name>Sample/symbol</name>
     <key>sps</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Bits per symbol</name>
+    <key>bps</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>header bits number</name>
+    <key>hdr_bits</key>
     <type>int</type>
   </param>
   <!-- Make one 'sink' node per input. Sub-nodes:

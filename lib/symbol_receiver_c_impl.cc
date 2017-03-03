@@ -179,13 +179,13 @@ namespace gr {
     symbol_receiver_c_impl::parse_header()
     {
       uint16_t len0,len1;    
-      len0 = _get_bit16(0);
-      len1 = _get_bit16(16);
+      len0 = _get_bit16(16);
+      len1 = _get_bit16(32);
       if(len0 == len1){
         d_payload_len=len0;
-        d_counter = _get_bit16(32);
-        d_qidx = _get_bit8(48);
-        d_qsize = _get_bit8(56);
+        d_counter = _get_bit16(48);
+        d_qidx = _get_bit8(0);
+        d_qsize = _get_bit8(8);
         if(d_debug){
           std::stringstream ss;
           ss<<"Packet found-->"<<"payload_len:"<<len0<<", counter:"<<d_counter<<", qidx:"<<(int)d_qidx<<", qsize:"<<(int)d_qsize;

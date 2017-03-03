@@ -24,6 +24,7 @@
 
 #include <gnuradio/io_signature.h>
 #include "interference_canceller_cc_impl.h"
+#include <algorithm>
 
 namespace gr {
   namespace lsa {
@@ -37,12 +38,16 @@ namespace gr {
     interference_canceller_cc::make(const std::vector<gr_complex>& clean_preamble,
       const std::string& sensing_tagname,
       int sps,
+      int bps,
+      int hdr_bits,
       bool debug)
     {
       return gnuradio::get_initial_sptr
         (new interference_canceller_cc_impl(clean_preamble,
           sensing_tagname,
           sps,
+          bps,
+          hdr_bits,
           debug));
     }
 
@@ -52,6 +57,8 @@ namespace gr {
     interference_canceller_cc_impl::interference_canceller_cc_impl(const std::vector<gr_complex>& clean_preamble,
       const std::string& sensing_tagname,
       int sps,
+      int bps,
+      int hdr_bits,
       bool debug)
       : gr::block("interference_canceller_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
@@ -67,6 +74,10 @@ namespace gr {
       d_output_buffer = new gr_complex[capacity];
       d_output_size =0;
       d_output_idx = 0;
+
+      d_bps = bps;
+      d_hdr_bits = hdr_bits;
+      d_hdr_sample_len = d_hdr_bits /d_bps * d_sps;
 
       d_retx_buffer.clear(); 
       d_retx_pkt_size.clear();
@@ -85,16 +96,18 @@ namespace gr {
       delete [] d_sample_buffer;
       delete [] d_output_buffer;
       for(int i=0;i<d_retx_buffer.size();++i){
+        if(d_retx_buffer[i]!=NULL)
         delete [] d_retx_buffer[i];
       }
       d_retx_buffer.clear();
     }
 
     void
-    interference_canceller_cc_impl::retx_handler(pmt::pmt_t hdr_info, const gr_complex* in)
+    interference_canceller_cc_impl::retx_handler(pmt::pmt_t hdr_info, int index)
     {
       int retx_size, retx_idx, payload_size=0;
       //float phase_est,freq_est, time_rate_est,time_k_est;
+      int pkt_begin_idx = index - d_hdr_sample_len;
       if(pmt::dict_has_key(hdr_info, pmt::intern("retx_size"))){
         retx_size = pmt::to_long(pmt::dict_ref(hdr_info, pmt::intern("retx_size"), pmt::PMT_NIL));
       }
@@ -105,25 +118,19 @@ namespace gr {
         payload_size = pmt::to_long(pmt::dict_ref(hdr_info, pmt::intern("payload"), pmt::PMT_NIL));
       }
       if(d_retx_buffer.empty()){
-        d_retx_buffer.resize(retx_size);
+        d_retx_buffer.resize(retx_size,NULL);
         d_retx_pkt_size.resize(retx_size);
+        d_retx_pkt_index.resize(retx_size);
         d_retx_count =0;
       }
       if(payload_size ==0){
         throw std::runtime_error("no payload length found");
       }
-      //FIXME
-      // can add a header length;
-      gr_complex* retx = new gr_complex[payload_size];
-      //FIXME
-      for(int i=0;i<payload_size;++i){
-        retx[i] = in[i];
-      }
-      d_retx_buffer[retx_idx] = retx;
       d_retx_count++;
       //FIXME
       // can add a header length
       d_retx_pkt_size[retx_idx] = payload_size;
+      d_retx_pkt_index[retx_idx] = pkt_begin_idx; 
     }
 
     void
@@ -134,6 +141,7 @@ namespace gr {
       int counter, qidx, qsize;
       float freq, phase, time_freq, time_phase;
       bool sensing_info=true;
+      int pkt_begin_idx = index - d_hdr_sample_len;
       if(pmt::dict_has_key(hdr_info, d_sensing_tagname)){
         sensing_info = pmt::to_bool(pmt::dict_ref(hdr_info, d_sensing_tagname,pmt::PMT_NIL));
       }
@@ -163,14 +171,75 @@ namespace gr {
       }
 
       d_buffer_info.push_back(hdr_info);
-      d_info_index.push_back(index);
+      d_info_index.push_back(pkt_begin_idx);
+
+    }
+    void
+    interference_canceller_cc_impl::sync_hdr_index(std::vector<int>& coerced_packet_len)
+    {
+      if(d_info_index.empty())
+        throw std::runtime_error("Cancellation failed: no header info found");
+      int cur_pkt_begin;
+      int count =0;
+      int next_pkt_begin;
+      int test_pkt_len;
+      pmt::pmt_t tmp_dict;
+      int cur_payload;
+      int retx_idx;
+      int fixed_pkt_len;
+      while(count < d_info_index.size()-1){
+        
+        tmp_dict = d_buffer_info[count];
+        cur_payload = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("payload"), pmt::PMT_NIL));
+        cur_pkt_begin = d_info_index[count];
+        next_pkt_begin = d_info_index[count+1];
+        test_pkt_len = next_pkt_begin - cur_pkt_begin - (cur_payload + d_hdr_sample_len);
+        
+        if(test_pkt_len == 0){
+          //fix normal case
+          fixed_pkt_len = cur_payload + d_hdr_sample_len;
+        }
+        else if( abs(test_pkt_len)<=d_sps ){
+            fixed_pkt_len = cur_payload + d_hdr_sample_len + test_pkt_len;
+        }
+        else{
+          //not in the range of next header information
+          fixed_pkt_len = cur_payload + d_hdr_sample_len;
+        }
+        if( pmt::dict_has_key(tmp_dict, pmt::intern("retx_idx"))){
+          retx_idx = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("retx_idx"), pmt::PMT_NIL));
+          d_retx_pkt_size[retx_idx] = fixed_pkt_len;
+        }
+        coerced_packet_len.push_back(fixed_pkt_len);
+        count++;
+      }
+      // fix last pkt
+      tmp_dict = d_buffer_info.back();
+      cur_pkt_begin = d_info_index.back();
+      cur_payload = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("payload"), pmt::PMT_NIL));
+      if(cur_pkt_begin + cur_payload+ d_hdr_sample_len >= d_sample_size){
+        fixed_pkt_len = d_sample_size - cur_pkt_begin;
+      }
+      else{
+        fixed_pkt_len = cur_pkt_begin + cur_payload+ d_hdr_sample_len;
+      }
+      if( pmt::dict_has_key(tmp_dict, pmt::intern("retx_idx"))){
+          retx_idx = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("retx_idx"), pmt::PMT_NIL));
+          d_retx_pkt_size[retx_idx] = fixed_pkt_len; 
+      }
+      coerced_packet_len.push_back(fixed_pkt_len); 
+      //create copy of retransmission
+      for(int i=0;i<d_retx_count;++i){
+        d_retx_buffer[i] = new gr_complex[d_retx_pkt_size[i]];
+        memcpy(d_retx_buffer[i],d_sample_buffer+d_retx_pkt_index[i], sizeof(gr_complex)* d_retx_pkt_size[i]);
+      }
 
     }
 
     void
     interference_canceller_cc_impl::do_interference_cancellation()
     {
-      if(d_debug){
+      /*if(d_debug){
         std::cout<<"<Debug>: do interference cancellation"<<std::endl;
         std::cout<<"header info:"<<std::endl;
         for(int i=0;i<d_buffer_info.size();++i){
@@ -182,30 +251,99 @@ namespace gr {
           std::cout<<"index:"<<d_info_index[i]<<" content:"<<tmp_dict<<std::endl;
         }
         std::cout<<"retx count:"<<d_retx_count<<std::endl;  
+      }*/
+      //FIXME
+
+      //can initialize output buffer first
+      std::vector<int> packet_len;
+      sync_hdr_index(packet_len);
+      //find last cei
+      int last_cei_idx=0;
+      int last_cei_qiter = 0;
+      int total_retx_size = 0;
+      for(int i=0;i<d_retx_pkt_index.size();++i){
+        if(d_retx_pkt_index[i]>last_cei_idx){
+          last_cei_idx = d_retx_pkt_index[i];
+          last_cei_qiter = i;
+        }
+        total_retx_size += d_retx_pkt_size[i];
+      }
+      int retx_size = d_retx_buffer.size();
+      d_cei_pkt_counter = last_cei_qiter;
+      d_cei_sample_counter = d_retx_pkt_size[last_cei_qiter];
+
+      int total_size = d_retx_pkt_index[d_cei_pkt_counter] + d_retx_pkt_size[d_cei_pkt_counter];
+
+      d_output_size = total_size;
+      std::fill_n(d_output_buffer, d_output_size, gr_complex(0,0));
+
+      int offset =0;
+      int sample_count=0;
+      int begin_idx=0;
+      int next_pkt_begin=0;
+      int next_pkt_size=0;
+      int test_index=0;
+      gr_complex* retx;
+      pmt::pmt_t tmp_dict;
+      while(total_size>0)
+      {
+        retx = d_retx_buffer[d_cei_pkt_counter];
+        begin_idx = total_size - d_cei_sample_counter;
+        if(begin_idx <0){
+          offset = d_retx_pkt_size[d_cei_pkt_counter] - total_size;
+          sample_count = total_size;
+          begin_idx =0;
+        }
+        else{
+          offset = 0;
+          sample_count = d_retx_pkt_size[d_cei_pkt_counter];
+        }
+
+        if(!d_info_index.empty()){
+          tmp_dict = d_buffer_info.back();
+          next_pkt_begin = d_info_index.back();
+          next_pkt_size = packet_len.back();
+          test_index = begin_idx - next_pkt_begin;
+          // can modified to handle more complex time offset
+          //FIXME
+          // can adjust to accommodate offset of larger range
+          if(abs(test_index)<= 2* d_sps){
+            begin_idx -= test_index;
+            d_buffer_info.erase(d_buffer_info.end());
+            d_info_index.erase(d_info_index.end());
+            packet_len.erase(packet_len.end());
+          }
+        }//sync with known index of packet
+        
+        for(int i=0;i<sample_count;++i){
+          //if there is cfo or time offset, fixed here?
+          d_output_buffer[begin_idx+i] = d_sample_buffer[begin_idx+i] - retx[i+offset];
+        }
+        total_size = begin_idx;
+        d_cei_pkt_counter = (d_cei_pkt_counter-1) % retx_size;
+        d_cei_sample_counter = d_retx_pkt_size[d_cei_pkt_counter];
       }
       
-
-
-      for(int i=0;i<d_sample_size;++i){
-        d_output_buffer[i] = d_sample_buffer[i];
-      }
-      d_output_size = d_sample_size;
       d_output_idx =0;
     }
 
     void
     interference_canceller_cc_impl::output_result(int noutput_items, gr_complex* out)
     {
-      if((d_output_idx == d_output_size) || d_output_size ==0 ){
+      if((d_output_idx == d_output_size) || (d_output_size ==0) || (d_state == RECEIVE) ){
         produce(0,0);
         return;
       }
+
       int out_count =0;
       int nout = (noutput_items > (d_output_size-d_output_idx)) ? (d_output_size-d_output_idx) : noutput_items;
       for(int i=0;i<nout;++i){
         out[i] = d_output_buffer[d_output_idx++];
       }
       produce(0,nout);
+      if((d_output_idx !=0 )&&(d_output_idx == d_output_size)){
+        d_state = RECEIVE; 
+      }
     }
 
     void
@@ -241,6 +379,7 @@ namespace gr {
       float* eng =  (float*) output_items[1];
       bool have_eng = output_items.size()>=2;
       int nin = (ninput_items[0]>noutput_items) ? noutput_items : ninput_items[0];
+      //handle sample_size properly;
       // Do <+signal processing+>
       std::vector<tag_t> tags;
       std::vector<tag_t> end_tags;
@@ -248,13 +387,17 @@ namespace gr {
       get_tags_in_window(tags, 0, 0, nin, pmt::intern("begin_of_retx"));
       get_tags_in_window(end_tags, 0,0 ,nin, pmt::intern("end_of_retx"));
       get_tags_in_window(hdr_tags, 0,0 ,nin, pmt::intern("header_found"));
-      if(!tags.empty()){
-        int offset = tags.back().offset - nitems_read(0);
-        d_sample_idx = 0;
-        d_sample_size = 0;
-      }
       
       for(int i=0;i<nin;++i){
+        if(!tags.empty()){
+        int offset = tags.back().offset - nitems_read(0);
+          if(offset == i){
+            d_sample_idx = 0;
+            d_sample_size = 0;
+            tags.erase(tags.begin());
+          }
+        }
+        
         if(!hdr_tags.empty()){
           int offset = hdr_tags[0].offset - nitems_read(0);
           if(i==offset){
@@ -266,7 +409,7 @@ namespace gr {
               tmp_dict = pmt::dict_add(tmp_dict, tmp_tags[j].key, tmp_tags[j].value);
             }
             if(pmt::dict_has_key(tmp_dict, pmt::intern("retx_idx"))){
-              retx_handler(tmp_dict, in+i);
+              retx_handler(tmp_dict, d_sample_idx);
             }
             if(pmt::dict_has_key(tmp_dict, pmt::intern("header_found"))){
               header_handler(tmp_dict, d_sample_idx);
@@ -275,26 +418,31 @@ namespace gr {
           }
         }
         d_sample_buffer[d_sample_idx++] = in[i];
-      }
-      
-      
+        d_sample_size++;
 
-      if(!end_tags.empty()){
+        if(!end_tags.empty()){
         int offset = end_tags.back().offset - nitems_read(0);
         //output
-        do_interference_cancellation();
+        if(offset == i){
+          do_interference_cancellation();
         d_retx_count=0;
         for(int i=0;i<d_retx_buffer.size();++i){
+          if(d_retx_buffer[i]!=NULL)
           delete [] d_retx_buffer[i];
         }
-        d_retx_buffer.clear();
-        d_retx_pkt_size.clear();
-        d_buffer_info.clear();
-        d_info_index.clear();
-        d_sample_idx = 0;
-        d_sample_size =0;
+          d_retx_buffer.clear();
+          d_retx_pkt_size.clear();
+          d_retx_pkt_index.clear();
+          d_buffer_info.clear();
+          d_info_index.clear();
+          d_sample_idx = 0;
+          d_sample_size =0;
+          d_state = OUTPUT;  
+          end_tags.erase(end_tags.begin());
+        }
+        }
       }
-
+            
       output_result(noutput_items, out);
 
       // Tell runtime system how many input items we consumed on

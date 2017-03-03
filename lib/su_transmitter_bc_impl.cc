@@ -268,10 +268,10 @@ namespace gr {
       for(int i=0;i<d_accesscode.size();++i){
         d_hdr_buffer[i]=d_accesscode[i];
       }
-        d_hdr_buffer[ac_len]=pkt_len[1];
-        d_hdr_buffer[ac_len+1]=pkt_len[0];
         d_hdr_buffer[ac_len+2]=pkt_len[1];
         d_hdr_buffer[ac_len+3]=pkt_len[0];
+        d_hdr_buffer[ac_len+4]=pkt_len[1];
+        d_hdr_buffer[ac_len+5]=pkt_len[0];
         if(type){
           if(d_pld_len_buffer.empty()){
             throw std::runtime_error("Retransmission with no elements in queue");
@@ -283,10 +283,10 @@ namespace gr {
             GR_LOG_DEBUG(d_logger, ss.str());
           }*/
         }
-        d_hdr_buffer[ac_len+7] = d_qsize;
-        d_hdr_buffer[ac_len+6] = d_qiter;
-        d_hdr_buffer[ac_len+4] = pkt_counter[1];
-        d_hdr_buffer[ac_len+5] = pkt_counter[0];
+        d_hdr_buffer[ac_len+1] = d_qsize;
+        d_hdr_buffer[ac_len] = d_qiter;
+        d_hdr_buffer[ac_len+6] = pkt_counter[1];
+        d_hdr_buffer[ac_len+7] = pkt_counter[0];
     }
 
     void

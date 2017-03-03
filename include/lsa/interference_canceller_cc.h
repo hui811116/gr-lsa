@@ -49,6 +49,8 @@ namespace gr {
       static sptr make(const std::vector<gr_complex>& clean_preamble,
         const std::string& sensing_tagname,
         int sps,
+        int bps,
+        int hdr_bits,
         bool debug);
     };
 

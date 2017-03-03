@@ -38,6 +38,9 @@ namespace gr {
       bool d_debug;
 
       int d_sps;
+      int d_bps;
+      int d_hdr_bits;
+      int d_hdr_sample_len;
 
       gr_complex* d_sample_buffer;
       gr_complex* d_output_buffer;
@@ -50,6 +53,7 @@ namespace gr {
       //for retransmission
       std::vector<gr_complex*> d_retx_buffer;
       std::vector<int> d_retx_pkt_size;
+      std::vector<int> d_retx_pkt_index;
       int d_retx_count;
 
       std::vector<pmt::pmt_t> d_buffer_info;
@@ -58,15 +62,19 @@ namespace gr {
       int d_cei_pkt_counter;
       int d_cei_sample_counter;
 
-      void retx_handler(pmt::pmt_t hdr_info, const gr_complex* in);
+      void retx_handler(pmt::pmt_t hdr_info, int index);
       void header_handler(pmt::pmt_t hdr_info, int index);
       void do_interference_cancellation();
+      void sync_hdr_index(std::vector<int>& coerced_packet_len);
+
       void output_result(int noutput_items, gr_complex* out);
      public:
       interference_canceller_cc_impl(
         const std::vector<gr_complex>& clean_preamble, 
         const std::string& sensing_tagname,
         int sps,
+        int bps,
+        int hdr_bits,
         bool debug);
       ~interference_canceller_cc_impl();
 
