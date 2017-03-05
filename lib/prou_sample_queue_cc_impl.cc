@@ -50,7 +50,7 @@ namespace gr {
       : gr::block("prou_sample_queue_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(2, 2, sizeof(gr_complex))),
-      d_sample_cap(4096*1024)
+      d_sample_cap(1024*1024)
     {
       d_sample_idx = 0;
       d_sample_size =0;
@@ -224,9 +224,15 @@ namespace gr {
       }   
       if(ninput_items <= space_left){
             memcpy(d_sample_buffer+d_sample_size, in , sizeof(gr_complex)*ninput_items);
+        //for(int i=0;i<ninput_items;++i){
+          //d_sample_buffer[d_sample_size+i] = in[i];
+        //}
             consume_count = ninput_items;
           }
           else{
+            //for(int i=0;i<space_left;++i){
+              //d_sample_buffer[d_sample_size+i] = in[i];
+            //}
             memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)*space_left);
             consume_count = space_left;
           }
@@ -371,7 +377,7 @@ namespace gr {
               if(d_sample_idx == d_end_retx_sample_size-1){
                 add_item_tag(1,nitems_written(1)+count,pmt::intern("end_of_retx"),pmt::from_long(d_end_retx_sample_size));
               }
-              out[count++] = d_sample_buffer[d_sample_idx];
+              sample_out[count++] = d_sample_buffer[d_sample_idx];
             }
             produce(1,count);
             produce(0,0);

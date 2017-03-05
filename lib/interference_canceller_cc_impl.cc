@@ -245,7 +245,7 @@ namespace gr {
     void
     interference_canceller_cc_impl::do_interference_cancellation()
     {
-      /*if(d_debug){
+      if(d_debug){
         std::cout<<"<Debug>: do interference cancellation"<<std::endl;
         std::cout<<"header info:"<<std::endl;
         for(int i=0;i<d_buffer_info.size();++i){
@@ -257,7 +257,7 @@ namespace gr {
           std::cout<<"index:"<<d_info_index[i]<<" content:"<<tmp_dict<<std::endl;
         }
         std::cout<<"retx count:"<<d_retx_count<<std::endl;  
-      }*/
+      }
       //FIXME
 
       //can initialize output buffer first
@@ -342,11 +342,10 @@ namespace gr {
     void
     interference_canceller_cc_impl::output_result(int noutput_items, gr_complex* out, float* eng)
     {
-      //if(d_debug)
-      //{
-        //std::cout<<"<output_result>"<< " out_idx:"<<d_output_idx<<" ,out_size:"<<d_output_size<<std::endl;
-
-      //}
+      if(d_debug)
+      {
+        std::cout<<"<output_result>"<< " out_idx:"<<d_output_idx<<" ,out_size:"<<d_output_size<<std::endl;
+      }
       int out_count =0;
       int begin_idx = d_output_idx;
       int nout = (noutput_items > (d_output_size-d_output_idx)) ? (d_output_size-d_output_idx) : noutput_items;
@@ -360,6 +359,7 @@ namespace gr {
         volk_32fc_magnitude_squared_32f(d_eng_buffer, d_output_buffer+begin_idx, nout);
         for(int i=0;i<nout;++i){
           eng[i] = d_eng_buffer[i];
+          //eng[i] = 8.7;
         }
         produce(1,nout);
       }

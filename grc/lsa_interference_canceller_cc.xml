@@ -25,7 +25,7 @@
     <name>Debug mode</name>
     <key>debug</key>
     <value>False</value>
-    <type>string</type>
+    <type>bool</type>
     <option>
       <name>On</name>
       <key>True</key>
