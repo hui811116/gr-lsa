@@ -25,6 +25,8 @@
 #include <gnuradio/io_signature.h>
 #include "interference_canceller_cc_impl.h"
 #include <algorithm>
+#include <volk/volk.h>
+#include <pmt/pmt.h>
 
 namespace gr {
   namespace lsa {
@@ -75,6 +77,8 @@ namespace gr {
       d_output_size =0;
       d_output_idx = 0;
 
+      d_eng_buffer = (float*) volk_malloc( sizeof(float) * capacity, volk_get_alignment());
+
       d_bps = bps;
       d_hdr_bits = hdr_bits;
       d_hdr_sample_len = d_hdr_bits /d_bps * d_sps;
@@ -100,6 +104,8 @@ namespace gr {
         delete [] d_retx_buffer[i];
       }
       d_retx_buffer.clear();
+
+      volk_free(d_eng_buffer);
     }
 
     void
@@ -285,6 +291,7 @@ namespace gr {
       int test_index=0;
       gr_complex* retx;
       pmt::pmt_t tmp_dict;
+      
       while(total_size>0)
       {
         retx = d_retx_buffer[d_cei_pkt_counter];
@@ -298,29 +305,34 @@ namespace gr {
           offset = 0;
           sample_count = d_retx_pkt_size[d_cei_pkt_counter];
         }
-
+        
         if(!d_info_index.empty()){
           tmp_dict = d_buffer_info.back();
+
           next_pkt_begin = d_info_index.back();
           next_pkt_size = packet_len.back();
           test_index = begin_idx - next_pkt_begin;
+
           // can modified to handle more complex time offset
           //FIXME
           // can adjust to accommodate offset of larger range
-          if(abs(test_index)<= 2* d_sps){
-            begin_idx -= test_index;
-            d_buffer_info.erase(d_buffer_info.end());
-            d_info_index.erase(d_info_index.end());
-            packet_len.erase(packet_len.end());
+          if(abs(test_index)<= d_sps){
+            //begin_idx -= test_index;
+            begin_idx = next_pkt_begin;
+            d_buffer_info.pop_back();
+            d_info_index.pop_back();
+            packet_len.pop_back();
+            
           }
-        }//sync with known index of packet
-        
+        }//sync with known index of packet        
         for(int i=0;i<sample_count;++i){
           //if there is cfo or time offset, fixed here?
           d_output_buffer[begin_idx+i] = d_sample_buffer[begin_idx+i] - retx[i+offset];
         }
         total_size = begin_idx;
         d_cei_pkt_counter = (d_cei_pkt_counter-1) % retx_size;
+        if(d_cei_pkt_counter<0)
+          d_cei_pkt_counter+= retx_size;
         d_cei_sample_counter = d_retx_pkt_size[d_cei_pkt_counter];
       }
       
@@ -328,22 +340,35 @@ namespace gr {
     }
 
     void
-    interference_canceller_cc_impl::output_result(int noutput_items, gr_complex* out)
+    interference_canceller_cc_impl::output_result(int noutput_items, gr_complex* out, float* eng)
     {
-      if((d_output_idx == d_output_size) || (d_output_size ==0) || (d_state == RECEIVE) ){
-        produce(0,0);
-        return;
-      }
+      //if(d_debug)
+      //{
+        //std::cout<<"<output_result>"<< " out_idx:"<<d_output_idx<<" ,out_size:"<<d_output_size<<std::endl;
 
+      //}
       int out_count =0;
+      int begin_idx = d_output_idx;
       int nout = (noutput_items > (d_output_size-d_output_idx)) ? (d_output_size-d_output_idx) : noutput_items;
       for(int i=0;i<nout;++i){
         out[i] = d_output_buffer[d_output_idx++];
       }
       produce(0,nout);
-      if((d_output_idx !=0 )&&(d_output_idx == d_output_size)){
-        d_state = RECEIVE; 
+      if(eng!=NULL && (nout!=0))
+      {
+        //GR_LOG_DEBUG(d_logger, "output samples with energy");
+        volk_32fc_magnitude_squared_32f(d_eng_buffer, d_output_buffer+begin_idx, nout);
+        for(int i=0;i<nout;++i){
+          eng[i] = d_eng_buffer[i];
+        }
+        produce(1,nout);
       }
+      if(d_output_idx == d_output_size){
+        d_state = RECEIVE;
+        d_output_idx = 0;
+        d_output_size =0; 
+      }
+      
     }
 
     void
@@ -376,8 +401,8 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      float* eng =  (float*) output_items[1];
       bool have_eng = output_items.size()>=2;
+      float* eng =(have_eng) ?  (float*) output_items[1] : NULL;
       int nin = (ninput_items[0]>noutput_items) ? noutput_items : ninput_items[0];
       //handle sample_size properly;
       // Do <+signal processing+>
@@ -388,7 +413,13 @@ namespace gr {
       get_tags_in_window(end_tags, 0,0 ,nin, pmt::intern("end_of_retx"));
       get_tags_in_window(hdr_tags, 0,0 ,nin, pmt::intern("header_found"));
       
-      for(int i=0;i<nin;++i){
+      int count = 0 ;
+
+      switch(d_state)
+      {
+        case RECEIVE:
+          for(int i=0;i<nin;++i){
+        count++;
         if(!tags.empty()){
         int offset = tags.back().offset - nitems_read(0);
           if(offset == i){
@@ -439,16 +470,20 @@ namespace gr {
           d_sample_size =0;
           d_state = OUTPUT;  
           end_tags.erase(end_tags.begin());
+          break;
         }
         }
       }
-            
-      output_result(noutput_items, out);
-
+        consume_each(count);
+        break;
+        case OUTPUT:
+          output_result(noutput_items, out, eng);
+          consume_each(0);
+        break;
+      }
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      consume_each (nin);
-
+      
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;
     }

@@ -44,6 +44,8 @@ namespace gr {
 
       gr_complex* d_sample_buffer;
       gr_complex* d_output_buffer;
+
+      float* d_eng_buffer;
       int d_output_size;
       int d_output_idx;
 
@@ -67,7 +69,7 @@ namespace gr {
       void do_interference_cancellation();
       void sync_hdr_index(std::vector<int>& coerced_packet_len);
 
-      void output_result(int noutput_items, gr_complex* out);
+      void output_result(int noutput_items, gr_complex* out, float* eng);
      public:
       interference_canceller_cc_impl(
         const std::vector<gr_complex>& clean_preamble, 

@@ -45,6 +45,7 @@ namespace gr {
       //std::vector<long int> d_sample_time;
       long int d_update_time;
       long int d_current_time;
+      long int d_last_time;
       float d_timeout;
 
       //for sensing and retransmission
@@ -59,7 +60,7 @@ namespace gr {
       bool d_debug;
       //helper function
       void tags_offset_handler(int offset);
-      void clear_queue_index_fix();
+      void clear_queue_index_fix(long int time);
       //void consume_handler(int noutput_items, int ninput_items);
       void out_items_handler(
         gr_complex* out, 
