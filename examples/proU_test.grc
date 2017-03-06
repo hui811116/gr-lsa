@@ -1194,7 +1194,7 @@
     </param>
     <param>
       <key>debug</key>
-      <value>True</value>
+      <value>False</value>
     </param>
     <param>
       <key>sense_tag</key>
