@@ -31,5 +31,6 @@ install(FILES
     modified_costas_loop_cc.h
     prou_sample_queue_cc.h
     symbol_receiver_c.h
-    interference_canceller_cc.h DESTINATION include/lsa
+    interference_canceller_cc.h
+    burst_tagger_cc.h DESTINATION include/lsa
 )

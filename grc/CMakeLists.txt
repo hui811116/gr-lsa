@@ -26,5 +26,6 @@ install(FILES
     lsa_modified_costas_loop_cc.xml
     lsa_prou_sample_queue_cc.xml
     lsa_symbol_receiver_c.xml
-    lsa_interference_canceller_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_interference_canceller_cc.xml
+    lsa_burst_tagger_cc.xml DESTINATION share/gnuradio/grc/blocks
 )
