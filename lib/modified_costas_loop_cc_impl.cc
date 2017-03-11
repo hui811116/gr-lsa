@@ -261,10 +261,11 @@ namespace gr {
           foptr[i] = d_freq;
           poptr[i] = d_phase;
           // direct copy
-          poly_freq[i] = plf_freq[i];
-          poly_phase[i] = plf_phase[i];
+          //poly_freq[i] = plf_freq[i];
+          //poly_phase[i] = plf_phase[i];
         }
-        
+        memcpy(poly_freq, plf_freq,sizeof(float)*noutput_items);
+        memcpy(poly_phase, plf_phase, sizeof(float)*noutput_items);
       }
         
       else {

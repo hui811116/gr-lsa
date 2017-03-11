@@ -303,11 +303,11 @@
     </param>
     <param>
       <key>samp_rate</key>
-      <value>sps*nfilts</value>
+      <value>nfilts</value>
     </param>
     <param>
       <key>sym_rate</key>
-      <value>1.0</value>
+      <value>1.0/sps</value>
     </param>
   </block>
   <block>
@@ -608,7 +608,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(320, 376)</value>
+      <value>(232, 332)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -637,6 +637,61 @@
     <param>
       <key>taps</key>
       <value>1.0 + 1.0j</value>
+    </param>
+  </block>
+  <block>
+    <key>digital_cma_equalizer_cc</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(480, 388)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>mu</key>
+      <value>0.01</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>digital_cma_equalizer_cc_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>modulus</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>num_taps</key>
+      <value>15</value>
+    </param>
+    <param>
+      <key>sps</key>
+      <value>2</value>
     </param>
   </block>
   <block>
@@ -804,7 +859,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(472, 476)</value>
+      <value>(240, 484)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -840,7 +895,7 @@
     </param>
     <param>
       <key>osps</key>
-      <value>1</value>
+      <value>2</value>
     </param>
     <param>
       <key>sps</key>
@@ -1716,6 +1771,12 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>digital_cma_equalizer_cc_0</source_block_id>
+    <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>interp_fir_filter_xxx_0</source_block_id>
     <sink_block_id>blocks_throttle_0</sink_block_id>
     <source_key>0</source_key>
@@ -1741,7 +1802,7 @@
   </connection>
   <connection>
     <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
-    <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
+    <sink_block_id>digital_cma_equalizer_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

@@ -437,6 +437,7 @@ namespace gr {
         d_pkt_info.erase(d_pkt_info.begin(),d_pkt_info.begin()+count);
       }
       int sample_fixed= 0;
+      std::vector<pmt::pmt_t> tmp_hdr;
       if(!d_buffer_info.empty()){
         tmp_index = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("buffer_index"),pmt::PMT_NIL));
         sample_fixed = d_sample_size - tmp_index;
@@ -453,10 +454,15 @@ namespace gr {
         }
         for(int i=0;i<d_pkt_info.size();i++){
           int hdr_idx = pmt::to_long(pmt::dict_ref(d_pkt_info[i], pmt::intern("header_found"), pmt::PMT_NIL));
-          d_pkt_info[i] = pmt::dict_delete(d_pkt_info[i], pmt::intern("header_found"));
-          d_pkt_info[i] = pmt::dict_add(d_pkt_info[i], pmt::intern("header_found"), pmt::from_long(hdr_idx-tmp_index));
+          int tmp_pld = pmt::to_long(pmt::dict_ref(d_pkt_info[i], pmt::intern("payload"), pmt::PMT_NIL));
+          if( hdr_idx +tmp_pld  < sample_fixed){  
+            d_pkt_info[i] = pmt::dict_delete(d_pkt_info[i], pmt::intern("header_found"));
+            d_pkt_info[i] = pmt::dict_add(d_pkt_info[i], pmt::intern("header_found"), pmt::from_long(hdr_idx-tmp_index));
+            tmp_hdr.push_back(d_pkt_info[i]);
+          }
         }
       }
+      d_pkt_info = tmp_hdr;
           
           d_sample_idx = 0;
           d_sample_size = sample_fixed;

@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<block>
+  <name>LSA Protocol Parser</name>
+  <key>lsa_protocol_parser_b</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.protocol_parser_b($accesscode, $debug)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Accesscode</name>
+    <key>accesscode</key>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Debug mode</name>
+    <key>debug</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>On</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Off</name>
+      <key>False</key>
+    </option>
+  </param>
+
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>byte</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>header</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+</block>
