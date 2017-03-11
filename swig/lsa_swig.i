@@ -24,6 +24,7 @@
 #include "lsa/symbol_receiver_c.h"
 #include "lsa/interference_canceller_cc.h"
 #include "lsa/burst_tagger_cc.h"
+#include "lsa/correlate_sync_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -55,3 +56,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, interference_canceller_cc);
 
 %include "lsa/burst_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, burst_tagger_cc);
+%include "lsa/correlate_sync_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, correlate_sync_cc);
