@@ -53,3 +53,4 @@ GR_ADD_TEST(qa_symbol_receiver_c ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR
 GR_ADD_TEST(qa_interference_canceller_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_interference_canceller_cc.py)
 GR_ADD_TEST(qa_burst_tagger_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_burst_tagger_cc.py)
 GR_ADD_TEST(qa_protocol_parser_b ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_protocol_parser_b.py)
+GR_ADD_TEST(qa_correlate_sync_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_correlate_sync_cc.py)

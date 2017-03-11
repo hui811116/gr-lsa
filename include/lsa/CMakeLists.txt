@@ -33,5 +33,6 @@ install(FILES
     symbol_receiver_c.h
     interference_canceller_cc.h
     burst_tagger_cc.h
-    protocol_parser_b.h DESTINATION include/lsa
+    protocol_parser_b.h
+    correlate_sync_cc.h DESTINATION include/lsa
 )

@@ -28,5 +28,6 @@ install(FILES
     lsa_symbol_receiver_c.xml
     lsa_interference_canceller_cc.xml
     lsa_burst_tagger_cc.xml
-    lsa_protocol_parser_b.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_protocol_parser_b.xml 
+    lsa_correlate_sync_cc.xml DESTINATION share/gnuradio/grc/blocks
 )
