@@ -31,13 +31,12 @@ namespace gr {
     {
      private:
       // Nothing to declare in this block.
-      float d_threshold_db;
+      double d_threshold;
       int   d_bin;
       pmt::pmt_t d_src_id;
       bool d_state_reg;
-
-      gr_complex* d_sample_reg;
       size_t d_cap;
+      float * d_eng;
 
      public:
       eng_det_cc_impl(float threshold,int bin);
@@ -51,14 +50,12 @@ namespace gr {
            gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
 
-      void set_threshold(float thes_db);
+      void set_threshold(float thres_db);
       float threshold() const;
 
       void set_bin_size(int bin);
       int bin_size() const;
 
-      //float get_thres() const;
-      //int   get_bin()   const;
     };
 
   } // namespace lsa
