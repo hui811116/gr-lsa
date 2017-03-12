@@ -62,6 +62,9 @@ namespace gr {
       gr::digital::constellation_sptr d_hdr_const;
       gr::digital::constellation_sptr d_pld_const;
 
+      std::vector<int> d_hdr_map;
+      std::vector<int> d_pld_map;
+
       bool insert_symbol(const gr_complex& symbol);
       void pub_byte_pkt();
       size_t header_nbits() const;

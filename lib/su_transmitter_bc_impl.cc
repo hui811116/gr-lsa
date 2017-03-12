@@ -41,8 +41,8 @@ namespace gr {
       const std::string& lengthtagname,
       const std::string& sensing_tag,
       const std::string& accesscode,
-      const std::vector<gr_complex>& hdr_points,
-      const std::vector<gr_complex>& pld_points,
+      const gr::digital::constellation_sptr& hdr_const,
+      const gr::digital::constellation_sptr& pld_const,
       int qmax,
       bool debug)
     {
@@ -51,8 +51,8 @@ namespace gr {
           lengthtagname,
           sensing_tag,
           accesscode,
-          hdr_points,
-          pld_points,
+          hdr_const,
+          pld_const,
           qmax,
           debug));
     }
@@ -64,8 +64,8 @@ namespace gr {
       const std::string& lengthtagname,
       const std::string& sensing_tag,
       const std::string& accesscode,
-      const std::vector<gr_complex>& hdr_points,
-      const std::vector<gr_complex>& pld_points,
+      const gr::digital::constellation_sptr& hdr_const,
+      const gr::digital::constellation_sptr& pld_const,
       int qmax,
       bool debug)
       : gr::tagged_stream_block("su_transmitter_bc",
@@ -85,8 +85,15 @@ namespace gr {
       d_debug = debug;
       d_rxindextagname = pmt::intern("counter");
 
-      d_hdr_points = hdr_points;
-      d_pld_points = pld_points;
+
+      d_hdr_const = hdr_const->base();
+      d_pld_const = pld_const->base();
+
+      d_hdr_points = hdr_const->points();
+      d_pld_points = pld_const->points();
+      
+      d_hdr_map = hdr_const->pre_diff_code();
+      d_pld_map = pld_const->pre_diff_code();
 
       // NOTE: make sure the length is divisible by any kind of modulation
       d_hdr_samp_len = (accesscode.length()+8*8) / (int) log2(d_hdr_points.size());
@@ -326,10 +333,11 @@ namespace gr {
       gr_complex* out, 
       const unsigned char* in, 
       int size, 
-      const std::vector<gr_complex>& mapper)
+      const std::vector<gr_complex>& mapper,
+      const std::vector<int>& idx_map)
     {
       for(int i=0;i<size;++i){
-        out[i] = mapper[in[i]];
+        out[i] = mapper[idx_map[in[i]]];
       }
     }
 
@@ -382,9 +390,9 @@ namespace gr {
           }
           generate_hdr(payload_len,false);
           _repack(d_hdr_symbol_buffer, d_hdr_buffer, header_nbits()/8, (int)log2(d_hdr_points.size()));
-          _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points);
+          _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points, d_hdr_map);
           _repack(d_pld_symbol_buffer, in, payload_len, (int)log2(d_pld_points.size()));
-          _map_sample(out+d_hdr_samp_len, d_pld_symbol_buffer, pld_symbol_samp_len, d_pld_points);
+          _map_sample(out+d_hdr_samp_len, d_pld_symbol_buffer, pld_symbol_samp_len, d_pld_points, d_pld_map);
           store_to_queue(out+d_hdr_samp_len, pld_symbol_samp_len, payload_len);
           d_pkt_counter++;
         break;
@@ -393,7 +401,7 @@ namespace gr {
           assert(d_qiter < d_pld_len_buffer.size());
           generate_hdr(d_pld_len_buffer[d_qiter],true);
           _repack(d_hdr_symbol_buffer, d_hdr_buffer,header_nbits()/8,(int)log2(d_hdr_points.size()));
-          _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points);
+          _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points, d_hdr_map);
 
           payload_len = d_pld_len_buffer[d_qiter];
           memcpy(out+d_hdr_samp_len,(d_buffer_ptr->at(d_qiter)).data(),sizeof(gr_complex)*pld_symbol_samp_len);

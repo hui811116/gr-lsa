@@ -4,7 +4,7 @@
   <key>lsa_su_transmitter_bc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_transmitter_bc($lengthtagname, $sensing_tag, $accesscode, $hdr_points, $pld_points, $qmax,$debug)</make>
+  <make>lsa.su_transmitter_bc($lengthtagname, $sensing_tag, $accesscode, $hdr_const, $pld_const, $qmax,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -29,14 +29,14 @@
     <type>string</type>
   </param>
   <param>
-    <name>Header Symbol Map</name>
-    <key>hdr_points</key>
-    <type>complex_vector</type>
+    <name>Header Constellation</name>
+    <key>hdr_const</key>
+    <type>raw</type>
   </param>
   <param>
-    <name>Payload Symbol Map</name>
-    <key>pld_points</key>
-    <type>complex_vector</type>
+    <name>Payload Constellation</name>
+    <key>pld_const</key>
+    <type>raw</type>
   </param>
   <param>
     <name>Queue Capacity</name>

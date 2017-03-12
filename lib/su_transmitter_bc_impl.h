@@ -49,6 +49,10 @@ namespace gr {
 
       std::vector<gr_complex> d_hdr_points;
       std::vector<gr_complex> d_pld_points;
+      std::vector<int> d_hdr_map;
+      std::vector<int> d_pld_map;
+      gr::digital::constellation_sptr d_hdr_const;
+      gr::digital::constellation_sptr d_pld_const;
 
       size_t d_hdr_samp_len;
       std::vector< std::vector<gr_complex> >* d_buffer_ptr;
@@ -84,7 +88,8 @@ namespace gr {
         gr_complex* out,
         const unsigned char* in,
         int size,
-        const std::vector<gr_complex>& mapper
+        const std::vector<gr_complex>& mapper,
+        const std::vector<int>& idx_map
         );
 
       void store_to_queue (
@@ -101,8 +106,10 @@ namespace gr {
         const std::string& lengthtagname,
         const std::string& sensing_tag,
         const std::string& accesscode,
-        const std::vector<gr_complex>& hdr_points,
-        const std::vector<gr_complex>& pld_points,
+        const gr::digital::constellation_sptr& hdr_const,
+        const gr::digital::constellation_sptr& pld_const,
+        //const std::vector<gr_complex>& hdr_points,
+        //const std::vector<gr_complex>& pld_points,
         int qmax,
         bool debug);
       ~su_transmitter_bc_impl();

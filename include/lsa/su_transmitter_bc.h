@@ -24,6 +24,7 @@
 
 #include <lsa/api.h>
 #include <gnuradio/tagged_stream_block.h>
+#include <gnuradio/digital/constellation.h>
 
 namespace gr {
   namespace lsa {
@@ -50,8 +51,10 @@ namespace gr {
         const std::string& lengthtagname,
         const std::string& sensing_tag,
         const std::string& accesscode,
-        const std::vector<gr_complex>& hdr_points,
-        const std::vector<gr_complex>& pld_points,
+        const gr::digital::constellation_sptr& hdr_const,
+        const gr::digital::constellation_sptr& pld_const,
+        //const std::vector<gr_complex>& hdr_points,
+        //const std::vector<gr_complex>& pld_points,
         int qmax,
         bool debug);
     };

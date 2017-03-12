@@ -1233,8 +1233,8 @@
       <value>0</value>
     </param>
     <param>
-      <key>hdr_points</key>
-      <value>mod.points()</value>
+      <key>hdr_const</key>
+      <value>mod</value>
     </param>
     <param>
       <key>id</key>
@@ -1253,8 +1253,8 @@
       <value>0</value>
     </param>
     <param>
-      <key>pld_points</key>
-      <value>mod.points()</value>
+      <key>pld_const</key>
+      <value>mod</value>
     </param>
     <param>
       <key>qmax</key>
