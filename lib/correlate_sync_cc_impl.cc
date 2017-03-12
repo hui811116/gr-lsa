@@ -123,10 +123,9 @@ namespace gr {
       gr_complex *out = (gr_complex *) output_items[0];
       gr_complex *corr = d_corr;
       float* corr_mag = d_norm_corr;
-      bool corr_out = (output_items.size()>=1);
-      if(corr_out){
+      bool have_corr = (output_items.size()>=2);
+      if(have_corr){
         corr_mag = (float*) output_items[1];
-        corr = d_corr;
       }
       memcpy(out,in, sizeof(gr_complex)* noutput_items);
       
@@ -138,14 +137,17 @@ namespace gr {
       float detection =0.0;
       for(int i=0;i<noutput_items;++i){
         eng_acc=std::accumulate(d_eng+i,d_eng+i+d_samples.size()-1,0.0);
-        if(logf(corr_mag[i])>logf(eng_acc)+d_eng_log){
+        if(2*logf(corr_mag[i])>(logf(eng_acc)+d_eng_log) ){
           //only noise present
           continue;
         }
-        detection = logf(corr_mag[i]) - logf(eng_acc);
+        detection = logf(corr_mag[i]) - 0.5*logf(eng_acc);
 
-        if(detection >= d_thres_log + d_eng_log){
-          add_item_tag(0,nitems_read(0)+i, pmt::intern("correlation"),pmt::from_bool(pmt::PMT_T));
+        if(detection >= d_thres_log + 0.5*d_eng_log){
+          add_item_tag(0,nitems_written(0)+i, pmt::intern("corr_est"),pmt::from_bool(pmt::PMT_T));
+          if(have_corr){
+            add_item_tag(1,nitems_written(1)+i,pmt::intern("corr_est"),pmt::from_bool(pmt::PMT_T));
+          }
         }
         /*
         if(eng_acc < 1e-6){
