@@ -43,6 +43,9 @@ namespace gr {
       std::vector<gr_complex> d_samples;
 
       float d_threshold;
+
+      float d_thres_log;
+      float d_eng_log;
      public:
       correlate_sync_cc_impl(const std::vector<gr_complex>& samples,
         float threshold);
