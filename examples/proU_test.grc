@@ -105,7 +105,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"11110000110010100101001101101001"</value>
+      <value>digital.packet_utils.default_access_code</value>
     </param>
   </block>
   <block>
@@ -120,7 +120,96 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(200, 388)</value>
+      <value>(24, 676)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>bps</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>mod.bits_per_symbol()</value>
+    </param>
+  </block>
+  <block>
+    <key>variable_modulate_vector</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>data</key>
+      <value>[int(clean_precode[i:i+8],2) for i in range(0,len(clean_precode),8)]</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>taps</key>
+      <value>[1]</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(224, 720)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>clean_hdr</value>
+    </param>
+    <param>
+      <key>mod</key>
+      <value>digital.generic_mod(mod, False, sps, True, eb, False, False)</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(224, 852)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>clean_precode</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>accesscode+"0000000000000000"</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(88, 444)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -147,7 +236,7 @@
     </param>
     <param>
       <key>type</key>
-      <value>qpsk</value>
+      <value>calcdist</value>
     </param>
     <param>
       <key>dims</key>
@@ -241,26 +330,18 @@
     </param>
   </block>
   <block>
-    <key>variable_modulate_vector</key>
+    <key>variable</key>
     <param>
       <key>comment</key>
       <value></value>
-    </param>
-    <param>
-      <key>data</key>
-      <value>preamble_ac</value>
     </param>
     <param>
       <key>_enabled</key>
       <value>True</value>
     </param>
     <param>
-      <key>taps</key>
-      <value>[1]</value>
-    </param>
-    <param>
       <key>_coordinate</key>
-      <value>(192, 748)</value>
+      <value>(24, 748)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -268,11 +349,11 @@
     </param>
     <param>
       <key>id</key>
-      <value>preamble</value>
+      <value>pre_bits</value>
     </param>
     <param>
-      <key>mod</key>
-      <value>digital.generic_mod(mod, False, sps, True, eb, False, False)</value>
+      <key>value</key>
+      <value>[accesscode[i:i+bps] for i in range(0,len(accesscode),bps)]</value>
     </param>
   </block>
   <block>
@@ -287,7 +368,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(200, 684)</value>
+      <value>(24, 876)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -295,11 +376,65 @@
     </param>
     <param>
       <key>id</key>
-      <value>preamble_ac</value>
+      <value>pre_idx</value>
     </param>
     <param>
       <key>value</key>
-      <value>[0xf0,0xca,0x53,0x69,0x00,0x00]</value>
+      <value>[mod.pre_diff_code().index(pre_symb[i]) for i in range(0,len(pre_symb))]</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(24, 812)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>pre_symb</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[int(pre_bits[i],bps) for i in range(0,len(pre_bits))]</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(24, 940)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>preamble_s</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[mod.points()[pre_idx[i]] for i in range(0,len(pre_idx))]</value>
     </param>
   </block>
   <block>
@@ -384,7 +519,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 388)</value>
+      <value>(8, 444)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -415,7 +550,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(80, 396)</value>
+      <value>(544, 48)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -499,6 +634,37 @@
     <param>
       <key>repeat</key>
       <value>True</value>
+    </param>
+  </block>
+  <block>
+    <key>blocks_message_debug</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1624, 584)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_message_debug_0</value>
     </param>
   </block>
   <block>
@@ -698,7 +864,7 @@
     </param>
     <param>
       <key>freq_offset</key>
-      <value>0</value>
+      <value>0.002</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -793,6 +959,49 @@
     </param>
   </block>
   <block>
+    <key>digital_map_bb</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(392, 284)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>digital_map_bb_0</value>
+    </param>
+    <param>
+      <key>map</key>
+      <value>mod.pre_diff_code()</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+  </block>
+  <block>
     <key>interp_fir_filter_xxx</key>
     <param>
       <key>alias</key>
@@ -848,6 +1057,53 @@
     </param>
   </block>
   <block>
+    <key>lsa_correlate_sync_cc</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(992, 480)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_correlate_sync_cc_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>samples</key>
+      <value>preamble_s</value>
+    </param>
+    <param>
+      <key>thres</key>
+      <value>0.9</value>
+    </param>
+  </block>
+  <block>
     <key>lsa_interference_canceller_cc</key>
     <param>
       <key>bps</key>
@@ -899,7 +1155,7 @@
     </param>
     <param>
       <key>preamble</key>
-      <value>preamble</value>
+      <value>clean_hdr</value>
     </param>
     <param>
       <key>hdr_bits</key>
@@ -989,7 +1245,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(816, 540)</value>
+      <value>(784, 540)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1195,6 +1451,10 @@
     <param>
       <key>debug</key>
       <value>False</value>
+    </param>
+    <param>
+      <key>queue</key>
+      <value>True</value>
     </param>
     <param>
       <key>sense_tag</key>
@@ -2282,7 +2542,7 @@
   </connection>
   <connection>
     <source_block_id>blocks_repack_bits_bb_0</source_block_id>
-    <sink_block_id>digital_chunks_to_symbols_xx_0</sink_block_id>
+    <sink_block_id>digital_map_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -2311,8 +2571,20 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>digital_map_bb_0</source_block_id>
+    <sink_block_id>digital_chunks_to_symbols_xx_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>interp_fir_filter_xxx_0</source_block_id>
     <sink_block_id>channels_channel_model_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_correlate_sync_cc_0</source_block_id>
+    <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -2372,6 +2644,12 @@
   </connection>
   <connection>
     <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
+    <sink_block_id>lsa_correlate_sync_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
     <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
@@ -2399,6 +2677,12 @@
     <sink_block_id>blocks_repack_bits_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_symbol_receiver_c_0</source_block_id>
+    <sink_block_id>blocks_message_debug_0</sink_block_id>
+    <source_key>info</source_key>
+    <sink_key>print</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_symbol_receiver_c_0</source_block_id>

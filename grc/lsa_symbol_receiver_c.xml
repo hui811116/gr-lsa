@@ -4,7 +4,7 @@
   <key>lsa_symbol_receiver_c</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.symbol_receiver_c($accesscode, $hdr,$pld,$sense_tag,$sps,$debug)</make>
+  <make>lsa.symbol_receiver_c($accesscode, $hdr,$pld,$sense_tag,$sps,$queue,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -34,6 +34,20 @@
     <name>Samples per symbol</name>
     <key>sps</key>
     <type>int</type>
+  </param>
+  <param>
+    <name>queue mode</name>
+    <key>queue</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>On</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Off</name>
+      <key>False</key>
+    </option>
   </param>
   <param>
     <name>debug mode</name>

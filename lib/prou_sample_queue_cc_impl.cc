@@ -81,6 +81,9 @@ namespace gr {
     void
     prou_sample_queue_cc_impl::info_msg_handler(pmt::pmt_t msg)
     {
+      //if(d_debug){
+        //std::cout<<"msg:"<<msg<<std::endl;
+      //}
       long int time;
       int counter=0, qidx, qsize, offset, sample_len;
       bool sensing_state=false;
@@ -115,7 +118,7 @@ namespace gr {
       long int tmp_time;
       int tmp_idx;
       bool retx_update=false;
-      if( (qsize!=0) && (d_retx_status.size()==0) ){
+      if( (qsize!=0) && (d_retx_status.empty()) ){
             d_retx_status.resize(qsize,false);
             d_retx_count = 0;
       } 
@@ -155,20 +158,28 @@ namespace gr {
         case WAIT_INFO:
           if( (d_retx_count == d_retx_status.size()) && 
             ((d_last_retx_idx + d_last_retx_samples) <= d_sample_size) ){
-            d_last_time = 0;
+            //d_last_time = 0;
+
             d_state = OUTPUT_SAMPLE;
             d_end_retx_sample_size = d_last_retx_idx + d_last_retx_samples;
+            if(d_debug)
+            {
+              std::cout<<"ProU Queue:Retransmission available for interference cancellation"<<std::endl;
+              std::cout<<"retx_count:"<<d_retx_count<<" ,retx_size:"<<d_retx_status.size()<<std::endl;
+            }
           }
           else if( (qsize == 0) && (qidx==0)
           &&( d_retx_count!= d_retx_status.size()) ){
             clear_queue_index_fix(time);
             d_state = LOAD_SAMPLE;
+            d_retx_count = 0;
+            d_retx_status.clear();
           }
         break;
         case OUTPUT_SAMPLE:
-          if(d_last_time==0){
+          /*if(d_last_time==0){
             d_last_time =time;
-          }
+          }*/
         break;
         default:
           throw std::runtime_error("Entering wrong state");
@@ -201,14 +212,21 @@ namespace gr {
         break;
         case WAIT_INFO:
           // if timeout --> failed
-          if(((time-d_update_time)/CLOCKS_PER_SEC)>=d_timeout){
+          if(((time-d_update_time)/CLOCKS_PER_SEC)>=d_timeout
+             || (d_sample_size == d_sample_cap)){
             d_sample_idx = 0;
             d_sample_size = 0;
             d_state = LOAD_SAMPLE;
             d_retx_status.clear();
             d_retx_count = 0;
             if(d_debug){
-              GR_LOG_DEBUG(d_logger,"timeout, resetting sample buffer");
+              if(d_sample_size == d_sample_cap){
+                  GR_LOG_DEBUG(d_logger, "Buffer full, resetting sample buffer");
+              }
+                else{
+                  GR_LOG_DEBUG(d_logger,"timeout, resetting sample buffer");
+                }
+              
             }
             consume_count = 0;
             return;
@@ -216,6 +234,7 @@ namespace gr {
         break;
         case OUTPUT_SAMPLE:
           consume_count = 0;
+          //consume_count = noutput_items;
           return;
         break;
         default:
@@ -224,20 +243,13 @@ namespace gr {
       }   
       if(ninput_items <= space_left){
             memcpy(d_sample_buffer+d_sample_size, in , sizeof(gr_complex)*ninput_items);
-        //for(int i=0;i<ninput_items;++i){
-          //d_sample_buffer[d_sample_size+i] = in[i];
-        //}
             consume_count = ninput_items;
           }
           else{
-            //for(int i=0;i<space_left;++i){
-              //d_sample_buffer[d_sample_size+i] = in[i];
-            //}
             memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)*space_left);
             consume_count = space_left;
           }
           if( (consume_count !=0) ){
-            //d_update_time = time;
             if((d_sample_size ==0)||(d_update_time==0) ){
               d_update_time =time;
             }
@@ -335,6 +347,7 @@ namespace gr {
       int count =0;
       int output_size;
       int end_idx;
+      long int tmp_time, hdr_time;
       switch(d_state)
       {
         case LOAD_SAMPLE:
@@ -353,16 +366,30 @@ namespace gr {
           output_size = d_end_retx_sample_size - d_sample_idx;
           end_idx = (noutput_items > (output_size))? output_size : noutput_items; 
           end_idx += d_sample_idx;
-
+          if(d_buffer_info.empty()){
+            //throw std::runtime_error("empty buffer info");
+            GR_LOG_WARN(d_logger,"empty buffer info");
+            d_state = LOAD_SAMPLE;
+            d_retx_count =0;
+            d_retx_status.clear();
+            d_end_retx_sample_size =0;
+            d_sample_idx = 0;
+            d_sample_size =0;
+          }
+          tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
             //last block of retransmission
             for(d_sample_idx;d_sample_idx<end_idx;++d_sample_idx){
               if(!d_pkt_info.empty()){
                 size_t offset = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("header_found"),pmt::PMT_NIL));
                 if(offset == d_sample_idx){
-                  pmt::pmt_t tmp_info =  d_pkt_info[0];
-                  tmp_info = pmt::dict_delete(tmp_info,pmt::intern("ctime"));
-                  tmp_info = pmt::dict_delete(tmp_info,pmt::intern("buffer_index"));
-                  pmt::pmt_t dict_items(pmt::dict_items(tmp_info));
+                  //pmt::pmt_t tmp_info =  d_pkt_info[0];
+                  hdr_time = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
+                  if(hdr_time > tmp_time){
+                    d_buffer_info.erase(d_buffer_info.begin());
+                  }
+                  d_pkt_info[0] = pmt::dict_delete(d_pkt_info[0],pmt::intern("ctime"));
+                  d_pkt_info[0] = pmt::dict_delete(d_pkt_info[0],pmt::intern("buffer_index"));
+                  pmt::pmt_t dict_items(pmt::dict_items(d_pkt_info[0]));
                   while(!pmt::is_null(dict_items)){
                     pmt::pmt_t this_dict(pmt::car(dict_items));
                     add_item_tag(1,nitems_written(1)+count,pmt::car(this_dict),pmt::cdr(this_dict));
@@ -385,15 +412,10 @@ namespace gr {
           if(d_sample_idx == d_end_retx_sample_size){
             //FIXME
             int tmp_time = std::clock();
-            for(int i=0;i<d_buffer_info.size();++i){
-              tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("ctime"),pmt::PMT_NIL));
-              if(tmp_time>d_last_time){
-                d_last_time = tmp_time;
-                break;
-              }
+            if(!d_buffer_info.empty()){
+              tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
             }
-
-            clear_queue_index_fix(d_last_time);
+            clear_queue_index_fix(tmp_time);
             //handle the samples, times, indexes, tags, of the samples left in buffer
             d_state = LOAD_SAMPLE;
             d_retx_count =0;
@@ -410,7 +432,26 @@ namespace gr {
     void
     prou_sample_queue_cc_impl::clear_queue_index_fix(long int time)
     {
+      /*
+      d_buffer_info.clear();
+      d_pkt_info.clear();
+      d_sample_idx =0;
+      d_sample_size=0;
+      */
       
+      if(d_debug){
+        std::cout<<"before clear_queue_index_fix"<<std::endl;
+        std::cout<<"sample size:"<<d_sample_size<<" ,sample_idx:"<<d_sample_idx<<std::endl;
+        std::cout<<"buffer info size:"<<d_buffer_info.size()<<" ,hdr_info size:"<<d_pkt_info.size()<<std::endl;
+        for(int i=0;i<d_buffer_info.size();++i){
+          std::cout<<d_buffer_info[i]<<std::endl;
+        }
+        std::cout<<"HEADER_INFO:"<<std::endl;
+        for(int i=0;i<d_pkt_info.size();++i){
+          std::cout<<d_pkt_info[i]<<std::endl;
+        }
+        std::cout<<"**********************************************"<<std::endl;
+      }
       int tmp_index=0; 
       long int tmp_time;
       int count = 0;
@@ -437,7 +478,7 @@ namespace gr {
         d_pkt_info.erase(d_pkt_info.begin(),d_pkt_info.begin()+count);
       }
       int sample_fixed= 0;
-      std::vector<pmt::pmt_t> tmp_hdr;
+      //std::vector<pmt::pmt_t> tmp_hdr;
       if(!d_buffer_info.empty()){
         tmp_index = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("buffer_index"),pmt::PMT_NIL));
         sample_fixed = d_sample_size - tmp_index;
@@ -452,21 +493,34 @@ namespace gr {
           d_buffer_info[i] = pmt::dict_delete(d_buffer_info[i], pmt::intern("buffer_index"));
           d_buffer_info[i] = pmt::dict_add(d_buffer_info[i], pmt::intern("buffer_index"), pmt::from_long(buf_idx-tmp_index));
         }
-        for(int i=0;i<d_pkt_info.size();i++){
+        /*for(int i=0;i<d_pkt_info.size();i++){
           int hdr_idx = pmt::to_long(pmt::dict_ref(d_pkt_info[i], pmt::intern("header_found"), pmt::PMT_NIL));
           int tmp_pld = pmt::to_long(pmt::dict_ref(d_pkt_info[i], pmt::intern("payload"), pmt::PMT_NIL));
-          if( hdr_idx +tmp_pld  < sample_fixed){  
+          if( hdr_idx-tmp_index +tmp_pld  < sample_fixed){  
             d_pkt_info[i] = pmt::dict_delete(d_pkt_info[i], pmt::intern("header_found"));
             d_pkt_info[i] = pmt::dict_add(d_pkt_info[i], pmt::intern("header_found"), pmt::from_long(hdr_idx-tmp_index));
             tmp_hdr.push_back(d_pkt_info[i]);
           }
-        }
+        }*/
       }
-      d_pkt_info = tmp_hdr;
+      d_pkt_info.clear();
+      //d_pkt_info = tmp_hdr;
           
           d_sample_idx = 0;
           d_sample_size = sample_fixed;
-          
+      if(d_debug){
+        std::cout<<"after clear_queue_index_fix"<<std::endl;
+        std::cout<<"sample size:"<<d_sample_size<<" ,sample_idx:"<<d_sample_idx<<std::endl;
+        std::cout<<"buffer info size:"<<d_buffer_info.size()<<" ,hdr_info size:"<<d_pkt_info.size()<<std::endl;
+        for(int i=0;i<d_buffer_info.size();++i){
+          std::cout<<d_buffer_info[i]<<std::endl;
+        }
+        std::cout<<"HEADER_INFO:"<<std::endl;
+        for(int i=0;i<d_pkt_info.size();++i){
+          std::cout<<d_pkt_info[i]<<std::endl;
+        }
+        std::cout<<"**********************************************"<<std::endl;
+      }
     }
 
     void
@@ -481,7 +535,8 @@ namespace gr {
           items_reqd = (items_reqd > noutput_items) ? noutput_items : items_reqd;
         break;
         case WAIT_INFO:
-          items_reqd = noutput_items;
+          items_reqd = d_sample_cap - d_sample_size;
+          items_reqd = (items_reqd > noutput_items) ? noutput_items : items_reqd;
         break;
         case OUTPUT_SAMPLE:
           //FIXME
@@ -514,6 +569,26 @@ namespace gr {
       out_items_handler(out,sample,in,noutput_items, consume_count);
       consume_each(consume_count);
       // Tell runtime system how many output items we produced.
+
+      /*if(d_debug){
+        std::cout<<"retx_count:"<<d_retx_count<<std::endl;
+        std::cout<<"state:";
+        switch(d_state){
+          case LOAD_SAMPLE:
+            std::cout<<"LOAD"<<std::endl;
+          break;
+          case WAIT_INFO:
+          std::cout<<"WAIT"<<std::endl;
+          break;
+          case OUTPUT_SAMPLE:
+          std::cout<<"OUT"<<std::endl;
+          break;
+          default:
+          break;
+          std::cout<<"sample_size:"<<d_sample_size<<std::endl;
+        }
+      }*/
+
       return WORK_CALLED_PRODUCE;
     }
 

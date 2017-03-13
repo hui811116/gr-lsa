@@ -29,7 +29,9 @@ namespace gr {
     class su_transmitter_bc_impl : public su_transmitter_bc
     {
      private:
-      // Nothing to declare in this block.
+      int d_mode;
+      long int d_update_time;
+
       bool d_debug;
       int d_state;
       int d_qmax;
@@ -108,8 +110,7 @@ namespace gr {
         const std::string& accesscode,
         const gr::digital::constellation_sptr& hdr_const,
         const gr::digital::constellation_sptr& pld_const,
-        //const std::vector<gr_complex>& hdr_points,
-        //const std::vector<gr_complex>& pld_points,
+        int mode,
         int qmax,
         bool debug);
       ~su_transmitter_bc_impl();

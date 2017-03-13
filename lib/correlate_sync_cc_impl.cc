@@ -25,6 +25,7 @@
 #include <gnuradio/io_signature.h>
 #include "correlate_sync_cc_impl.h"
 #include <volk/volk.h>
+#include <gnuradio/math.h>
 #include <cmath>
 #include <numeric>
 
@@ -135,6 +136,7 @@ namespace gr {
       
       float eng_acc=0.0;
       float detection =0.0;
+      float phase;
       for(int i=0;i<noutput_items;++i){
         eng_acc=std::accumulate(d_eng+i,d_eng+i+d_samples.size()-1,0.0);
         if(2*logf(corr_mag[i])>(logf(eng_acc)+d_eng_log) ){
@@ -144,9 +146,15 @@ namespace gr {
         detection = logf(corr_mag[i]) - 0.5*logf(eng_acc);
 
         if(detection >= d_thres_log + 0.5*d_eng_log){
+          phase = fast_atan2f(corr[i].imag(), corr[i].real());
+          if(corr[i].real() < 0.0)
+            phase += M_PI;
+
           add_item_tag(0,nitems_written(0)+i, pmt::intern("corr_est"),pmt::from_bool(pmt::PMT_T));
+          add_item_tag(0,nitems_written(0)+i, pmt::intern("phase_est"),pmt::from_float(phase));
           if(have_corr){
             add_item_tag(1,nitems_written(1)+i,pmt::intern("corr_est"),pmt::from_bool(pmt::PMT_T));
+            add_item_tag(1,nitems_written(1)+i, pmt::intern("phase_est"),pmt::from_float(phase));
           }
         }
         /*

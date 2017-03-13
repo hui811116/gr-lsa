@@ -47,10 +47,11 @@ namespace gr {
         const gr::digital::constellation_sptr& pld_const,
         const std::string& sensing_tagname,
         int sps,
+        bool queue_mode,
         bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new symbol_receiver_c_impl(accesscode, hdr_const,pld_const,sensing_tagname,sps,debug));
+        (new symbol_receiver_c_impl(accesscode, hdr_const,pld_const,sensing_tagname,sps,queue_mode,debug));
     }
 
     /*
@@ -63,6 +64,7 @@ namespace gr {
         const gr::digital::constellation_sptr& pld_const,
         const std::string& sensing_tagname,
         int sps,
+        bool queue_mode,
         bool debug)
       : gr::sync_block("symbol_receiver_c",
               gr::io_signature::makev(1, 5, iosig),
@@ -87,6 +89,7 @@ namespace gr {
       d_byte_reg = new unsigned char[cap];//
       d_symbol_to_bytes = new unsigned char[cap];
       d_debug = debug;
+      d_queue = queue_mode;
       d_sps = sps;
 
       message_port_register_out(d_hdr_port);
@@ -96,6 +99,8 @@ namespace gr {
       d_prev_time  = 0;
       d_current_time = 0;
       d_symbol_count =0;
+
+      d_corr_phase = 0.0;
     }
 
     /*
@@ -274,12 +279,10 @@ namespace gr {
         sen_back = pmt::dict_add(sen_back,pmt::intern("counter"),pmt::from_long(d_counter));
         //time index for feedback labeling in queue
         //FIXME
-        // this index meant for the end of header
-        // can shift to the begin of preamble, but samples may not be adequate...
-        sen_back = pmt::dict_add(sen_back,pmt::intern("buffer_offset"),pmt::from_long(d_symbol_count*d_sps));
-        sen_back = pmt::dict_add(sen_back,pmt::intern("ctime"),pmt::from_long(d_current_time));
-
-        if(have_sync){
+        if(d_queue){
+          sen_back = pmt::dict_add(sen_back,pmt::intern("buffer_offset"),pmt::from_long(d_symbol_count*d_sps));
+          sen_back = pmt::dict_add(sen_back,pmt::intern("ctime"),pmt::from_long(d_current_time));  
+          if(have_sync){
           //FIXME
           //another method is to average time and freq estimate over (preamble + header length)
           sen_back = pmt::dict_add(sen_back, pmt::intern("time_rate_f_est"),pmt::from_float(poly_freq[index]));
@@ -287,6 +290,8 @@ namespace gr {
           sen_back = pmt::dict_add(sen_back, pmt::intern("freq_est"),pmt::from_float(cos_freq[index]));
           sen_back = pmt::dict_add(sen_back, pmt::intern("phase_est"),pmt::from_float(cos_phase[index]));
         }
+        }
+        
       }
       message_port_pub(d_hdr_port,sen_back);
     }
@@ -309,9 +314,11 @@ namespace gr {
       // Do <+signal processing+>
       std::vector<tag_t> time_tags;
       std::vector<tag_t> tags;
+      std::vector<tag_t> corr_phase_tags;
       
       get_tags_in_window(tags, 0,0,noutput_items, d_sensing_tagname);
       get_tags_in_window(time_tags, 0,0,noutput_items, d_time_tagname);
+      get_tags_in_window(corr_phase_tags, 0,0,noutput_items, pmt::intern("corr_phase"));
       
       for(int i=0;i<noutput_items;++i){
         if(!tags.empty()){
@@ -334,6 +341,13 @@ namespace gr {
             d_symbol_count =0;
             d_prev_time = d_current_time;
             time_tags.erase(time_tags.begin());
+          }
+        }
+        if(!corr_phase_tags.empty()){
+          int offset = corr_phase_tags[0].offset - nitems_read(0);
+          if(offset == i){
+            d_corr_phase = pmt::to_float(corr_phase_tags[0].value);
+            //FIXME
           }
         }
         if(insert_symbol(in[i])){

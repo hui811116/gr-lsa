@@ -27,9 +27,13 @@
 #include <algorithm>
 #include <volk/volk.h>
 #include <pmt/pmt.h>
+#include <gnuradio/math.h>
+#include <gnuradio/expj.h>
 
 namespace gr {
   namespace lsa {
+
+#define TWO_PI (2.0f*M_PI)
 
     enum cancellerState{
       RECEIVE,
@@ -183,8 +187,9 @@ namespace gr {
     void
     interference_canceller_cc_impl::sync_hdr_index(std::vector<int>& coerced_packet_len)
     {
-      if(d_info_index.empty())
+      if(d_info_index.empty()){
         throw std::runtime_error("Cancellation failed: no header info found");
+      }
       int cur_pkt_begin;
       int count =0;
       int next_pkt_begin;
@@ -193,6 +198,9 @@ namespace gr {
       int cur_payload;
       int retx_idx;
       int fixed_pkt_len;
+      float phase_shift, freq_offset;
+      gr_complex sample_fix;
+      std::vector<pmt::pmt_t> retx_hdr_info(d_retx_pkt_size.size());
       while(count < d_info_index.size()-1){
         
         tmp_dict = d_buffer_info[count];
@@ -215,10 +223,13 @@ namespace gr {
         if( pmt::dict_has_key(tmp_dict, pmt::intern("retx_idx"))){
           retx_idx = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("retx_idx"), pmt::PMT_NIL));
           d_retx_pkt_size[retx_idx] = fixed_pkt_len;
+          //store impairments estimates
+          retx_hdr_info[retx_idx] = tmp_dict;
         }
         coerced_packet_len.push_back(fixed_pkt_len);
         count++;
       }
+
       // fix last pkt
       tmp_dict = d_buffer_info.back();
       cur_pkt_begin = d_info_index.back();
@@ -232,12 +243,32 @@ namespace gr {
       if( pmt::dict_has_key(tmp_dict, pmt::intern("retx_idx"))){
           retx_idx = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("retx_idx"), pmt::PMT_NIL));
           d_retx_pkt_size[retx_idx] = fixed_pkt_len; 
+          retx_hdr_info[retx_idx] = tmp_dict;
       }
       coerced_packet_len.push_back(fixed_pkt_len); 
+      
+
       //create copy of retransmission
       for(int i=0;i<d_retx_count;++i){
         d_retx_buffer[i] = new gr_complex[d_retx_pkt_size[i]];
-        memcpy(d_retx_buffer[i],d_sample_buffer+d_retx_pkt_index[i], sizeof(gr_complex)* d_retx_pkt_size[i]);
+        //fix its own impairments first?
+        phase_shift = pmt::to_float(pmt::dict_ref(retx_hdr_info[i],pmt::intern("phase_est"),pmt::PMT_NIL));
+        freq_offset = pmt::to_float(pmt::dict_ref(retx_hdr_info[i],pmt::intern("freq_est"),pmt::PMT_NIL));
+        freq_offset/= static_cast<float>(d_sps);
+        //FIXME
+        //carrier frequency and phase correction for retransmission.
+        for(int j=0;j<d_retx_pkt_size[i];++j){
+          sample_fix = d_sample_buffer[d_retx_pkt_index[i]+j] * gr_expj(-phase_shift);
+          d_retx_buffer[i][j] = sample_fix;
+          phase_shift += freq_offset;
+          while(phase_shift>TWO_PI){
+            phase_shift-= TWO_PI;
+          }
+          while(phase_shift<-TWO_PI){
+            phase_shift+= TWO_PI;
+          }
+        }
+        //memcpy(d_retx_buffer[i],d_sample_buffer+d_retx_pkt_index[i], sizeof(gr_complex)* d_retx_pkt_size[i]);
       }
 
     }
@@ -289,7 +320,9 @@ namespace gr {
       int next_pkt_begin=0;
       int next_pkt_size=0;
       int test_index=0;
+      float phase_shift, freq_offset;
       gr_complex* retx;
+      gr_complex fixed_sample;
       pmt::pmt_t tmp_dict;
       
       while(total_size>0)
@@ -308,35 +341,51 @@ namespace gr {
         
         if(!d_info_index.empty()){
           tmp_dict = d_buffer_info.back();
-
           next_pkt_begin = d_info_index.back();
           next_pkt_size = packet_len.back();
           test_index = begin_idx - next_pkt_begin;
-
           // can modified to handle more complex time offset
           //FIXME
           // can adjust to accommodate offset of larger range
-          if(abs(test_index)<= d_sps){
-            //begin_idx -= test_index;
+          if(abs(test_index)<= 2*d_sps){
+            //FIXME
+            phase_shift = pmt::to_float(pmt::dict_ref(tmp_dict, pmt::intern("phase_est"), pmt::PMT_NIL));
+            freq_offset = pmt::to_float(pmt::dict_ref(tmp_dict, pmt::intern("freq_est"), pmt::PMT_NIL));
+            freq_offset/= static_cast<float>(d_sps);//change to sample-wise frequency offset
+
             begin_idx = next_pkt_begin;
             d_buffer_info.pop_back();
             d_info_index.pop_back();
-            packet_len.pop_back();
-            
+            packet_len.pop_back(); 
           }
         }//sync with known index of packet        
         for(int i=0;i<sample_count;++i){
+          //NOTE: in expj the sign is the same as desired sample in order to synchronize the phase of two samples
+          fixed_sample = retx[i+offset]*gr_expj(phase_shift);
           //if there is cfo or time offset, fixed here?
-          d_output_buffer[begin_idx+i] = d_sample_buffer[begin_idx+i] - retx[i+offset];
+          //d_output_buffer[begin_idx+i] = d_sample_buffer[begin_idx+i] - retx[i+offset];
+          d_output_buffer[begin_idx+i] = d_sample_buffer[begin_idx+i] - fixed_sample;
+          phase_shift += freq_offset;
+          while(phase_shift>TWO_PI){
+            phase_shift-=TWO_PI;
+          }
+          while(phase_shift<-TWO_PI){
+            phase_shift+=TWO_PI;
+          }
         }
+        //abuse variable total_size to sync to the estimated begin of previous packet
         total_size = begin_idx;
         d_cei_pkt_counter = (d_cei_pkt_counter-1) % retx_size;
         if(d_cei_pkt_counter<0)
           d_cei_pkt_counter+= retx_size;
         d_cei_sample_counter = d_retx_pkt_size[d_cei_pkt_counter];
-      }
+      }//end while
       
       d_output_idx =0;
+
+      if(d_debug){
+        GR_LOG_DEBUG(d_logger, "Do interference cancellation complete!");
+      }
     }
 
     void

@@ -24,13 +24,20 @@
 
 #include <gnuradio/io_signature.h>
 #include "su_transmitter_bc_impl.h"
-
+#include <ctime>
 #include <sstream>
 
 namespace gr {
   namespace lsa {
 
-
+    //transmission mode
+    // active: successive transmission
+    // passive: stop and wait
+    enum SuTxMode{
+      ACTIVE,
+      PASSIVE,
+      SUCCESSIVE
+    };
     enum SuTxState{
       CLEAR_TO_SEND,
       RETRANSMISSION
@@ -44,6 +51,7 @@ namespace gr {
       const gr::digital::constellation_sptr& hdr_const,
       const gr::digital::constellation_sptr& pld_const,
       int qmax,
+      int mode,
       bool debug)
     {
       return gnuradio::get_initial_sptr
@@ -54,6 +62,7 @@ namespace gr {
           hdr_const,
           pld_const,
           qmax,
+          mode,
           debug));
     }
 
@@ -67,6 +76,7 @@ namespace gr {
       const gr::digital::constellation_sptr& hdr_const,
       const gr::digital::constellation_sptr& pld_const,
       int qmax,
+      int mode,
       bool debug)
       : gr::tagged_stream_block("su_transmitter_bc",
               gr::io_signature::make(1, 1, sizeof(char)),
@@ -82,6 +92,21 @@ namespace gr {
         throw std::invalid_argument ("SU TX: Invalid queue size");
       }
       d_qmax = qmax;
+      switch(mode){
+        case ACTIVE:
+          d_mode = ACTIVE;
+        break;
+        case PASSIVE:
+          d_mode = PASSIVE;
+        break;
+        case SUCCESSIVE:
+          d_mode = SUCCESSIVE;
+        break;
+        default:
+          GR_LOG_WARN(d_logger, "su tx select invalid mode, automatic change to \"ACTIVE\" ");
+          d_mode = ACTIVE;
+        break;
+      }
       d_debug = debug;
       d_rxindextagname = pmt::intern("counter");
 
@@ -157,6 +182,12 @@ namespace gr {
     void
     su_transmitter_bc_impl::receiver_msg_handler(pmt::pmt_t msg)
     {
+
+      long int ctime=0;
+      if(pmt::dict_has_key(msg,pmt::intern("ctime"))){
+        ctime = pmt::to_long(pmt::dict_ref(msg, pmt::intern("ctime"), pmt::PMT_NIL));
+      }
+
       std::vector<pmt::pmt_t> tag_keys;
       std::vector<pmt::pmt_t> tag_vals;
       int rx_counter = -1;
@@ -177,15 +208,14 @@ namespace gr {
         }
       }
       
-      switch(d_state)
+      switch(d_mode){
+        case ACTIVE:
+          switch(d_state)
       {
         case CLEAR_TO_SEND:
           if(rx_sensing_info){
             d_qiter = 0;
-            //assert(!d_counter_buffer.empty());
-            //BUG here?
             if(d_counter_buffer.empty()){
-              //throw std::runtime_error("No elements been transmitted, but rx report causing interference");
               if(d_debug)
               GR_LOG_CRIT(d_logger, "No elements been transmitted, but rx report causing interference");
               return;
@@ -195,10 +225,7 @@ namespace gr {
             d_state = RETRANSMISSION;
           }
           else{
-            //assert(!d_counter_buffer.empty());
             if(d_counter_buffer.empty()){
-              //BUG here
-              //throw std::runtime_error("Receiving ACK while no elements been transmitted");
               if(d_debug)
                 GR_LOG_CRIT(d_logger, "Receiving ACK while no elements been transmitted");
               return;
@@ -236,7 +263,25 @@ namespace gr {
           std::runtime_error("SUTX: Entering wrong state");
         break;
       }
-      
+        break;
+        case PASSIVE:
+          if(d_state == CLEAR_TO_SEND && rx_sensing_info){
+            d_update_time = std::clock();
+            //represent silent state
+            d_state = RETRANSMISSION;
+          }
+          else if(d_state == RETRANSMISSION && !rx_sensing_info && (ctime>d_update_time) ){
+            d_state = CLEAR_TO_SEND;
+            d_update_time = std::clock();
+          }
+        break;
+        case SUCCESSIVE:
+        //discard any message
+        break;
+        default:
+          throw std::runtime_error("Entering wrong state");
+        break;
+      } 
     }
 
     bool
@@ -284,11 +329,6 @@ namespace gr {
             throw std::runtime_error("Retransmission with no elements in queue");
           }
           pkt_counter = (unsigned char*)& d_counter_buffer[d_qiter];
-          /*if(d_debug){
-            std::stringstream ss;
-            ss<< "RETX_COUNTER:"<<d_counter_buffer[d_qiter];
-            GR_LOG_DEBUG(d_logger, ss.str());
-          }*/
         }
         d_hdr_buffer[ac_len+1] = d_qsize;
         d_hdr_buffer[ac_len] = d_qiter;
@@ -357,66 +397,96 @@ namespace gr {
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
-      //gr::thread::scoped_lock guard(d_setlock);
       const unsigned char *in = (const unsigned char *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
       int payload_len = ninput_items[0];
       int pld_symbol_samp_len;
-      switch(d_state)
-      {
-        case CLEAR_TO_SEND:
-          pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
-        break;
-        case RETRANSMISSION:
-          pld_symbol_samp_len = (d_buffer_ptr->at(d_qiter)).size();
-        break;
-        default:
-          std::runtime_error("SU_TX::wrong state. failed");
-        break;
-      }
-      if(noutput_items < (pld_symbol_samp_len + d_hdr_samp_len)){
-        if(d_debug){
-          GR_LOG_DEBUG(d_logger, "output buffer smaller than a packet size");
-        }
-        consume_each(0);
-        return 0;
-      }
       
-      switch(d_state)
-      {
-        case CLEAR_TO_SEND:
-          if(d_buffer_ptr->size() == d_qmax){
-            queue_size_adapt();
+      switch(d_mode){
+        case ACTIVE:
+          switch(d_state)
+          {
+            case CLEAR_TO_SEND:
+            pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
+              if(d_buffer_ptr->size() == d_qmax){
+                queue_size_adapt();
+              }
+              generate_hdr(payload_len,false);
+              _repack(d_hdr_symbol_buffer, d_hdr_buffer, header_nbits()/8, (int)log2(d_hdr_points.size()));
+              _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points, d_hdr_map);
+              _repack(d_pld_symbol_buffer, in, payload_len, (int)log2(d_pld_points.size()));
+              _map_sample(out+d_hdr_samp_len, d_pld_symbol_buffer, pld_symbol_samp_len, d_pld_points, d_pld_map);
+              store_to_queue(out+d_hdr_samp_len, pld_symbol_samp_len, payload_len);  
+          
+              d_pkt_counter++;
+            break;
+
+            case RETRANSMISSION:
+              pld_symbol_samp_len = (d_buffer_ptr->at(d_qiter)).size();
+              assert(d_qiter < d_pld_len_buffer.size());
+              generate_hdr(d_pld_len_buffer[d_qiter],true);
+              _repack(d_hdr_symbol_buffer, d_hdr_buffer,header_nbits()/8,(int)log2(d_hdr_points.size()));
+              _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points, d_hdr_map);
+
+              payload_len = d_pld_len_buffer[d_qiter];
+              memcpy(out+d_hdr_samp_len,(d_buffer_ptr->at(d_qiter)).data(),sizeof(gr_complex)*pld_symbol_samp_len);
+              d_qiter++;
+              d_qiter %= d_qsize;
+            break;
+            default:
+              std::runtime_error("SU TX: Entering wrong state");
+            break;
           }
-          generate_hdr(payload_len,false);
-          _repack(d_hdr_symbol_buffer, d_hdr_buffer, header_nbits()/8, (int)log2(d_hdr_points.size()));
+          noutput_items = pld_symbol_samp_len + d_hdr_samp_len;
+          return noutput_items;
+        
+        break;
+        case PASSIVE:
+          switch(d_state)
+          {
+            case CLEAR_TO_SEND:
+              pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
+              generate_hdr(payload_len,false);
+              _repack(d_hdr_symbol_buffer, d_hdr_buffer, header_nbits()/8, (int)log2(d_hdr_points.size()));
+              _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points, d_hdr_map);
+              _repack(d_pld_symbol_buffer, in, payload_len, (int)log2(d_pld_points.size()));
+              _map_sample(out+d_hdr_samp_len, d_pld_symbol_buffer, pld_symbol_samp_len, d_pld_points, d_pld_map);
+              d_pkt_counter++;
+              noutput_items = pld_symbol_samp_len + d_hdr_samp_len;
+              return noutput_items;
+            break;
+            case RETRANSMISSION:
+            //certain timeout to resume
+                if((std::clock()-d_update_time)/ CLOCKS_PER_SEC >= 10.0){
+                  d_state = CLEAR_TO_SEND;
+                  d_update_time = std::clock();
+                }
+                return 0;
+            break;
+            default:
+              throw std::runtime_error("Entering wrong state");
+              return 0;
+            break;
+          }
+        break;
+        case SUCCESSIVE:
+        pld_symbol_samp_len = payload_len*8/log2(d_pld_points.size());
+        generate_hdr(payload_len,false);
+        _repack(d_hdr_symbol_buffer, d_hdr_buffer, header_nbits()/8, (int)log2(d_hdr_points.size()));
           _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points, d_hdr_map);
           _repack(d_pld_symbol_buffer, in, payload_len, (int)log2(d_pld_points.size()));
           _map_sample(out+d_hdr_samp_len, d_pld_symbol_buffer, pld_symbol_samp_len, d_pld_points, d_pld_map);
-          store_to_queue(out+d_hdr_samp_len, pld_symbol_samp_len, payload_len);
           d_pkt_counter++;
-        break;
-
-        case RETRANSMISSION:
-          assert(d_qiter < d_pld_len_buffer.size());
-          generate_hdr(d_pld_len_buffer[d_qiter],true);
-          _repack(d_hdr_symbol_buffer, d_hdr_buffer,header_nbits()/8,(int)log2(d_hdr_points.size()));
-          _map_sample(out, d_hdr_symbol_buffer, d_hdr_samp_len, d_hdr_points, d_hdr_map);
-
-          payload_len = d_pld_len_buffer[d_qiter];
-          memcpy(out+d_hdr_samp_len,(d_buffer_ptr->at(d_qiter)).data(),sizeof(gr_complex)*pld_symbol_samp_len);
-          d_qiter++;
-          d_qiter %= d_qsize;
+          return pld_symbol_samp_len + d_hdr_samp_len;
         break;
         default:
-          std::runtime_error("SU TX: Entering wrong state");
+          throw std::runtime_error("Entering wrong state");
+          return 0;
         break;
       }
-      //number of output processing
-      noutput_items = pld_symbol_samp_len + d_hdr_samp_len;
-      // Tell runtime system how many output items we produced.
-      return noutput_items;
     }
+
+      
 
   } /* namespace lsa */
 } /* namespace gr */

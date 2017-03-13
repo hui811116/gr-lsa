@@ -32,6 +32,7 @@ namespace gr {
      private:
       // Nothing to declare in this block.
       bool d_debug;
+      bool d_queue;
       pmt::pmt_t d_sensing_tagname;
       pmt::pmt_t d_hdr_port;
       pmt::pmt_t d_pkt_port;
@@ -65,6 +66,8 @@ namespace gr {
       std::vector<int> d_hdr_map;
       std::vector<int> d_pld_map;
 
+      float d_corr_phase;
+
       bool insert_symbol(const gr_complex& symbol);
       void pub_byte_pkt();
       size_t header_nbits() const;
@@ -93,6 +96,7 @@ namespace gr {
         const gr::digital::constellation_sptr& pld_const,
         const std::string& sensing_tagname,
         int sps,
+        bool queue_mode,
         bool debug);
       ~symbol_receiver_c_impl();
 
