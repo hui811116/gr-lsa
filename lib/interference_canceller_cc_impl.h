@@ -34,13 +34,17 @@ namespace gr {
       pmt::pmt_t d_sensing_tagname;
       std::vector<gr_complex> d_clean_preamble;
 
-      int d_state;
+      //int d_state;
       bool d_debug;
 
       int d_sps;
       int d_bps;
       int d_hdr_bits;
       int d_hdr_sample_len;
+      
+      int d_last_info_idx;
+
+      const size_t d_cap;
 
       gr_complex* d_sample_buffer;
       gr_complex* d_output_buffer;
@@ -61,13 +65,21 @@ namespace gr {
       std::vector<pmt::pmt_t> d_buffer_info;
       std::vector<int> d_info_index;
 
+      std::vector<int> d_end_index;
+      std::vector<int> d_out_index;
+
       int d_cei_pkt_counter;
       int d_cei_sample_counter;
 
-      void retx_handler(pmt::pmt_t hdr_info, int index);
+      void tags_handler(std::vector<tag_t>& tags);
+      void update_system_index(int queue_index);
+
+      void retx_check(pmt::pmt_t hdr_info, int qindex,int qsize,int offset);
       void header_handler(pmt::pmt_t hdr_info, int index);
       void do_interference_cancellation();
       void sync_hdr_index(std::vector<int>& coerced_packet_len);
+
+      void cancellation_detector();
 
       void output_result(int noutput_items, gr_complex* out, float* eng);
      public:
