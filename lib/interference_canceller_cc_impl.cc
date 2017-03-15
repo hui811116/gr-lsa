@@ -120,7 +120,7 @@ namespace gr {
         return;
       }
       int payload_size=0;
-      int pkt_begin_idx = offset - d_hdr_sample_len;
+      int pkt_begin_idx = offset;
       if(pmt::dict_has_key(hdr_info, pmt::intern("payload"))){
         payload_size = pmt::to_long(pmt::dict_ref(hdr_info, pmt::intern("payload"), pmt::PMT_NIL));
       }
@@ -136,7 +136,8 @@ namespace gr {
         throw std::runtime_error("no payload length found");
       }
       if(d_retx_buffer[qindex]==NULL){
-        d_retx_buffer[qindex] = new gr_complex[payload_size + d_hdr_sample_len];
+        // can reserve a sps for possible time offset
+        d_retx_buffer[qindex] = new gr_complex[payload_size + d_hdr_sample_len + 2*d_sps];
         d_retx_count++;
         //this is naive sample length
         d_retx_pkt_size[qindex] = payload_size + d_hdr_sample_len;
@@ -163,16 +164,20 @@ namespace gr {
       gr_complex sample_fix;
       pmt::pmt_t tmp_dict;
 
+      std::cout<<"info size:"<<d_info_index.size()<<std::endl;
+      std::cout<<"end_idx:"<<end_idx<<std::endl;
       while(count < d_info_index.size()){
         tmp_dict = d_buffer_info[count];
         cur_payload = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("payload"), pmt::PMT_NIL));
         cur_pkt_begin = d_info_index[count];
-        if(cur_pkt_begin + cur_payload + d_hdr_sample_len >= end_idx){
-          break;
-        }
-        if(count == d_info_index.size()-1){
-          next_pkt_begin = d_sample_size;
-          GR_LOG_WARN(d_logger, "index info reaching end of available information");
+        if(cur_pkt_begin + cur_payload + d_hdr_sample_len > end_idx){
+          if( abs(cur_pkt_begin + cur_payload + d_hdr_sample_len - end_idx) <=d_sps ){
+            next_pkt_begin = end_idx;  
+          }
+          else{
+            std::cout<<"break count:"<<count<<" ,cur_begin:"<<cur_pkt_begin<<" ,len:"<<cur_payload<<std::endl;
+            break;  
+          }
         }
         else{
           next_pkt_begin = d_info_index[count+1];  
@@ -248,6 +253,17 @@ namespace gr {
       pmt::pmt_t tmp_dict;
 
       sync_hdr_index(packet_len, buffer_info, info_index, end_idx);
+      if(d_debug){
+        std::cout<<"refined packet samples"<<std::endl;
+        for(int i=0;i<packet_len.size();++i){
+          int qidx, counter;
+          qidx = pmt::to_long(pmt::dict_ref(buffer_info[i], pmt::intern("queue_index"),pmt::PMT_NIL));
+          counter = pmt::to_long(pmt::dict_ref(buffer_info[i], pmt::intern("counter"),pmt::PMT_NIL));
+          std::cout<<"["<<i<<"]"<<"idx:"<<info_index[i]<<" ,pkt len:";
+          std::cout<<packet_len[i]<<" ,qidx:"<<qidx<<" ,counter:"<<counter<<std::endl;
+        }
+      }
+
 
       for(int i=0;i<d_retx_pkt_index.size();++i){
         if(d_retx_pkt_index[i]>last_cei_idx){
@@ -415,7 +431,7 @@ namespace gr {
         //update index
         while(d_last_info_idx<d_buffer_info.size()){
           pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::PMT_NIL));
-          valid_size = d_info_index[d_last_info_idx] + pld_len;
+          valid_size = d_info_index[d_last_info_idx] + pld_len + d_hdr_sample_len;
           if(valid_size>d_sample_size){
             //samples not enough
             return;
@@ -459,7 +475,7 @@ namespace gr {
         }//end while 
         
         sample_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[end_iter],pmt::intern("payload"),pmt::PMT_NIL));
-        sample_idx+= d_info_index[end_iter];
+        sample_idx+= (d_info_index[end_iter]+d_hdr_sample_len);
         if(success){
         // copy to another buffer?
         // do_interference cancellation 
