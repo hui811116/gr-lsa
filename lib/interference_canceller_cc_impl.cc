@@ -35,10 +35,6 @@ namespace gr {
 
 #define TWO_PI (2.0f*M_PI)
 
-    /*enum cancellerState{
-      RECEIVE,
-      OUTPUT
-    };*/
 
     interference_canceller_cc::sptr
     interference_canceller_cc::make(const std::vector<gr_complex>& clean_preamble,
@@ -74,7 +70,6 @@ namespace gr {
       d_sps(sps)
     {
       d_sensing_tagname = pmt::string_to_symbol(sensing_tagname);
-      //const size_t capacity = 1024*4096;
       d_sample_buffer = new gr_complex[d_cap];
       d_sample_size =0;
       d_sample_idx =0;
@@ -91,8 +86,6 @@ namespace gr {
       d_retx_buffer.clear(); 
       d_retx_pkt_size.clear();
       d_buffer_info.clear();
-
-      //d_state = RECEIVE;
       d_debug = debug;
       set_tag_propagation_policy(TPP_DONT);
 
@@ -128,7 +121,6 @@ namespace gr {
       int pkt_begin_idx = offset - d_hdr_sample_len;
       if(pmt::dict_has_key(hdr_info, pmt::intern("payload"))){
         payload_size = pmt::to_long(pmt::dict_ref(hdr_info, pmt::intern("payload"), pmt::PMT_NIL));
-        //payload_size+= d_hdr_sample_len;
       }
       if(d_retx_buffer.empty()){
         d_retx_buffer.resize(qsize,NULL);
@@ -268,7 +260,8 @@ namespace gr {
         freq_offset = pmt::to_float(pmt::dict_ref(retx_hdr_info[i],pmt::intern("freq_est"),pmt::PMT_NIL));
         freq_offset/= static_cast<float>(d_sps);
         //FIXME
-        //carrier frequency and phase correction for retransmission.
+        // carrier frequency and phase correction for retransmission.
+        // this method performs so poor!
         for(int j=0;j<d_retx_pkt_size[i];++j){
           sample_fix = d_sample_buffer[d_retx_pkt_index[i]+j] * gr_expj(-phase_shift);
           d_retx_buffer[i][j] = sample_fix;
@@ -290,12 +283,12 @@ namespace gr {
     {
       
       int end_idx = d_end_index.front();
-
+      d_end_index.erase(d_end_index.begin());
       //do signal processing here,
       
       //move result to output buffer
       //push back output_index
-
+      std::cout<<"<debug>: do interference cancellation calling update system index"<<std::endl;
       update_system_index(end_idx);
       /*
 
@@ -450,11 +443,11 @@ namespace gr {
             //samples not enough
             return;
           }
-          if(pmt::dict_has_key(d_buffer_info[d_last_info_idx],pmt::intern("retx_idx"))){
-            qidx = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("retx_idx"),pmt::PMT_NIL));
+          if(pmt::dict_has_key(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"))){
+            qidx = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
           }
-          if(pmt::dict_has_key(d_buffer_info[d_last_info_idx],pmt::intern("retx_size"))){
-            qsize = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("retx_size"),pmt::PMT_NIL));
+          if(pmt::dict_has_key(d_buffer_info[d_last_info_idx],pmt::intern("queue_size"))){
+            qsize = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_size"),pmt::PMT_NIL));
           }
           if(qidx==0 && qsize==0 && !d_retx_buffer.empty()){
             //this case meant for end of retransmission.
@@ -468,10 +461,11 @@ namespace gr {
             break;
           }
           retx_check(d_buffer_info[d_last_info_idx],qidx,qsize,d_info_index[d_last_info_idx]);
-          if(d_retx_count == d_retx_buffer.size()){
+          if(!d_retx_buffer.empty() && d_retx_count == d_retx_buffer.size()){
             //interference cancellation available
             end_iter = d_last_info_idx;
             success = true;
+            d_last_info_idx++;
             break;
           }
           d_last_info_idx++;
@@ -484,9 +478,16 @@ namespace gr {
         // do_interference cancellation 
         // move to output buffer?
           d_end_index.push_back(sample_idx);
-        //do_interference_cancellation(); //move flow to general work;
+          if(d_debug){
+            std::cout<<"<debug>" <<"interference cancellation available!"<<std::endl;
+            for(int i=0;i<d_retx_pkt_index.size();++i){
+              std::cout<<"["<<i<<"] "<<d_retx_pkt_index[i]<<std::endl;
+            }
+            std::cout<<"************************************************"<<std::endl;
+          }
         }
         else if(failed){
+          std::cout<<"<debug>: failed calling update system index to fix info"<<std::endl;
           update_system_index(sample_idx);
         }//other cases?
       }
@@ -495,16 +496,18 @@ namespace gr {
     void
     interference_canceller_cc_impl::update_system_index(int queue_index)
     {
-      //move samples
+      // move samples
       int new_size = d_sample_size-queue_index;
-      for(int i=0;i<new_size;++i){
-        d_sample_buffer[i] = d_sample_buffer[queue_index+i];
-      }
+      memcpy(d_sample_buffer, d_sample_buffer+queue_index, sizeof(gr_complex)*new_size);
+
+      d_sample_size = new_size;
+      d_sample_idx = 0;
+
       std::vector<int> new_info_index;
       std::vector<int> new_end_idx;
       int rm_count=0;
       
-      //update info index
+      // update info index
       for(int i=0;i<d_info_index.size();++i){
         int tmp_idx = d_info_index[i] - queue_index;
         if(tmp_idx<0){
@@ -514,13 +517,13 @@ namespace gr {
         new_info_index.push_back(d_info_index[i]-queue_index);
       }
       d_info_index = new_info_index;
-      //update buffer info
+      // update buffer info
       if(rm_count>0){
         d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+rm_count);  
       }
-      //update last info index
+      // update last info index
       d_last_info_idx = 0;
-      //update end index
+      // update end index
       for(int i=0;i<d_end_index.size();++i){
         d_end_index[i] -= queue_index;
         if(d_end_index[i]>=0){
@@ -528,7 +531,8 @@ namespace gr {
         }
       }
       d_end_index = new_end_idx;
-      //update retx info
+      // update retx info
+      // this is a passive method, resynchronization to maintain hdr info.
       d_retx_count = 0;
       d_retx_pkt_size.clear();
       d_retx_pkt_index.clear();
@@ -541,28 +545,29 @@ namespace gr {
 
     }
     void
-    interference_canceller_cc_impl::tags_handler(std::vector<tag_t>& tags)
+    interference_canceller_cc_impl::tags_handler(std::vector<tag_t>& tags, int nin)
     {
       int qsize, qidx;
       int offset;
       int begin_hdr_idx;
 
+      // this should be for new tags
+      // using tag absolute offset is a terrible idea. 
+
       for(int i=0;i<tags.size();++i){
         std::vector<tag_t> tmp_tags;
-        get_tags_in_range(tmp_tags, 0,tags[i].offset,tags[i].offset);
+        get_tags_in_range(tmp_tags, 0,tags[i].offset,tags[i].offset+d_sps);
         offset = tags[i].offset - nitems_read(0);
         if(!tmp_tags.empty()){
           pmt::pmt_t dict = pmt::make_dict();
           for(int j =0;j<tmp_tags.size();++j){
             dict = pmt::dict_add(dict, tmp_tags[j].key, tmp_tags[j].value);
           }
-          if(d_debug){
-            std::cout<<"buffer info added:"<<dict<<std::endl;
-          }
           d_buffer_info.push_back(dict);
           //hdr sample len is for preamble length
           begin_hdr_idx = d_sample_size + offset - d_hdr_sample_len; 
           if(begin_hdr_idx <0){
+            std::cout<<"<debug>"<<"sample_size:"<<d_sample_size<<" ,offset:"<<offset<<" ,d_hdr_sample_len:"<<d_hdr_sample_len<<std::endl;
             GR_LOG_WARN(d_logger,"header begins at negative index");
             begin_hdr_idx = 0;
           }
@@ -579,26 +584,10 @@ namespace gr {
 
       int space = d_cap -d_sample_size;
 
+      items_reqd = (noutput_items>space) ? space : noutput_items;
       for(int i=0;i<ninput_items_required.size();++i){
-             ninput_items_required[i] = (noutput_items>space) ? space : noutput_items;
+             ninput_items_required[i] = items_reqd;
           }    
-      /*
-      switch(d_state)
-      {
-        case RECEIVE:
-          for(int i=0;i<ninput_items_required.size();++i){
-             ninput_items_required[i] = noutput_items;
-          }    
-        break;
-        case OUTPUT:
-          for(int i=0;i<ninput_items_required.size();++i)
-            ninput_items_required[i] = 0;
-        break;
-        default:
-          std::runtime_error("Entering wrong state");
-        break;
-      }
-      */
     }
 
     int
@@ -613,97 +602,35 @@ namespace gr {
       float* eng =(have_eng) ?  (float*) output_items[1] : NULL;
       int count = 0; //for outputs
       int nin = (ninput_items[0]>noutput_items) ? noutput_items : ninput_items[0];
+      // maintain queue size
+      if(d_cap-d_sample_size < noutput_items){
+        update_system_index(d_cap/2);
+      }
       nin = (d_cap - d_sample_size > nin) ? nin : (d_cap - d_sample_size);
-      //handle sample_size properly;
+      // handle sample_size properly;
       memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)* nin);
       // Do <+signal processing+>
       std::vector<tag_t> tags;
       get_tags_in_window(tags, 0,0 ,nin, pmt::intern("header_found"));
-      //insert tags as dictionaries. 
-      tags_handler(tags); 
-      //checking interference cancellation availability
+      // insert tags as dictionaries. 
+      tags_handler(tags, nin);
+      // update sample size
+      d_sample_size+=nin; 
+      // checking interference cancellation availability
       cancellation_detector();
       if(!d_end_index.empty()){
         do_interference_cancellation();
         //do one end index
       }
-      //output status checking
+      // output status checking
       if(!d_out_index.empty()){
         output_result(noutput_items, out, eng);
       }
-/*
-      switch(d_state)
-      {
-        case RECEIVE:
-          for(int i=0;i<nin;++i){
-        count++;
-        if(!tags.empty()){
-        int offset = tags[0].offset - nitems_read(0);
-          if(offset == i){
-            d_sample_idx = 0;
-            d_sample_size = 0;
-            tags.erase(tags.begin());
-          }
-        }
-        
-        if(!hdr_tags.empty()){
-          int offset = hdr_tags[0].offset - nitems_read(0);
-          if(i==offset){
-            std::vector<tag_t> tmp_tags;
-            //window size?
-            get_tags_in_window(tmp_tags, 0,i, i+4);
-            pmt::pmt_t tmp_dict=pmt::make_dict();
-            for(int j=0;j<tmp_tags.size();++j){
-              tmp_dict = pmt::dict_add(tmp_dict, tmp_tags[j].key, tmp_tags[j].value);
-            }
-            if(pmt::dict_has_key(tmp_dict, pmt::intern("retx_idx"))){
-              retx_handler(tmp_dict, d_sample_idx);
-            }
-            if(pmt::dict_has_key(tmp_dict, pmt::intern("header_found"))){
-              header_handler(tmp_dict, d_sample_idx);
-            }
-            hdr_tags.erase(hdr_tags.begin());
-          }
-        }
-        d_sample_buffer[d_sample_idx++] = in[i];
-        d_sample_size++;
-
-        if(!end_tags.empty()){
-        int offset = end_tags.back().offset - nitems_read(0);
-        //output
-        if(offset == i){
-          do_interference_cancellation();
-        d_retx_count=0;
-        for(int i=0;i<d_retx_buffer.size();++i){
-          if(d_retx_buffer[i]!=NULL)
-          delete [] d_retx_buffer[i];
-        }
-          d_retx_buffer.clear();
-          d_retx_pkt_size.clear();
-          d_retx_pkt_index.clear();
-          d_buffer_info.clear();
-          d_info_index.clear();
-          d_sample_idx = 0;
-          d_sample_size =0;
-          d_state = OUTPUT;  
-          end_tags.erase(end_tags.begin());
-          break;
-        }
-        }
+      else{
+        produce(0,0);
       }
-        consume_each(count);
-        break;
-        case OUTPUT:
-          output_result(noutput_items, out, eng);
-          consume_each(0);
-        break;
-      }
-      */
       consume_each(nin);
-      // Tell runtime system how many input items we consumed on
-      // each input stream.
-      
-      // Tell runtime system how many output items we produced.
+
       return WORK_CALLED_PRODUCE;
     }
 

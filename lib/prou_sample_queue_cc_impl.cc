@@ -58,7 +58,7 @@ namespace gr {
       d_timeout = 5.0;
       d_last_time = d_update_time;
       d_current_time = d_update_time;
-      d_retx_count = 0;
+      //d_retx_count = 0;
       d_sensing_tagname = pmt::string_to_symbol(sensing_tagname);
       
       d_debug = debug;
@@ -108,11 +108,7 @@ namespace gr {
       }
       long int tmp_time;
       int tmp_idx;
-      bool retx_update=false;
-      if( (qsize!=0) && (d_retx_status.empty()) ){
-            d_retx_status.resize(qsize,false);
-            d_retx_count = 0;
-      } 
+      
       if(!sensing_state){
             for(int i=0;i<d_buffer_info.size();++i){
               tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("ctime"),pmt::PMT_NIL));
@@ -125,16 +121,8 @@ namespace gr {
                 //this tag should be different from feedback, since it will be used by down stream
                 info_tag = pmt::dict_delete(info_tag, pmt::intern("buffer_offset"));
                 info_tag = pmt::dict_add(info_tag, pmt::intern("header_found"), pmt::from_long(info_index));
-                if((qsize!=0) &&(qsize == d_retx_status.size()) && 
-                  (qidx < qsize) && (d_retx_status[qidx] == false) ){
-                  retx_update = true;
-                  d_retx_status[qidx] = true;
-                  d_retx_count++;
-                  info_tag = pmt::dict_add(info_tag, pmt::intern("retx_idx"), pmt::from_long(qidx));
-                  info_tag = pmt::dict_add(info_tag, pmt::intern("retx_size"), pmt::from_long(qsize));
-                }
-                  d_pkt_info.push_back(info_tag);
-                  break;
+                d_pkt_info.push_back(info_tag);
+                break;
                 }
               }
             }
@@ -221,6 +209,8 @@ namespace gr {
             break;
           }          
           d_last_time = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
+          d_pkt_info[0] = pmt::dict_delete(d_pkt_info[0],pmt::intern("ctime"));
+          //d_pkt_info[0] = pmt::dict_delete(d_pkt_info[0],pmt::intern("header_found"));
           pmt::pmt_t dict = pmt::dict_items(d_pkt_info[0]);
           while(!pmt::is_null(dict)){
             pmt::pmt_t tmp_pair = pmt::car(dict);
@@ -324,12 +314,6 @@ namespace gr {
       append_samples(in,ninput_items[0],noutput_items,consume_count,d_current_time);
       out_items_handler(out,sample,in,noutput_items, consume_count);
       consume_each(consume_count);
-      /*if(d_debug){
-        std::cout<<"noutput_items:"<<noutput_items;
-        std::cout<<" ,consume:"<<consume_count<<std::endl;
-        std::cout<<"d_current_time:"<<d_current_time;
-        std::cout<<" ,d_update_time:"<<d_update_time<<std::endl;
-      }*/
 
       return WORK_CALLED_PRODUCE;
     }

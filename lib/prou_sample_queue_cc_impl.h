@@ -47,8 +47,8 @@ namespace gr {
       float d_timeout;
 
       //for sensing and retransmission
-      std::vector<bool> d_retx_status;
-      int d_retx_count;
+      //std::vector<bool> d_retx_status;
+      //int d_retx_count;
 
       bool d_debug;
       //helper function

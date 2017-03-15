@@ -34,7 +34,6 @@ namespace gr {
       pmt::pmt_t d_sensing_tagname;
       std::vector<gr_complex> d_clean_preamble;
 
-      //int d_state;
       bool d_debug;
 
       int d_sps;
@@ -71,7 +70,7 @@ namespace gr {
       int d_cei_pkt_counter;
       int d_cei_sample_counter;
 
-      void tags_handler(std::vector<tag_t>& tags);
+      void tags_handler(std::vector<tag_t>& tags, int nin);
       void update_system_index(int queue_index);
 
       void retx_check(pmt::pmt_t hdr_info, int qindex,int qsize,int offset);
