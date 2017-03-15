@@ -59,24 +59,26 @@ namespace gr {
       std::vector<gr_complex*> d_retx_buffer;
       std::vector<int> d_retx_pkt_size;
       std::vector<int> d_retx_pkt_index;
+      std::vector<pmt::pmt_t> d_retx_info;
       int d_retx_count;
 
+      // for header labeling
       std::vector<pmt::pmt_t> d_buffer_info;
       std::vector<int> d_info_index;
 
       std::vector<int> d_end_index;
       std::vector<int> d_out_index;
 
-      int d_cei_pkt_counter;
-      int d_cei_sample_counter;
-
       void tags_handler(std::vector<tag_t>& tags, int nin);
       void update_system_index(int queue_index);
 
       void retx_check(pmt::pmt_t hdr_info, int qindex,int qsize,int offset);
-      void header_handler(pmt::pmt_t hdr_info, int index);
       void do_interference_cancellation();
-      void sync_hdr_index(std::vector<int>& coerced_packet_len);
+      void sync_hdr_index(
+        std::vector<int>& coerced_packet_len,
+        std::vector<pmt::pmt_t>& buffer_info,
+        std::vector<int>& info_index, 
+        int end_idx);
 
       void cancellation_detector();
 
