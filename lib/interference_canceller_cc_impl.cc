@@ -164,8 +164,8 @@ namespace gr {
       gr_complex sample_fix;
       pmt::pmt_t tmp_dict;
 
-      std::cout<<"info size:"<<d_info_index.size()<<std::endl;
-      std::cout<<"end_idx:"<<end_idx<<std::endl;
+      //std::cout<<"info size:"<<d_info_index.size()<<std::endl;
+      //std::cout<<"end_idx:"<<end_idx<<std::endl;
       while(count < d_info_index.size()){
         tmp_dict = d_buffer_info[count];
         cur_payload = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("payload"), pmt::PMT_NIL));
@@ -175,7 +175,7 @@ namespace gr {
             next_pkt_begin = end_idx;  
           }
           else{
-            std::cout<<"break count:"<<count<<" ,cur_begin:"<<cur_pkt_begin<<" ,len:"<<cur_payload<<std::endl;
+            //std::cout<<"break count:"<<count<<" ,cur_begin:"<<cur_pkt_begin<<" ,len:"<<cur_payload<<std::endl;
             break;  
           }
         }
@@ -275,16 +275,45 @@ namespace gr {
       retx_size = d_retx_buffer.size();
       cei_pkt_counter = last_cei_qiter;
       cei_sample_counter = d_retx_pkt_size[last_cei_qiter];
+      retx = d_retx_buffer[last_cei_qiter];
 
       total_size = d_retx_pkt_index[cei_pkt_counter] + d_retx_pkt_size[cei_pkt_counter];
 
       //d_output_size += total_size;
       d_out_index.push_back(d_output_size+total_size);
-      std::cout<<"output end size:"<<d_output_size+total_size<<std::endl;
+      //std::cout<<"output end size:"<<d_output_size+total_size<<std::endl;
       if(d_output_size+total_size >d_cap){
         throw std::runtime_error("output size greater than buffer capacity");
       }
       std::fill_n(d_output_buffer+d_output_size, total_size, gr_complex(0,0));
+
+      while(total_size>0){
+        //d_output_buffer[--total_size];
+        --total_size;
+        cei_sample_counter--;
+        if(!info_index.empty()){
+          int idx = info_index.back();
+          if(total_size==idx){
+            //update to previous info
+            //std::cout<<"popping info at index:"<<total_size<<std::endl;
+            cei_sample_counter=0;
+            buffer_info.pop_back();
+            info_index.pop_back();
+            packet_len.pop_back();
+          }
+          else if((cei_sample_counter==0) && (idx<total_size) ){
+            //std::cout<<"at index:"<<total_size<<"retransmission not enough, use first sample to subtract"<<std::endl;
+            cei_sample_counter++;
+          }
+        }
+        if(cei_sample_counter==0){
+          cei_pkt_counter = (cei_pkt_counter-1)%retx_size;
+          if(cei_pkt_counter<0)
+            cei_pkt_counter+= retx_size;
+          cei_sample_counter = d_retx_pkt_size[cei_pkt_counter];
+          //std::cout<<"at:"<<total_size<<"cei counter reach 0, update to next one:"<<cei_pkt_counter<<" ,len:"<<cei_pkt_counter<<std::endl;
+        }
+      }
 
       /*
       while(total_size>0)
@@ -363,15 +392,6 @@ namespace gr {
     void
     interference_canceller_cc_impl::output_result(int noutput_items, gr_complex* out, float* eng)
     {
-      /*
-      std::cout<<"*****************************************"<<std::endl;
-      std::cout<<"<debug> output_result: begin"<<std::endl;
-      std::cout<<"output index:"<<d_output_idx<<" output_size:"<<d_output_size<<std::endl;
-      std::cout<<"end indexes:"<<std::endl;
-      for(int i=0;i<d_out_index.size();++i){
-        std::cout<<"["<<i<<"]"<<d_out_index[i]<<std::endl;
-      }*/
-
       int out_count =0;
       int end_idx = d_out_index.front();
       int nout = (noutput_items > (d_output_size-d_output_idx)) ? (d_output_size-d_output_idx) : noutput_items;
@@ -402,18 +422,6 @@ namespace gr {
           }
         }
       }
-      /*
-      std::cout<<"-----------------------------------------------"<<std::endl;
-      std::cout<<"after update:"<<std::endl;
-      std::cout<<"nout:"<<nout<<std::endl;
-      std::cout<<"end idx:"<<std::endl;
-      for(int i=0;i<d_out_index.size();++i){
-        std::cout<<"["<<i<<"]"<<d_out_index[i]<<std::endl;
-      }
-      std::cout<<"output index:"<<d_output_idx<<" output_size:"<<d_output_size<<std::endl;
-      std::cout<<"<debug> output_result ends"<<std::endl;
-      std::cout<<"****************************************************"<<std::endl;
-      */
     }
 
     void
