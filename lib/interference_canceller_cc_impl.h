@@ -52,6 +52,9 @@ namespace gr {
       int d_output_size;
       int d_output_idx;
 
+      std::vector<pmt::pmt_t> d_out_info;
+      std::vector<int> d_out_info_idx;
+
       int d_sample_size;
       int d_sample_idx;
 

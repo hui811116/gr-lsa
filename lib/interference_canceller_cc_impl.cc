@@ -29,6 +29,8 @@
 #include <pmt/pmt.h>
 #include <gnuradio/math.h>
 #include <gnuradio/expj.h>
+#include <map>
+
 
 namespace gr {
   namespace lsa {
@@ -164,25 +166,25 @@ namespace gr {
       gr_complex sample_fix;
       pmt::pmt_t tmp_dict;
 
-      //std::cout<<"info size:"<<d_info_index.size()<<std::endl;
-      //std::cout<<"end_idx:"<<end_idx<<std::endl;
+      std::map<int,int> idx_iter_map;
+      std::map<int,int>::iterator it;
+
       while(count < d_info_index.size()){
         tmp_dict = d_buffer_info[count];
         cur_payload = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("payload"), pmt::PMT_NIL));
         cur_pkt_begin = d_info_index[count];
+        idx_iter_map.insert( std::pair<int,int>(d_info_index[count],count) );
         if(cur_pkt_begin + cur_payload + d_hdr_sample_len > end_idx){
           if( abs(cur_pkt_begin + cur_payload + d_hdr_sample_len - end_idx) <=d_sps ){
             next_pkt_begin = end_idx;  
           }
           else{
-            //std::cout<<"break count:"<<count<<" ,cur_begin:"<<cur_pkt_begin<<" ,len:"<<cur_payload<<std::endl;
             break;  
           }
         }
         else{
           next_pkt_begin = d_info_index[count+1];  
         }
-        
         test_pkt_len = next_pkt_begin - cur_pkt_begin - (cur_payload + d_hdr_sample_len);
         if( abs(test_pkt_len)<=d_sps ){
           fixed_pkt_len = cur_payload + d_hdr_sample_len + test_pkt_len;
@@ -206,6 +208,18 @@ namespace gr {
         //FIXME
         // carrier frequency and phase correction for retransmission.
         // this method performs so poor!
+        // use coerced packet len to copy retransmission
+        it = idx_iter_map.find(d_retx_pkt_index[i]);
+        if(it == idx_iter_map.end()){
+          throw std::runtime_error("cannot found the index of retransmission, terminate");
+        }
+        if(coerced_packet_len[it->second] > d_retx_pkt_size[i]+d_sps*2){
+          //resize to fit samples, normally should not happen...
+          delete [] d_retx_buffer[i];
+          d_retx_buffer[i] = new gr_complex[coerced_packet_len[it->second] + d_sps*2];
+        }
+        memcpy(d_retx_buffer[i], d_sample_buffer+(it->first), sizeof(gr_complex)*coerced_packet_len[it->second]);
+        d_retx_pkt_size[i] = coerced_packet_len[it->second];
         /*
         for(int j=0;j<d_retx_pkt_size[i];++j){
           sample_fix = d_sample_buffer[d_retx_pkt_index[i]+j] * gr_expj(-phase_shift);
@@ -219,7 +233,7 @@ namespace gr {
           }
         }*/
         // this is for non correcting case
-        memcpy(d_retx_buffer[i],d_sample_buffer+d_retx_pkt_index[i], sizeof(gr_complex)* d_retx_pkt_size[i]);
+        //memcpy(d_retx_buffer[i],d_sample_buffer+d_retx_pkt_index[i], sizeof(gr_complex)* d_retx_pkt_size[i]);
       }
 
     }
@@ -253,6 +267,13 @@ namespace gr {
       pmt::pmt_t tmp_dict;
 
       sync_hdr_index(packet_len, buffer_info, info_index, end_idx);
+
+      for(int i=0;i<buffer_info.size();++i){
+        d_out_info.push_back(buffer_info[i]);
+        d_out_info_idx.push_back(info_index[i]);
+      }
+
+
       if(d_debug){
         std::cout<<"refined packet samples"<<std::endl;
         for(int i=0;i<packet_len.size();++i){
@@ -261,6 +282,10 @@ namespace gr {
           counter = pmt::to_long(pmt::dict_ref(buffer_info[i], pmt::intern("counter"),pmt::PMT_NIL));
           std::cout<<"["<<i<<"]"<<"idx:"<<info_index[i]<<" ,pkt len:";
           std::cout<<packet_len[i]<<" ,qidx:"<<qidx<<" ,counter:"<<counter<<std::endl;
+        }
+        std::cout<<"retransmission:"<<std::endl;
+        for(int i=0;i<d_retx_count;++i){
+          std::cout<<"["<<i<<"]"<<d_retx_pkt_size[i]<<std::endl;
         }
       }
 
@@ -288,21 +313,20 @@ namespace gr {
       std::fill_n(d_output_buffer+d_output_size, total_size, gr_complex(0,0));
 
       while(total_size>0){
-        //d_output_buffer[--total_size];
-        --total_size;
+        total_size--;
         cei_sample_counter--;
+        d_output_buffer[d_output_size+total_size] = d_sample_buffer[total_size] - retx[cei_sample_counter];
+        
         if(!info_index.empty()){
           int idx = info_index.back();
           if(total_size==idx){
             //update to previous info
-            //std::cout<<"popping info at index:"<<total_size<<std::endl;
             cei_sample_counter=0;
             buffer_info.pop_back();
             info_index.pop_back();
             packet_len.pop_back();
           }
           else if((cei_sample_counter==0) && (idx<total_size) ){
-            //std::cout<<"at index:"<<total_size<<"retransmission not enough, use first sample to subtract"<<std::endl;
             cei_sample_counter++;
           }
         }
@@ -311,7 +335,6 @@ namespace gr {
           if(cei_pkt_counter<0)
             cei_pkt_counter+= retx_size;
           cei_sample_counter = d_retx_pkt_size[cei_pkt_counter];
-          //std::cout<<"at:"<<total_size<<"cei counter reach 0, update to next one:"<<cei_pkt_counter<<" ,len:"<<cei_pkt_counter<<std::endl;
         }
       }
 
@@ -399,6 +422,8 @@ namespace gr {
       memcpy(out,d_output_buffer+d_output_idx,sizeof(gr_complex)*nout);
          
       produce(0,nout);
+      if(nout==0)
+        return;
       if(eng!=NULL && (nout!=0))
       {
         volk_32fc_magnitude_squared_32f(d_eng_buffer, d_output_buffer+d_output_idx, nout);
@@ -407,6 +432,19 @@ namespace gr {
         }
         produce(1,nout);
       }
+      //add_item_tag(0,nitems_written(0),pmt::intern("out_begin"),pmt::from_long(87));
+      while(!d_out_info.empty()){
+        if(d_out_info_idx[0]>(d_output_idx+nout)){
+          break;
+        }
+          int counter = pmt::to_long(pmt::dict_ref(d_out_info[0],pmt::intern("counter"),pmt::PMT_NIL));
+          std::cout<<"index:"<<d_out_info_idx[0]<<"nout:"<<nout<<"output_idx:"<<d_output_idx<<std::endl;
+          add_item_tag(0,nitems_written(0)+d_out_info_idx[0]+(64/d_bps*d_sps),pmt::intern("counter"),pmt::from_long(counter));
+          d_out_info.erase(d_out_info.begin());
+          d_out_info_idx.erase(d_out_info_idx.begin());
+      }
+
+
       d_output_idx += nout;
       //update output buffer
       if(d_output_idx >= end_idx){
@@ -421,6 +459,15 @@ namespace gr {
             throw std::runtime_error("output index cannot be negative");
           }
         }
+        //for(int i=0;i<d_out_info_idx.size();++i){
+          //d_out_info_idx[i]-= end_idx;
+          //if(d_out_info_idx[i]<0){
+            //throw std::runtime_error("output info index cannot be negative");
+          //}
+        //}
+        //cheating method;
+        d_out_info.clear();
+        d_out_info_idx.clear();
       }
     }
 
@@ -491,10 +538,6 @@ namespace gr {
           d_end_index.push_back(sample_idx);
           if(d_debug){
             std::cout<<"<debug>" <<"interference cancellation available!"<<std::endl;
-            for(int i=0;i<d_retx_pkt_index.size();++i){
-              std::cout<<"["<<i<<"] "<<d_retx_pkt_index[i]<< " ,pkt size:"<<d_retx_pkt_size[i]<< std::endl;
-            }
-            std::cout<<"************************************************"<<std::endl;
           }
         }
         else if(failed){
@@ -580,7 +623,7 @@ namespace gr {
           //hdr sample len is for preamble length
           begin_hdr_idx = d_sample_size + offset - d_hdr_sample_len; 
           if(begin_hdr_idx <0){
-            std::cout<<"<debug>"<<"sample_size:"<<d_sample_size<<" ,offset:"<<offset<<" ,d_hdr_sample_len:"<<d_hdr_sample_len<<std::endl;
+            //std::cout<<"<debug>"<<"sample_size:"<<d_sample_size<<" ,offset:"<<offset<<" ,d_hdr_sample_len:"<<d_hdr_sample_len<<std::endl;
             GR_LOG_WARN(d_logger,"header begins at negative index");
             begin_hdr_idx = 0;
           }

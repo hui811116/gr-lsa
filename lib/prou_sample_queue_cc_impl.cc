@@ -44,7 +44,7 @@ namespace gr {
       : gr::block("prou_sample_queue_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(2, 2, sizeof(gr_complex))),
-      d_sample_cap(1024*1024)
+      d_sample_cap(128*1024)
     {
       d_sample_idx = 0;
       d_sample_size =0;
@@ -182,7 +182,7 @@ namespace gr {
       }
       
         end_idx = 0;
-        pkt_count = 0;
+        //pkt_count = 0;
         while(pkt_count<d_pkt_info.size()){
           hdr_idx = pmt::to_long(pmt::dict_ref(d_pkt_info[pkt_count],pmt::intern("header_found"),pmt::PMT_NIL));
           tmp_pld = pmt::to_long(pmt::dict_ref(d_pkt_info[pkt_count],pmt::intern("payload"),pmt::PMT_NIL));
@@ -190,14 +190,14 @@ namespace gr {
           if(hdr_idx >= (d_sample_idx + output_size)){
             break;
           }
-          pkt_count++;
+          //pkt_count++;
         }
         output_size = d_sample_size - d_sample_idx;
         output_size = (output_size > noutput_items) ? noutput_items : output_size;
-        if(d_debug){
-          std::cout<<"<debug>output:"<<output_size<<" ,d_sample_idx:"<<d_sample_idx<<" ,d_sample_size"
-          <<d_sample_size<<" ,end_idx:"<<end_idx<<std::endl;
-        }
+        //if(d_debug){
+          //std::cout<<"<debug>output:"<<output_size<<" ,d_sample_idx:"<<d_sample_idx<<" ,d_sample_size"
+          //<<d_sample_size<<" ,end_idx:"<<end_idx<<std::endl;
+        //}
         if(end_idx==0){
           produce(1,0);
           return;
@@ -210,7 +210,6 @@ namespace gr {
           }          
           d_last_time = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
           d_pkt_info[0] = pmt::dict_delete(d_pkt_info[0],pmt::intern("ctime"));
-          //d_pkt_info[0] = pmt::dict_delete(d_pkt_info[0],pmt::intern("header_found"));
           pmt::pmt_t dict = pmt::dict_items(d_pkt_info[0]);
           while(!pmt::is_null(dict)){
             pmt::pmt_t tmp_pair = pmt::car(dict);
@@ -247,7 +246,7 @@ namespace gr {
         if(rm_count==0)
           return;
         d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+rm_count);
-        tmp_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[rm_count],pmt::intern("buffer_index"),pmt::PMT_NIL));
+        tmp_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("buffer_index"),pmt::PMT_NIL));
         for(int i=0;i<d_buffer_info.size();++i){
           int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("buffer_index"),pmt::PMT_NIL));
           d_buffer_info[i] = pmt::dict_delete(d_buffer_info[i],pmt::intern("buffer_index"));
@@ -265,11 +264,17 @@ namespace gr {
         d_update_time = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
         d_pkt_info = new_pkt_info;
         memcpy(d_sample_buffer, d_sample_buffer+tmp_idx, sizeof(gr_complex)* (d_sample_size-tmp_idx));
-        d_sample_idx -= tmp_idx;//bug here
-        d_sample_size-= tmp_idx;
-        if(d_sample_idx<0){
+        if(d_sample_idx-tmp_idx<0){
+          std::cout<<"ERROR:"<<std::endl;
+          std::cout<<"sample index:"<<d_sample_idx<<" ,sample_size:"<<d_sample_size<<" ,tmp_idx:"<<tmp_idx<<" ,rm_count:"<<rm_count<<std::endl;
           throw std::runtime_error("sample index cannot be negative");
         }
+        //std::cout<<"sample index:"<<d_sample_idx<<" ,sample_size:"<<d_sample_size<<" ,tmp_idx:"<<tmp_idx<<" ,rm_count:"<<rm_count<<std::endl;
+        //std::cout<<"buffer_info:"<<d_buffer_info[0]<<std::endl;
+        //std::cout<<"pkt_info:"<<d_pkt_info[0]<<std::endl;
+        d_sample_idx -= tmp_idx;//bug here
+        d_sample_size-= tmp_idx;
+        
     }
 
     void
