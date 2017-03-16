@@ -26,6 +26,8 @@
 #include "lsa/burst_tagger_cc.h"
 #include "lsa/protocol_parser_b.h"
 #include "lsa/correlate_sync_cc.h"
+#include "lsa/symbol_queue_receiver_cc.h"
+#include "lsa/symbol_level_ic_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -61,3 +63,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, burst_tagger_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, protocol_parser_b);
 %include "lsa/correlate_sync_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, correlate_sync_cc);
+%include "lsa/symbol_queue_receiver_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, symbol_queue_receiver_cc);
+%include "lsa/symbol_level_ic_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, symbol_level_ic_cc);

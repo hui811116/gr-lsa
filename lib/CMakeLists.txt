@@ -37,7 +37,9 @@ list(APPEND lsa_sources
     interference_canceller_cc_impl.cc
     burst_tagger_cc_impl.cc
     protocol_parser_b_impl.cc 
-    correlate_sync_cc_impl.cc )
+    correlate_sync_cc_impl.cc
+    symbol_queue_receiver_cc_impl.cc
+    symbol_level_ic_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
