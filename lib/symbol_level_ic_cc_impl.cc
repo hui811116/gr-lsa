@@ -82,6 +82,7 @@ namespace gr {
 
       d_eng = (float*) volk_malloc(sizeof(float)*d_cap, volk_get_alignment());
       d_sensing = pmt::string_to_symbol("sensing");
+      set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -119,7 +120,7 @@ namespace gr {
         qidx = pmt::to_long(pmt::dict_ref(d_buf_info[d_info_count], pmt::intern("queue_index"), pmt::PMT_NIL));
         qsize = pmt::to_long(pmt::dict_ref(d_buf_info[d_info_count], pmt::intern("queue_size"), pmt::PMT_NIL));
         pld = pmt::to_long(pmt::dict_ref(d_buf_info[d_info_count], pmt::intern("payload"), pmt::PMT_NIL));
-        if(d_info_idx[d_info_count]+pld > d_buf_size){
+        if( (d_info_idx[d_info_count]+pld+4096) > (d_buf_size) ){
           //symbols not enough
           break;
         }
@@ -141,7 +142,8 @@ namespace gr {
           }
           if(d_retx_buffer[qidx]==NULL){
             d_retx_buffer[qidx] = new gr_complex[d_hdr_len+pld+d_bps]; // d_bps as guard
-            d_retx_idx[qidx] = d_info_idx[d_info_count];
+            d_retx_idx[qidx] = d_info_idx[d_info_count]-d_hdr_len;
+            d_retx_idx[qidx] = (d_retx_idx[qidx]<0)?0:d_retx_idx[qidx];
             d_retx_count++;
             d_retx_pld[qidx] = pld;
           }  
@@ -180,6 +182,8 @@ namespace gr {
             d_info_idx[i]-=end_idx;
           }  
         }
+        for(int i=0;i<d_end_idx.size();++i)
+          d_end_idx[i]-= end_idx;
     }
     void
     symbol_level_ic_cc_impl::clean_retx()
@@ -197,10 +201,79 @@ namespace gr {
     void
     symbol_level_ic_cc_impl::do_interference_cancellation()
     {
+      /*
+      std::cout<<"******************cancel******************"<<std::endl;
+      std::cout<<"info:"<<std::endl;
+      for(int i=0;i<=d_info_count;i++){
+        std::cout<<"["<<i<<"]"<<"{"<<d_info_idx[i]<<"}"<<d_buf_info[i]<<std::endl;
+      }
+      std::cout<<"*******************************************"<<std::endl;
+      */
+      for(int i=0;i<d_retx_buffer.size();++i){
+        memcpy(d_retx_buffer[i],d_buffer+d_retx_idx[i],sizeof(gr_complex)*(d_retx_pld[i]+d_hdr_len));
+      }
+
+      int cei_pkt_count, cei_len_count;
       int end_idx = d_end_idx.front();
+      int qsize = d_retx_buffer.size();
+      gr_complex* retx;
+      //int offset;
       d_end_idx.erase(d_end_idx.begin());
-      memcpy(d_output_buffer+d_out_idx, d_buffer, sizeof(gr_complex)*end_idx);
+
+      std::vector<int> idx_copy(d_info_idx.begin(), d_info_idx.begin()+d_info_count+1);
+      cei_pkt_count = pmt::to_long(pmt::dict_ref(d_buf_info[d_info_count],pmt::intern("queue_index"),pmt::PMT_NIL));
+      cei_len_count = d_retx_pld[cei_pkt_count]+d_hdr_len;
+      retx = d_retx_buffer[cei_pkt_count];
+      //offset = d_info_idx[d_info_count]-d_hdr_len;
+      int idx_offset = idx_copy.back()-d_hdr_len;
+      if(idx_offset > end_idx-1)
+        GR_LOG_WARN(d_logger,"last index exceed ending index");
+
+      for(int i=end_idx-1;i>=0;i--){
+        d_output_buffer[d_out_size+i] = d_buffer[i] - retx[--cei_len_count];
+        if( (i>idx_offset) && (cei_len_count<0) ){
+          cei_len_count=1;
+        }
+        if(i==idx_offset){
+          idx_copy.pop_back();
+          if(!idx_copy.empty())
+            idx_offset=idx_copy.back();
+          else
+            idx_offset=0;
+          cei_len_count=-1;
+        }
+        if(cei_len_count<0){
+          cei_pkt_count = (cei_pkt_count-1) % qsize;
+          if(cei_pkt_count<0)
+            cei_pkt_count+= qsize;
+          cei_len_count = d_retx_pld[cei_pkt_count]+d_hdr_len;
+          retx = d_retx_buffer[cei_pkt_count];
+        }
+      }
+
+      //memcpy(d_output_buffer+d_out_size, d_buffer, sizeof(gr_complex)*end_idx);
       d_out_size+=end_idx;
+      //d_info_count++;//add one to pass over last retransmission
+      if(d_info_idx.size()>d_info_count+1){
+        int next_begin = d_info_idx[d_info_count+1];
+        if(end_idx> next_begin){
+          end_idx = next_begin;
+        }
+      }
+      memcpy(d_buffer,d_buffer+end_idx, sizeof(gr_complex)* end_idx);
+      //std::cout<<"buf size:"<<d_buf_size<< " ,end_idx;"<<end_idx<<std::endl;
+      d_buf_size -= end_idx;
+      d_buf_idx =0;
+      d_buf_info.erase(d_buf_info.begin(),d_buf_info.begin()+d_info_count+1);
+      d_info_idx.erase(d_info_idx.begin(),d_info_idx.begin()+d_info_count+1);
+      for(int i=0;i<d_info_idx.size();++i){
+        //std::cout<<"info:"<<d_buf_info[i]<<std::endl;
+        d_info_idx[i]-= end_idx;
+      }
+      for(int i=0;i<d_end_idx.size();++i){
+        d_end_idx[i]-= end_idx;
+      }
+      d_info_count=0;
     }
 
     void
@@ -240,14 +313,14 @@ namespace gr {
       int count=0;
       consume = (ninput_items[0]>consume) ? consume : ninput_items[0];
       memcpy(d_buffer, in, sizeof(gr_complex)* consume);
-      d_buf_size+=consume;
+      
       std::vector<tag_t> tags, qs_tags, qi_tags, c_tags, pld_tags;
 
-      get_tags_in_window(tags,0,0,consume,pmt::intern("LSA_hdr"));
-      get_tags_in_window(qs_tags,0,0,consume,pmt::intern("queue_size"));
-      get_tags_in_window(qi_tags,0,0,consume,pmt::intern("queue_index"));
-      get_tags_in_window(c_tags,0,0,consume,pmt::intern("counter"));
-      get_tags_in_window(pld_tags,0,0,consume,pmt::intern("payload"));
+      get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+consume,pmt::intern("LSA_hdr"));
+      get_tags_in_range(qs_tags,0,nitems_read(0),nitems_read(0)+consume,pmt::intern("queue_size"));
+      get_tags_in_range(qi_tags,0,nitems_read(0),nitems_read(0)+consume,pmt::intern("queue_index"));
+      get_tags_in_range(c_tags,0,nitems_read(0),nitems_read(0)+consume,pmt::intern("counter"));
+      get_tags_in_range(pld_tags,0,nitems_read(0),nitems_read(0)+consume,pmt::intern("payload"));
       while(!tags.empty()){
         pmt::pmt_t tmp_dict = pmt::make_dict();
         tmp_dict = pmt::dict_add(tmp_dict,qs_tags[0].key,qs_tags[0].value);
@@ -257,17 +330,19 @@ namespace gr {
 
         d_buf_info.push_back(tmp_dict);
         d_info_idx.push_back(tags[0].offset - nitems_read(0)+d_buf_size);
+        //std::cout<<"d_buf_size:"<<d_buf_size<<" ,offset:"<<tags[0].offset - nitems_read(0)+d_buf_size<<" ,info:"<<tmp_dict<<std::endl;
         tags.erase(tags.begin());
         qs_tags.erase(qs_tags.begin());
         qi_tags.erase(qi_tags.begin());
         c_tags.erase(c_tags.begin());
         pld_tags.erase(pld_tags.begin());
       }
+      d_buf_size+=consume;
       if(ic_detector()){
         //do_interference_cancellation;
         do_interference_cancellation();
         clean_retx();
-        clean_buffer();
+        //clean_buffer();
         //reset after cancellation
       }
       // Do <+signal processing+>
@@ -284,6 +359,7 @@ namespace gr {
           volk_32fc_magnitude_squared_32f(d_eng, d_output_buffer+d_out_idx, count);
           memcpy(eng, d_eng, sizeof(float)*count);
         }
+        d_out_idx+=count;
       }
       if(2*d_out_idx>d_cap){
         memcpy(d_output_buffer, d_output_buffer+d_out_idx, sizeof(gr_complex)* (d_cap-d_out_idx));

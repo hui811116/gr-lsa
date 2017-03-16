@@ -78,7 +78,7 @@
     <type>complex</type>
   </source>
   <source>
-    <name>out</name>
+    <name>energy</name>
     <type>float</type>
     <optional>1</optional>
   </source>
