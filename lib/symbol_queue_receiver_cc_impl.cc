@@ -135,7 +135,7 @@ namespace gr {
     {
       unsigned char hold_byte;
       hold_byte = d_hdr_const->decision_maker(&symbol);
-      //hold_byte = d_hdr_pre_code[hold_byte];
+      hold_byte = d_hdr_pre_code[hold_byte];
       switch(d_state){
         case SEARCH:
           for(int i=0;i<d_hdr_bps;++i){

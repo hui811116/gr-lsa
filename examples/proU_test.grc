@@ -93,7 +93,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(192, 620)</value>
+      <value>(24, 540)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -147,7 +147,7 @@
     </param>
     <param>
       <key>type</key>
-      <value>qpsk</value>
+      <value>calcdist</value>
     </param>
     <param>
       <key>dims</key>
@@ -159,7 +159,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(24, 316)</value>
+      <value>(528, 40)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -260,7 +260,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(192, 748)</value>
+      <value>(24, 672)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -287,7 +287,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(200, 684)</value>
+      <value>(32, 604)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -318,7 +318,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 516)</value>
+      <value>(16, 416)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -384,7 +384,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 388)</value>
+      <value>(224, 460)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -415,7 +415,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(80, 396)</value>
+      <value>(16, 296)</value>
     </param>
     <param>
       <key>_rotation</key>

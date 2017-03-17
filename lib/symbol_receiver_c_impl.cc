@@ -72,6 +72,9 @@ namespace gr {
       d_pld_const = pld_const->base();
       d_hdr_bps = hdr_const->bits_per_symbol();
       d_pld_bps = pld_const->bits_per_symbol();
+      d_hdr_code = hdr_const->pre_diff_code();
+      d_pld_code = pld_const->pre_diff_code();
+
       d_state = SEARCH;
 
       d_hdr_port = pmt::mp("info");
@@ -203,6 +206,7 @@ namespace gr {
       switch(d_state){
         case SEARCH:
           hold_byte = d_hdr_const->decision_maker(&symbol);
+          hold_byte = d_hdr_code[hold_byte];
           for(int i=0;i<d_hdr_bps;++i){
             uint64_t check_bits = (~0ULL);
             d_data_reg = (d_data_reg << 1) | ((hold_byte >> (d_hdr_bps-1-i) )& 0x01 );
@@ -215,6 +219,7 @@ namespace gr {
         break;
         case WAIT_HDR:
           hold_byte = d_hdr_const->decision_maker(&symbol);
+          hold_byte = d_hdr_code[hold_byte];
           for(int i=0;i<d_hdr_bps;++i){
             d_input_bits.push_back( (((hold_byte >> (d_hdr_bps-1-i)) & 0x01)==0x00 )? false : true );
           }
@@ -230,11 +235,12 @@ namespace gr {
           }
         break;
         case WAIT_PLD:
-          //hold_byte = d_pld_const->decision_maker(&symbol);
-          d_byte_reg[d_byte_count++] = d_pld_const->decision_maker(&symbol);
+          hold_byte = d_pld_const->decision_maker(&symbol);
+          d_byte_reg[d_byte_count++] = d_pld_code[hold_byte];
+
           if(d_payload_len*8 == d_byte_count*d_pld_bps)
           {
-            pub_byte_pkt();//FIXME
+            pub_byte_pkt();
             d_state = SEARCH;
             return true;
           }

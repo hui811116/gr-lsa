@@ -58,23 +58,19 @@ namespace gr {
       int d_qsize;
 
       gr::digital::constellation_sptr d_hdr_const;
-      //gr::digital::constellation_sptr d_pld_const;
 
       bool insert_symbol(const gr_complex& symbol);
-      //void pub_byte_pkt();
+      
       size_t header_nbits() const;
       bool set_accesscode(const std::string& accesscode);
-      //uint64_t accesscode()const;
+      
       uint16_t _get_bit16(int begin_idx);
       uint8_t _get_bit8(int begin_idx);
       bool parse_header();
       
       void pub_hdr();
       //feedback to queue mechanism
-      //long int d_prev_time;
-      //long int d_current_time;
-      //pmt::pmt_t d_time_tagname;
-      //int d_symbol_count;
+      
      public:
       symbol_queue_receiver_cc_impl(
         const std::string& accesscode,
