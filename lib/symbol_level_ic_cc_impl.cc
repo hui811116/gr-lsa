@@ -228,7 +228,7 @@ namespace gr {
       int idx_offset = idx_copy.back()-d_hdr_len;
       if(idx_offset > end_idx-1)
         GR_LOG_WARN(d_logger,"last index exceed ending index");
-
+      //std::cout<<"outsize:"<<d_out_size<<std::endl;
       for(int i=end_idx-1;i>=0;i--){
         d_output_buffer[d_out_size+i] = d_buffer[i] - retx[--cei_len_count];
         if( (i>idx_offset) && (cei_len_count<0) ){
@@ -237,7 +237,7 @@ namespace gr {
         if(i==idx_offset){
           idx_copy.pop_back();
           if(!idx_copy.empty())
-            idx_offset=idx_copy.back();
+            idx_offset=idx_copy.back()-d_hdr_len;
           else
             idx_offset=0;
           cei_len_count=-1;
@@ -312,7 +312,8 @@ namespace gr {
       int consume = d_cap-d_buf_size;
       int count=0;
       consume = (ninput_items[0]>consume) ? consume : ninput_items[0];
-      memcpy(d_buffer, in, sizeof(gr_complex)* consume);
+      if(consume >0)
+        memcpy(d_buffer+d_buf_size, in, sizeof(gr_complex)* consume);
       
       std::vector<tag_t> tags, qs_tags, qi_tags, c_tags, pld_tags;
 
@@ -354,12 +355,14 @@ namespace gr {
       if(d_out_idx<d_out_size){
         count = d_out_size-d_out_idx;
         count = (noutput_items>count)?count: noutput_items;
-        memcpy(out, d_output_buffer+d_out_idx, sizeof(gr_complex)*count);
+        if(count>0){
+          memcpy(out, d_output_buffer+d_out_idx, sizeof(gr_complex)*count);
         if(out_eng){
           volk_32fc_magnitude_squared_32f(d_eng, d_output_buffer+d_out_idx, count);
           memcpy(eng, d_eng, sizeof(float)*count);
         }
-        d_out_idx+=count;
+        d_out_idx+=count;  
+        }
       }
       if(2*d_out_idx>d_cap){
         memcpy(d_output_buffer, d_output_buffer+d_out_idx, sizeof(gr_complex)* (d_cap-d_out_idx));
