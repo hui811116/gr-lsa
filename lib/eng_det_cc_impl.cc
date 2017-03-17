@@ -28,10 +28,8 @@
 #include <numeric>
 #include <cmath>
 #include <cfloat>
-// float minimum: 
-   //FLT_MIN  <= 1e-37
-   //FLT_MIN_10_EXP <= -37
-   //FLT_MIN_EXP <= minimum integer of exponent part of a float 
+#include <volk/volk.h>
+
 
 namespace gr {
   namespace lsa {
@@ -51,13 +49,16 @@ namespace gr {
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make2(1, 2, sizeof(gr_complex),sizeof(float))),
       d_src_id(pmt::intern(alias())),
-      d_state_reg(false)
+      d_state_reg(false),
+      d_cap(24*1024)
     {
-      d_threshold_db=threshold;
-      d_bin=bin;
+      set_threshold(threshold);
+      set_bin_size(bin);
       set_tag_propagation_policy(TPP_DONT);
-      d_cap = 24 * 1024;
-      d_sample_reg = new gr_complex[d_cap];
+      set_history(d_bin);
+      
+      
+      d_eng = (float*) volk_malloc(sizeof(float)*d_cap, volk_get_alignment());
     }
 
     /*
@@ -65,14 +66,14 @@ namespace gr {
      */
     eng_det_cc_impl::~eng_det_cc_impl()
     {
-      delete [] d_sample_reg;
+      volk_free(d_eng);
     }
 
     void
     eng_det_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      ninput_items_required[0] =noutput_items + d_bin -1;
+      ninput_items_required[0] =noutput_items + history();
     }
 
     int
@@ -82,74 +83,62 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      // NOTE: ninput_items is fixed, but noutput_items is not.
-      //int nin = ninput_items[0];
-      //int noutput_items_calc=nin-d_bin+1;
       gr_complex * out_wave= (gr_complex*) output_items[0];
-
+      bool out_eng = (output_items.size()>1);
       int out_count = 0;
 
-      float ed_val[noutput_items];
       float *out ;
-      out = (output_items.size()>1)? ((float *) output_items[1]) : ed_val;
-      float temp[ninput_items[0]];
-      for(int it=0;it<ninput_items[0];++it){
-        temp[it]=norm(in[it]);
-      }
-      // fixed bin, may be a parameter in future implementation
+      out = out_eng? ((float *) output_items[1]) : d_eng;
+      
+      volk_32fc_magnitude_squared_32f(d_eng, in, ninput_items[0]);
+      
       float float_test;
       for(int i=0;i<noutput_items;++i)
       {
-          float_test=std::accumulate(temp+i,temp+i+d_bin,0.0);
-          out[i]=(float_test==0.0)? 10*FLT_MIN_10_EXP : 10*std::log10(float_test);
-          if((out[i]>=d_threshold_db))
+          float_test=std::accumulate(d_eng+i,d_eng+i+d_bin,0.0);
+          if((float_test>=d_thres))
           {
             if(!d_state_reg){
-              add_item_tag(0,nitems_written(0)+out_count, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
-              add_item_tag(0,nitems_written(0)+out_count, pmt::intern("begin"), pmt::PMT_T, d_src_id);
-              if(output_items.size()>1){
-                add_item_tag(1,nitems_written(1)+i, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
-                add_item_tag(1,nitems_written(1)+i, pmt::intern("begin"), pmt::PMT_T, d_src_id);
+              add_item_tag(0,nitems_written(0)+out_count, pmt::intern("ed_begin"), pmt::PMT_T, d_src_id);
+              if(out_eng){
+                add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_begin"), pmt::PMT_T, d_src_id);
                 }
               d_state_reg=true;
             }
             out_wave[out_count++]= in[i];
           }// not yet found 
-          else if((out[i]<d_threshold_db)&& d_state_reg)
+          else if((out[i]<d_thres)&& d_state_reg)
           {
-            //add_item_tag(0,nitems_written(0)+i, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
-            //add_item_tag(0,nitems_written(0)+i, pmt::intern("state"), pmt::PMT_F, d_src_id);
-            if(output_items.size()>1){
-              add_item_tag(1,nitems_written(1)+i, pmt::intern("detected"), pmt::from_float(float_test), d_src_id);
-              add_item_tag(1,nitems_written(1)+i, pmt::intern("begin"), pmt::PMT_F, d_src_id);
+            if(out_eng){
+              add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
             }
             d_state_reg=false;
           }
       }
-      
-      // Do <+signal processing+>
-      //memcpy(out_wave,in,sizeof(gr_complex)*noutput_items);
+      if(out_eng){
+        memcpy(out, d_eng, sizeof(float)*noutput_items);
+      }
       produce(0,out_count);
       produce(1,noutput_items);
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (noutput_items);
-      // output buffer maybe not enough?
-      //produce(0,noutput_items);
-      //produce(0,ninput_items[0]);
-      //produce(1,noutput_items_calc);
+      
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;
     }
 //**************************
 //    SET functions
 //**************************    
-    void eng_det_cc_impl::set_threshold(float thes_db)
+    bool eng_det_cc_impl::set_threshold(float thres_db)
     {
-      d_threshold_db=thes_db;
+      d_thres = pow(10,thres_db/10);
     }
-    void eng_det_cc_impl::set_bin_size(int bin)
+    bool eng_det_cc_impl::set_bin_size(int bin)
     {
+      if(bin<0){
+        throw std::runtime_error("Invalid bin size");
+      }
       d_bin=bin;
     }
 //***************************
@@ -157,7 +146,7 @@ namespace gr {
 //***************************
     float eng_det_cc_impl::threshold() const
     {
-      return d_threshold_db;
+      return d_thres;
     }
 
     int eng_det_cc_impl::bin_size() const
