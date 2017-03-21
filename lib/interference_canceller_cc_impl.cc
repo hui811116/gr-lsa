@@ -166,10 +166,18 @@ namespace gr {
       gr_complex sample_fix;
       pmt::pmt_t tmp_dict;
 
-      std::map<int,int> idx_iter_map;
-      std::map<int,int>::iterator it;
+      //std::map<int,int> idx_iter_map;
+      //std::map<int,int>::iterator it;
 
-      while(count < d_info_index.size()){
+      buffer_info.assign(d_buffer_info.begin(),d_buffer_info.begin()+d_last_info_idx+1);
+      info_index.assign(d_info_index.begin(),d_info_index.begin()+d_last_info_idx+1);
+      for(int i=0;i<buffer_info.size();++i){
+        int test_pkt_len = pmt::to_long(pmt::dict_ref(buffer_info[i],pmt::intern("payload"),pmt::PMT_NIL));
+        coerced_packet_len.push_back(test_pkt_len+d_hdr_sample_len);
+      }
+      //FIXME
+      // this part meant for fixing payload length
+      /*while(count < d_info_index.size()){
         tmp_dict = d_buffer_info[count];
         cur_payload = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("payload"), pmt::PMT_NIL));
         cur_pkt_begin = d_info_index[count];
@@ -197,7 +205,7 @@ namespace gr {
         buffer_info.push_back(tmp_dict);
         info_index.push_back(cur_pkt_begin);
         count++;
-      }
+      }*/
       
       //create copy of retransmission
       for(int i=0;i<d_retx_count;++i){
@@ -205,35 +213,44 @@ namespace gr {
         phase_shift = pmt::to_float(pmt::dict_ref(d_retx_info[i],pmt::intern("phase_est"),pmt::PMT_NIL));
         freq_offset = pmt::to_float(pmt::dict_ref(d_retx_info[i],pmt::intern("freq_est"),pmt::PMT_NIL));
         freq_offset/= static_cast<float>(d_sps);
+        //NOTE: this offset is estimated after header been found,
+        //      to find the estimate the begin of packet, a naive way is to shift back 
+        phase_shift-= freq_offset*d_hdr_sample_len;
+        while(phase_shift>=TWO_PI){
+          phase_shift-=TWO_PI;
+        }
+        while(phase_shift<=-TWO_PI){
+          phase_shift+=TWO_PI;
+        }
         //FIXME
-        // carrier frequency and phase correction for retransmission.
+        // 1. carrier frequency and phase correction for retransmission.
         // this method performs so poor!
-        // use coerced packet len to copy retransmission
-        it = idx_iter_map.find(d_retx_pkt_index[i]);
-        if(it == idx_iter_map.end()){
-          throw std::runtime_error("cannot found the index of retransmission, terminate");
-        }
-        if(coerced_packet_len[it->second] > d_retx_pkt_size[i]+d_sps*2){
+        // 2. use coerced packet len to copy retransmission
+        //it = idx_iter_map.find(d_retx_pkt_index[i]);
+        //if(it == idx_iter_map.end()){
+          //throw std::runtime_error("cannot found the index of retransmission, terminate");
+        //}
+        //if(coerced_packet_len[it->second] > d_retx_pkt_size[i]+d_sps*2){
           //resize to fit samples, normally should not happen...
-          delete [] d_retx_buffer[i];
-          d_retx_buffer[i] = new gr_complex[coerced_packet_len[it->second] + d_sps*2];
-        }
-        memcpy(d_retx_buffer[i], d_sample_buffer+(it->first), sizeof(gr_complex)*coerced_packet_len[it->second]);
-        d_retx_pkt_size[i] = coerced_packet_len[it->second];
-        /*
-        for(int j=0;j<d_retx_pkt_size[i];++j){
+          //delete [] d_retx_buffer[i];
+          //d_retx_buffer[i] = new gr_complex[coerced_packet_len[it->second] + d_sps*2];
+        //}
+        //memcpy(d_retx_buffer[i], d_sample_buffer+(it->first), sizeof(gr_complex)*coerced_packet_len[it->second]);
+        //d_retx_pkt_size[i] = coerced_packet_len[it->second];
+        
+        for(int j=0;j<d_retx_pkt_size[i]+2*d_sps;++j){
           sample_fix = d_sample_buffer[d_retx_pkt_index[i]+j] * gr_expj(-phase_shift);
           d_retx_buffer[i][j] = sample_fix;
           phase_shift += freq_offset;
-          while(phase_shift>TWO_PI){
+          while(phase_shift>=TWO_PI){
             phase_shift-= TWO_PI;
           }
-          while(phase_shift<-TWO_PI){
+          while(phase_shift<=-TWO_PI){
             phase_shift+= TWO_PI;
           }
-        }*/
+        }
         // this is for non correcting case
-        //memcpy(d_retx_buffer[i],d_sample_buffer+d_retx_pkt_index[i], sizeof(gr_complex)* d_retx_pkt_size[i]);
+        //memcpy(d_retx_buffer[i],d_sample_buffer+d_retx_pkt_index[i], sizeof(gr_complex)* (d_retx_pkt_size[i]+2*d_sps) );
       }
 
     }
@@ -241,82 +258,86 @@ namespace gr {
     void
     interference_canceller_cc_impl::do_interference_cancellation()
     {
-      
+      if(d_debug)
+      {
+        std::cout<<"***************************************"<<std::endl;
+        std::cout<<"retx_buffer_size:"<<d_retx_buffer.size()<<" ,d_retx_count:"<<d_retx_count<<std::endl;
+        std::cout<<"Do interference cancellation:"<<std::endl;
+        for(int i=0;i<(d_last_info_idx+1) ;++i){
+          int ct, qi,qs;
+          ct = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("counter"),pmt::PMT_NIL));
+          qi = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_index"),pmt::PMT_NIL));
+          qs = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_size"),pmt::PMT_NIL));
+          std::cout<<"["<<i<<"]"<<" ,index:"<<d_info_index[i]<<" counter:"<<ct<<" ,queue_index:"<<qi<<" ,queue_size:"<<qs<<std::endl;
+        }
+        std::cout<<"***************************************"<<std::endl;
+      }
+
+
       int end_idx = d_end_index.front();
       d_end_index.erase(d_end_index.begin());
       //do signal processing here,
-      //move result to output buffer
-      //push back output_index
-      
-      //can initialize output buffer first
       std::vector<int> packet_len;
       std::vector<pmt::pmt_t> buffer_info;
       std::vector<int> info_index;
-      //find last cei
-      int last_cei_idx=0 , last_cei_qiter = 0;
-      int total_retx_size = 0;
       int cei_pkt_counter, cei_sample_counter;
-      int retx_size;
+      int retx_size = d_retx_buffer.size();
       int total_size;
-      int offset =0;
-      int sample_count=0;
-      int begin_idx=0, next_pkt_begin=0, next_pkt_size=0;
-      int test_index=0;
+      int pld_len;
       float phase_shift, freq_offset;
-      gr_complex* retx, fixed_sample;
+      gr_complex* retx, corrected_sample;
       pmt::pmt_t tmp_dict;
 
+      // fixing packet len
       sync_hdr_index(packet_len, buffer_info, info_index, end_idx);
 
-      for(int i=0;i<buffer_info.size();++i){
-        d_out_info.push_back(buffer_info[i]);
-        d_out_info_idx.push_back(info_index[i]);
+      cei_pkt_counter = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
+      pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::PMT_NIL));
+      phase_shift = pmt::to_float(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("phase_est"),pmt::PMT_NIL));
+      freq_offset = pmt::to_float(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("freq_est"),pmt::PMT_NIL));
+      freq_offset/=static_cast<float>(d_sps);
+      phase_shift += freq_offset*pld_len;
+      while(phase_shift>=TWO_PI){
+        phase_shift-=TWO_PI;
       }
-
-
-      if(d_debug){
-        std::cout<<"refined packet samples"<<std::endl;
-        for(int i=0;i<packet_len.size();++i){
-          int qidx, counter;
-          qidx = pmt::to_long(pmt::dict_ref(buffer_info[i], pmt::intern("queue_index"),pmt::PMT_NIL));
-          counter = pmt::to_long(pmt::dict_ref(buffer_info[i], pmt::intern("counter"),pmt::PMT_NIL));
-          std::cout<<"["<<i<<"]"<<"idx:"<<info_index[i]<<" ,pkt len:";
-          std::cout<<packet_len[i]<<" ,qidx:"<<qidx<<" ,counter:"<<counter<<std::endl;
-        }
-        std::cout<<"retransmission:"<<std::endl;
-        for(int i=0;i<d_retx_count;++i){
-          std::cout<<"["<<i<<"]"<<d_retx_pkt_size[i]<<std::endl;
-        }
+      while(phase_shift<=-TWO_PI){
+        phase_shift+=TWO_PI;
       }
-
-
-      for(int i=0;i<d_retx_pkt_index.size();++i){
-        if(d_retx_pkt_index[i]>last_cei_idx){
-          last_cei_idx = d_retx_pkt_index[i];
-          last_cei_qiter = i;
-        }
-        total_retx_size += d_retx_pkt_size[i];
-      }
-      retx_size = d_retx_buffer.size();
-      cei_pkt_counter = last_cei_qiter;
-      cei_sample_counter = d_retx_pkt_size[last_cei_qiter];
-      retx = d_retx_buffer[last_cei_qiter];
+      
+      cei_sample_counter = d_retx_pkt_size[cei_pkt_counter];
+      retx = d_retx_buffer[cei_pkt_counter];
 
       total_size = d_retx_pkt_index[cei_pkt_counter] + d_retx_pkt_size[cei_pkt_counter];
 
-      //d_output_size += total_size;
+      if(d_output_size+total_size > d_cap){
+        //clear output_buffer before doing interference cancellation
+        GR_LOG_WARN(d_logger,"output size greater than buffer capacity");
+        d_output_size =0;
+        d_output_idx =0;
+        d_out_info.clear();
+        d_out_info_idx.clear();
+        d_out_index.clear();
+      }
       d_out_index.push_back(d_output_size+total_size);
-      //std::cout<<"output end size:"<<d_output_size+total_size<<std::endl;
-      if(d_output_size+total_size >d_cap){
-        throw std::runtime_error("output size greater than buffer capacity");
+      // not neccessary, for debugging tags
+      for(int i=0;i<info_index.size();++i){
+        d_out_info.push_back(buffer_info[i]);
+        d_out_info_idx.push_back(info_index[i]+d_output_size);
       }
       std::fill_n(d_output_buffer+d_output_size, total_size, gr_complex(0,0));
 
       while(total_size>0){
         total_size--;
         cei_sample_counter--;
-        d_output_buffer[d_output_size+total_size] = d_sample_buffer[total_size] - retx[cei_sample_counter];
-        
+        corrected_sample = gr_expj(phase_shift)*retx[cei_sample_counter];
+        d_output_buffer[d_output_size+total_size] = d_sample_buffer[total_size] - corrected_sample;
+
+        phase_shift-=freq_offset;
+        while(phase_shift>=TWO_PI)
+          phase_shift-=TWO_PI;
+        while(phase_shift<=-TWO_PI)
+          phase_shift+=TWO_PI;
+
         if(!info_index.empty()){
           int idx = info_index.back();
           if(total_size==idx){
@@ -325,6 +346,17 @@ namespace gr {
             buffer_info.pop_back();
             info_index.pop_back();
             packet_len.pop_back();
+            if(!buffer_info.empty()){
+              phase_shift = pmt::to_float(pmt::dict_ref(buffer_info.back(),pmt::intern("phase_est"),pmt::PMT_NIL));
+              freq_offset = pmt::to_float(pmt::dict_ref(buffer_info.back(),pmt::intern("freq_est"),pmt::PMT_NIL));
+              freq_offset/=static_cast<float>(d_sps);
+              pld_len = pmt::to_long(pmt::dict_ref(buffer_info.back(),pmt::intern("payload"),pmt::PMT_NIL));
+              phase_shift+=freq_offset * pld_len;
+              while(phase_shift>=TWO_PI)
+                phase_shift-=TWO_PI;
+              while(phase_shift<=-TWO_PI)
+                phase_shift+=TWO_PI;
+            }
           }
           else if((cei_sample_counter==0) && (idx<total_size) ){
             cei_sample_counter++;
@@ -335,80 +367,12 @@ namespace gr {
           if(cei_pkt_counter<0)
             cei_pkt_counter+= retx_size;
           cei_sample_counter = d_retx_pkt_size[cei_pkt_counter];
-        }
-      }
-
-      /*
-      while(total_size>0)
-      {
-        retx = d_retx_buffer[cei_pkt_counter];
-        begin_idx = total_size - cei_sample_counter;
-        if(begin_idx <0){
-          // in case out of sample range
-          // offset is the truncated size of first packet
-          offset = d_retx_pkt_size[cei_pkt_counter] - total_size;
-          sample_count = total_size;
-          begin_idx =0;
-        }
-        else{
-          // normal case, samples are enough so offset =0;
-          offset = 0;
-          sample_count = d_retx_pkt_size[cei_pkt_counter];
+          retx = d_retx_buffer[cei_pkt_counter];
         }
         
-        if(!d_info_index.empty()){
-          // FIXME
-          // copy info before doing this part
-          tmp_dict = buffer_info.back();
-          next_pkt_begin = info_index.back();
-          next_pkt_size = packet_len.back();
-          test_index = begin_idx - next_pkt_begin;
-          // can modified to handle more complex time offset
-          //FIXME
-          // can adjust to accommodate offset of larger range
-          if(abs(test_index)<= 2*d_sps){
-            //FIXME
-            phase_shift = pmt::to_float(pmt::dict_ref(tmp_dict, pmt::intern("phase_est"), pmt::PMT_NIL));
-            freq_offset = pmt::to_float(pmt::dict_ref(tmp_dict, pmt::intern("freq_est"), pmt::PMT_NIL));
-            freq_offset/= static_cast<float>(d_sps);//change to sample-wise frequency offset
+      }
 
-            begin_idx = next_pkt_begin;
-            buffer_info.pop_back();
-            info_index.pop_back();
-            packet_len.pop_back(); 
-          }
-        }//sync with known index of packet        
-        for(int i=0;i<sample_count;++i){
-          //NO CFO case
-          fixed_sample = d_sample_buffer[begin_idx+i] - retx[i+offset];
-          //First method , synchronize to SU signal
-          //fixed_sample = d_sample_buffer[begin_idx+i] * gr_expj(-phase_shift) - retx[i+offset];
-          //Second method, leave possible proU CFO unchanged 
-          //NOTE: in expj the sign is the same as desired sample in order to synchronize the phase of two samples
-          //fixed_sample = retx[i+offset]*gr_expj(phase_shift);
-          //if there is cfo or time offset, fixed here?
-          //d_output_buffer[begin_idx+i] = d_sample_buffer[begin_idx+i] - retx[i+offset];
-          //d_output_buffer[begin_idx+i] = d_sample_buffer[begin_idx+i] - fixed_sample;
-          d_output_buffer[d_output_idx + begin_idx+i] = fixed_sample;
-          
-          phase_shift += freq_offset;
-          while(phase_shift>TWO_PI){
-            phase_shift-=TWO_PI;
-          }
-          while(phase_shift<-TWO_PI){
-            phase_shift+=TWO_PI;
-          }
-        }
-        //abuse variable total_size to sync to the estimated begin of previous packet
-        total_size = begin_idx;
-        cei_pkt_counter = (cei_pkt_counter-1) % retx_size;
-        if(cei_pkt_counter<0)
-          cei_pkt_counter+= retx_size;
-        cei_sample_counter = d_retx_pkt_size[cei_pkt_counter];
-      }//end while
-
-      */
-      d_output_size = d_out_index.back();      
+      d_output_size = d_out_index.back();
       update_system_index(end_idx);
     }
 
@@ -418,10 +382,7 @@ namespace gr {
       int out_count =0;
       int end_idx = d_out_index.front();
       int nout = (noutput_items > (d_output_size-d_output_idx)) ? (d_output_size-d_output_idx) : noutput_items;
-
-      memcpy(out,d_output_buffer+d_output_idx,sizeof(gr_complex)*nout);
-         
-      produce(0,nout);
+      
       if(nout==0)
         return;
       if(eng!=NULL && (nout!=0))
@@ -432,26 +393,31 @@ namespace gr {
         }
         produce(1,nout);
       }
-      //add_item_tag(0,nitems_written(0),pmt::intern("out_begin"),pmt::from_long(87));
       while(!d_out_info.empty()){
         if(d_out_info_idx[0]>(d_output_idx+nout)){
           break;
         }
           int counter = pmt::to_long(pmt::dict_ref(d_out_info[0],pmt::intern("counter"),pmt::PMT_NIL));
-          std::cout<<"index:"<<d_out_info_idx[0]<<"nout:"<<nout<<"output_idx:"<<d_output_idx<<std::endl;
-          add_item_tag(0,nitems_written(0)+d_out_info_idx[0]+(64/d_bps*d_sps),pmt::intern("counter"),pmt::from_long(counter));
+          int offset = d_out_info_idx[0] - d_output_idx;
+          int qsize = pmt::to_long(pmt::dict_ref(d_out_info[0],pmt::intern("queue_size"),pmt::PMT_NIL));
+          int qidx =  pmt::to_long(pmt::dict_ref(d_out_info[0],pmt::intern("queue_index"),pmt::PMT_NIL));
+          add_item_tag(0,nitems_written(0)+offset,pmt::intern("counter"),pmt::from_long(counter));
+          if(qsize!=0){
+            add_item_tag(0,nitems_written(0)+offset,pmt::intern("CEI_idx"),pmt::from_long(qidx));
+            add_item_tag(0,nitems_written(0)+offset,pmt::intern("CEI_size"),pmt::from_long(qsize));
+          }
           d_out_info.erase(d_out_info.begin());
           d_out_info_idx.erase(d_out_info_idx.begin());
       }
-
-
+      memcpy(out,d_output_buffer+d_output_idx,sizeof(gr_complex)*nout);
+      produce(0,nout);
       d_output_idx += nout;
       //update output buffer
       if(d_output_idx >= end_idx){
         int new_size = d_output_size - end_idx;
         memcpy(d_output_buffer, d_output_buffer+ end_idx, sizeof(gr_complex)* new_size);
         d_output_size-=end_idx;
-        d_output_idx -= end_idx;
+        d_output_idx=0;
         d_out_index.erase(d_out_index.begin());
         for(int i=0;i<d_out_index.size();++i){
           d_out_index[i]-=end_idx;
@@ -459,93 +425,92 @@ namespace gr {
             throw std::runtime_error("output index cannot be negative");
           }
         }
-        //for(int i=0;i<d_out_info_idx.size();++i){
-          //d_out_info_idx[i]-= end_idx;
-          //if(d_out_info_idx[i]<0){
-            //throw std::runtime_error("output info index cannot be negative");
-          //}
-        //}
-        //cheating method;
-        d_out_info.clear();
-        d_out_info_idx.clear();
+        std::vector<int> fix_info_idx;
+        std::vector<pmt::pmt_t> fix_info;
+        for(int i=0;i<d_out_info_idx.size();++i){
+          d_out_info_idx[i]-= end_idx;
+          if(d_out_info_idx[i]>=0){
+            fix_info_idx.push_back(d_out_info_idx[i]);
+            fix_info.push_back(d_out_info[i]);
+          }
+          else{
+            std::cerr<<"<WARNING>:output index correction encounter negative index:"<<
+            "("<<d_out_info_idx[i]<<"-"<<end_idx<<")"<<std::endl;
+          }
+        }
+        d_out_info=fix_info;
+        d_out_info_idx=fix_info_idx;
       }
     }
 
-    void
+    bool
     interference_canceller_cc_impl::cancellation_detector()
     {
       int qsize,qidx;
       int pld_len, sample_idx;
       int valid_size;
-      bool success=false, failed=false;
-      int end_iter = 0;
       if(d_buffer_info.empty()){
-        return;
+        return false;
       }
       else{
         //update index
         while(d_last_info_idx<d_buffer_info.size()){
           pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::PMT_NIL));
           valid_size = d_info_index[d_last_info_idx] + pld_len + d_hdr_sample_len;
-          if(valid_size>d_sample_size){
+          qidx = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
+          qsize = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_size"),pmt::PMT_NIL));
+          if( (valid_size+4096) > d_sample_size){
             //samples not enough
-            return;
+            //save 4096 for stablity
+            return false;
           }
-          if(pmt::dict_has_key(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"))){
-            qidx = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
-          }
-          if(pmt::dict_has_key(d_buffer_info[d_last_info_idx],pmt::intern("queue_size"))){
-            qsize = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_size"),pmt::PMT_NIL));
-          }
-          if(qidx==0 && qsize==0 && !d_retx_buffer.empty()){
-            //this case meant for end of retransmission.
-            //should declare failed and fix queue and indexes
-            end_iter = d_last_info_idx-1;
-            if(end_iter<0){
-              throw std::runtime_error("detection error, setting retransmission before a valid one received");
-            }
-            //NOTE: when this case happens, it had passed the desired position at least one pkt.
-            failed = true;
-            break;
-          }
-          if(qsize!=d_retx_buffer.size() && !d_retx_buffer.empty()){
-            // this case means a new retransmission size encountered
+          if((qsize!=d_retx_buffer.size()) && !d_retx_buffer.empty()){
             // should update info and tracking for new size
-            end_iter = d_last_info_idx-1;
-            if(end_iter<0){
-              throw std::runtime_error("detection error, setting retransmission before a valid one received");
-            }
-            failed = true;
-            break;
+            // reset HERE
+            update_system_hdr();
+            return false;
           }
           retx_check(d_buffer_info[d_last_info_idx],qidx,qsize,d_info_index[d_last_info_idx]);
-          if(!d_retx_buffer.empty() && d_retx_count == d_retx_buffer.size()){
-            //interference cancellation available
-            end_iter = d_last_info_idx;
-            success = true;
-            d_last_info_idx++;
-            break;
+          if(!d_retx_buffer.empty() && (d_retx_count == d_retx_buffer.size()) ){ 
+            //interference cancellation available  
+            int last_idx = d_info_index[d_last_info_idx] + d_hdr_sample_len + pld_len;
+            d_end_index.push_back(last_idx);
+            return true;
           }
           d_last_info_idx++;
         }//end while 
         
-        sample_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[end_iter],pmt::intern("payload"),pmt::PMT_NIL));
-        sample_idx+= (d_info_index[end_iter]+d_hdr_sample_len);
-        if(success){
-        // copy to another buffer?
-        // do_interference cancellation 
-        // move to output buffer?
-          d_end_index.push_back(sample_idx);
-          if(d_debug){
-            std::cout<<"<debug>" <<"interference cancellation available!"<<std::endl;
-          }
-        }
-        else if(failed){
-          if(d_debug)
-            std::cout<<"<debug>: failed calling update system index to fix info"<<std::endl;
-          update_system_index(sample_idx);
-        }//other cases?
+      }//else
+      return false;
+    }//function
+
+    void
+    interference_canceller_cc_impl::update_system_hdr()
+    {
+      //removed till d_last_info_idx;
+      int rm_idx = d_info_index[d_last_info_idx];
+      d_info_index.erase(d_info_index.begin(),d_info_index.begin()+d_last_info_idx);
+      d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+d_last_info_idx);
+      for(int k=0;k<d_info_index.size();++k){
+        d_info_index[k]-= rm_idx;
+        d_info_index[k] = (d_info_index[k]<0) ? 0 : d_info_index[k];
       }
+      int rest_len = d_sample_size - rm_idx;
+      memcpy(d_sample_buffer, d_sample_buffer+rm_idx, sizeof(gr_complex)*rest_len);
+      d_sample_size-= rm_idx;
+      d_sample_idx =0;
+
+      d_retx_count =0;
+      d_retx_info.clear();
+      d_retx_pkt_size.clear();
+      d_retx_pkt_index.clear();
+      for(int k=0;k<d_retx_buffer.size();++k){
+        if(d_retx_buffer[k]!=NULL)
+          delete [] d_retx_buffer[k];
+      }
+      d_retx_buffer.clear();
+      d_last_info_idx = 0;
+      d_end_index.clear();
     }
 
     void
@@ -623,7 +588,6 @@ namespace gr {
           //hdr sample len is for preamble length
           begin_hdr_idx = d_sample_size + offset - d_hdr_sample_len; 
           if(begin_hdr_idx <0){
-            //std::cout<<"<debug>"<<"sample_size:"<<d_sample_size<<" ,offset:"<<offset<<" ,d_hdr_sample_len:"<<d_hdr_sample_len<<std::endl;
             GR_LOG_WARN(d_logger,"header begins at negative index");
             begin_hdr_idx = 0;
           }
@@ -665,18 +629,16 @@ namespace gr {
       nin = (d_cap - d_sample_size > nin) ? nin : (d_cap - d_sample_size);
       // handle sample_size properly;
       memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)* nin);
-      // Do <+signal processing+>
       std::vector<tag_t> tags;
       get_tags_in_window(tags, 0,0 ,nin, pmt::intern("header_found"));
       // insert tags as dictionaries. 
       tags_handler(tags, nin);
       // update sample size
       d_sample_size+=nin; 
-      // checking interference cancellation availability
-      cancellation_detector();
-      if(!d_end_index.empty()){
+      // detecting interference cancellation availability 
+      // is faster by checking tag-by-tag.  
+      if(cancellation_detector()){
         do_interference_cancellation();
-        //do one end index
       }
       // output status checking
       if(!d_out_index.empty()){

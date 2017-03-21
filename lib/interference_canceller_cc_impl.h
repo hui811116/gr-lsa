@@ -74,6 +74,7 @@ namespace gr {
 
       void tags_handler(std::vector<tag_t>& tags, int nin);
       void update_system_index(int queue_index);
+      void update_system_hdr();
 
       void retx_check(pmt::pmt_t hdr_info, int qindex,int qsize,int offset);
       void do_interference_cancellation();
@@ -83,7 +84,7 @@ namespace gr {
         std::vector<int>& info_index, 
         int end_idx);
 
-      void cancellation_detector();
+      bool cancellation_detector();
 
       void output_result(int noutput_items, gr_complex* out, float* eng);
      public:
