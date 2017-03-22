@@ -130,7 +130,8 @@ namespace gr {
       
       // Do <+signal processing+>
       produce(0,out_count);
-      produce(1,noutput_items);
+      if(have_eng)
+        produce(1,noutput_items);
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (noutput_items);
