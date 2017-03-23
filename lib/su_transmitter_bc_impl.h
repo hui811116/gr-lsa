@@ -29,7 +29,9 @@ namespace gr {
     class su_transmitter_bc_impl : public su_transmitter_bc
     {
      private:
-      // Nothing to declare in this block.
+      int d_mode;
+      long int d_update_time;
+
       bool d_debug;
       int d_state;
       int d_qmax;
@@ -47,14 +49,12 @@ namespace gr {
       
       pmt::pmt_t d_debug_port;
 
-      gr::digital::constellation_sptr d_hdr_const;
-      gr::digital::constellation_sptr d_pld_const;
-
-      std::vector<int> d_hdr_code;
-      std::vector<int> d_pld_code;
-
       std::vector<gr_complex> d_hdr_points;
       std::vector<gr_complex> d_pld_points;
+      std::vector<int> d_hdr_map;
+      std::vector<int> d_pld_map;
+      gr::digital::constellation_sptr d_hdr_const;
+      gr::digital::constellation_sptr d_pld_const;
 
       size_t d_hdr_samp_len;
       std::vector< std::vector<gr_complex> >* d_buffer_ptr;
@@ -91,7 +91,7 @@ namespace gr {
         const unsigned char* in,
         int size,
         const std::vector<gr_complex>& mapper,
-        const std::vector<int>& code_map
+        const std::vector<int>& idx_map
         );
 
       void store_to_queue (
@@ -110,6 +110,7 @@ namespace gr {
         const std::string& accesscode,
         const gr::digital::constellation_sptr& hdr_const,
         const gr::digital::constellation_sptr& pld_const,
+        int mode,
         int qmax,
         bool debug);
       ~su_transmitter_bc_impl();

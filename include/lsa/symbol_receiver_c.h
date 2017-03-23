@@ -52,6 +52,7 @@ namespace gr {
         const gr::digital::constellation_sptr& pld_const,
         const std::string& sensing_tagname,
         int sps,
+        bool queue_mode,
         bool debug);
     };
 
