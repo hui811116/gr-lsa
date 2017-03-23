@@ -9,4 +9,4 @@ examples/*
 *.out
 tag
 *.tag
-
+*.orig
