@@ -245,7 +245,7 @@ namespace gr {
           d_byte_reg[d_byte_count++] = d_pld_map[symbol_idx];
           if(d_payload_len*8 == d_byte_count*d_pld_bps)
           {
-            pub_byte_pkt();//FIXME
+            pub_byte_pkt();
             d_state = SEARCH;
             return true;
           }

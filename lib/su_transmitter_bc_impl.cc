@@ -110,7 +110,6 @@ namespace gr {
       d_debug = debug;
       d_rxindextagname = pmt::intern("counter");
 
-
       d_hdr_const = hdr_const->base();
       d_pld_const = pld_const->base();
 

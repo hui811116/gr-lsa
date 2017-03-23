@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<block>
+  <name>LSA symbol queue receiver</name>
+  <key>lsa_symbol_queue_receiver_cc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.symbol_queue_receiver_cc($accesscode, $sensing, $hdr_const, $sps, $pld_bps, $debug)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Accesscode</name>
+    <key>accesscode</key>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Sensing tag</name>
+    <key>sensing</key>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Header Constellation</name>
+    <key>hdr_const</key>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Samples/symbol</name>
+    <key>sps</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Payload bps</name>
+    <key>pld_bps</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Debug mode</name>
+    <key>debug</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>On</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Off</name>
+      <key>False</key>
+    </option>
+  </param>
+
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+  <sink>
+    <name>freq</name>
+    <type>float</type>
+    <optional>1</optional>
+  </sink>
+  <sink>
+    <name>phase</name>
+    <type>float</type>
+    <optional>1</optional>
+  </sink>
+  <sink>
+    <name>rate_f</name>
+    <type>float</type>
+    <optional>1</optional>
+  </sink>
+  <sink>
+    <name>rate_k</name>
+    <type>float</type>
+    <optional>1</optional>
+  </sink>
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+  <source>
+    <name>freq</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>phase</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>rate_f</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>rate_k</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>  
+  <source>
+    <name>header_info</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+</block>

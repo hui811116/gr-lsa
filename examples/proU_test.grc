@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<?grc format='1' created='3.7.11'?>
+<?grc format='1' created='3.7.12'?>
 <flow_graph>
   <timestamp>Mon Feb 20 13:46:08 2017</timestamp>
   <block>
@@ -93,7 +93,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(192, 620)</value>
+      <value>(24, 540)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -248,7 +248,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(24, 316)</value>
+      <value>(528, 40)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -449,7 +449,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(24, 940)</value>
+      <value>(32, 604)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -480,7 +480,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 516)</value>
+      <value>(16, 416)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -546,7 +546,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 444)</value>
+      <value>(224, 460)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -577,7 +577,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(544, 48)</value>
+      <value>(16, 296)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1005,7 +1005,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(392, 284)</value>
+      <value>(248, 340)</value>
     </param>
     <param>
       <key>_rotation</key>

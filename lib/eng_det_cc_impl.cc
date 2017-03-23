@@ -29,6 +29,7 @@
 #include <cmath>
 #include <volk/volk.h>
 
+
 namespace gr {
   namespace lsa {
 
@@ -47,18 +48,16 @@ namespace gr {
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make2(1, 2, sizeof(gr_complex),sizeof(float))),
       d_src_id(pmt::intern(alias())),
-      d_state_reg(false)
+      d_state_reg(false),
+      d_cap(24*1024)
     {
       set_threshold(threshold);
-      if(bin<0){
-        throw std::invalid_argument("Energy average bin size cannot be negative");
-      }
       set_bin_size(bin);
       set_tag_propagation_policy(TPP_DONT);
-      d_cap = 24 * 1024;
-      set_max_noutput_items(d_cap);
-      d_eng = (float*)volk_malloc(sizeof(float)*d_cap, volk_get_alignment());
       set_history(d_bin);
+      
+      
+      d_eng = (float*) volk_malloc(sizeof(float)*d_cap, volk_get_alignment());
     }
 
     /*
@@ -135,7 +134,6 @@ namespace gr {
       // Tell runtime system how many input items we consumed on
       // each input stream.
       consume_each (noutput_items);
-
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;
     }
@@ -146,8 +144,11 @@ namespace gr {
     {
       d_threshold = pow(10,thres_db/10);
     }
-    void eng_det_cc_impl::set_bin_size(int bin)
+    bool eng_det_cc_impl::set_bin_size(int bin)
     {
+      if(bin<0){
+        throw std::runtime_error("Invalid bin size");
+      }
       d_bin=bin;
     }
 //***************************

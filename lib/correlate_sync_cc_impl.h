@@ -43,7 +43,6 @@ namespace gr {
       std::vector<gr_complex> d_samples;
 
       float d_threshold;
-
       float d_thres_log;
       float d_eng_log;
      public:
