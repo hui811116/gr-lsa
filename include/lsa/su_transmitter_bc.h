@@ -54,6 +54,7 @@ namespace gr {
         const gr::digital::constellation_sptr& hdr_const,
         const gr::digital::constellation_sptr& pld_const,
         int qmax,
+        int mode,
         bool debug);
     };
 

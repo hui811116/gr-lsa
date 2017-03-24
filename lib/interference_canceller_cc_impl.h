@@ -34,13 +34,16 @@ namespace gr {
       pmt::pmt_t d_sensing_tagname;
       std::vector<gr_complex> d_clean_preamble;
 
-      int d_state;
       bool d_debug;
 
       int d_sps;
       int d_bps;
       int d_hdr_bits;
       int d_hdr_sample_len;
+      
+      int d_last_info_idx;
+
+      const size_t d_cap;
 
       gr_complex* d_sample_buffer;
       gr_complex* d_output_buffer;
@@ -49,6 +52,9 @@ namespace gr {
       int d_output_size;
       int d_output_idx;
 
+      std::vector<pmt::pmt_t> d_out_info;
+      std::vector<int> d_out_info_idx;
+
       int d_sample_size;
       int d_sample_idx;
 
@@ -56,18 +62,29 @@ namespace gr {
       std::vector<gr_complex*> d_retx_buffer;
       std::vector<int> d_retx_pkt_size;
       std::vector<int> d_retx_pkt_index;
+      std::vector<pmt::pmt_t> d_retx_info;
       int d_retx_count;
 
+      // for header labeling
       std::vector<pmt::pmt_t> d_buffer_info;
       std::vector<int> d_info_index;
 
-      int d_cei_pkt_counter;
-      int d_cei_sample_counter;
+      std::vector<int> d_end_index;
+      std::vector<int> d_out_index;
 
-      void retx_handler(pmt::pmt_t hdr_info, int index);
-      void header_handler(pmt::pmt_t hdr_info, int index);
+      void tags_handler(std::vector<tag_t>& tags, int nin);
+      void update_system_index(int queue_index);
+      void update_system_hdr();
+
+      void retx_check(pmt::pmt_t hdr_info, int qindex,int qsize,int offset);
       void do_interference_cancellation();
-      void sync_hdr_index(std::vector<int>& coerced_packet_len);
+      void sync_hdr_index(
+        std::vector<int>& coerced_packet_len,
+        std::vector<pmt::pmt_t>& buffer_info,
+        std::vector<int>& info_index, 
+        int end_idx);
+
+      bool cancellation_detector();
 
       void output_result(int noutput_items, gr_complex* out, float* eng);
      public:

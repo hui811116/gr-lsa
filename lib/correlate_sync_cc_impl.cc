@@ -25,6 +25,7 @@
 #include <gnuradio/io_signature.h>
 #include "correlate_sync_cc_impl.h"
 #include <volk/volk.h>
+#include <gnuradio/math.h>
 #include <cmath>
 #include <numeric>
 
@@ -68,6 +69,7 @@ namespace gr {
         throw std::runtime_error("correlation samples energy cannot be zero");
       }
       d_samples_eng = sample_eng;
+      d_eng_log = logf(sample_eng);
 
       std::reverse(d_samples.begin(), d_samples.end());
 
@@ -98,6 +100,7 @@ namespace gr {
         throw std::runtime_error("Threshold should be normalized to [0,1]");
       }
       d_threshold = thres;
+      d_thres_log = logf(d_threshold);
     }
 
 
@@ -120,37 +123,38 @@ namespace gr {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
       gr_complex *corr = d_corr;
-      float* cor_mag = d_norm_corr;
-      bool cor_out = (output_items.size()>=1);
-      if(cor_out){
-        cor_mag = (float*) output_items[1];
-        corr = d_corr;
+      float* corr_mag = d_norm_corr;
+      bool have_corr = (output_items.size()>=2);
+      if(have_corr){
+        corr_mag = (float*) output_items[1];
       }
-      memcpy(out,in, sizeof(gr_complex)* noutput_items);
-      
+      memcpy(out,in,sizeof(gr_complex)* noutput_items);
+   
       d_filter->filter(noutput_items, in, corr);
-      volk_32fc_magnitude_32f(d_corr_mag, corr, noutput_items);
+      volk_32fc_magnitude_32f(corr_mag, corr, noutput_items);
       volk_32fc_magnitude_squared_32f(d_eng,in,noutput_items + history());
 
-      //std::stringstream ss;
-      //ss<<"noutput_items:"<<noutput_items<<" ,input_items:"<<ninput_items[0]<<" ,history:"<<history()<<" ,sample_size:"<<d_samples.size()<<std::endl;
-      //GR_LOG_DEBUG(d_logger, ss.str());
       float eng_acc=0.0;
+      float detection = 0;
+      float phase;
       for(int i=0;i<noutput_items;++i){
         eng_acc=std::accumulate(d_eng+i,d_eng+i+d_samples.size()-1,0.0);
-        if(eng_acc < 1e-6){
-          //GR_LOG_WARN(d_logger,"accumulated energy is zero, terminated");
-          cor_mag[i] = 0.0;
+        if(2*logf(corr_mag[i])>logf(eng_acc)+d_eng_log){
+          continue;
         }
-        else{
-          cor_mag[i] = d_corr_mag[i]/sqrt(eng_acc)/sqrt(d_samples_eng);  
-          //if(cor_mag[i] >1){
-           // std::stringstream ss;
-           // ss<<"iteration:"<<i<<" ,eng_acc:"<<eng_acc<<" ,d_sample_eng:"<<d_samples_eng<<std::endl;
-           // ss<<"noutput_items:"<<noutput_items<<" ,input_items:"<<ninput_items[0]<<std::endl;
-           // GR_LOG_DEBUG(d_logger,ss.str());
-          //}
+        detection = logf(corr_mag[i]) - 0.5*logf(eng_acc);
+        if(detection >= d_thres_log + 0.5*d_eng_log){
+          phase = fast_atan2f(corr[i].imag(),corr[i].real());
+          if(corr[i].real()< 0.0)
+            phase += M_PI;
+          add_item_tag(0,nitems_written(0)+i,pmt::intern("corr_est"),pmt::from_bool(pmt::PMT_T));
+          add_item_tag(0,nitems_written(0)+i,pmt::intern("phase_est"),pmt::from_float(phase));
+          if(have_corr){
+            add_item_tag(1,nitems_written(1)+i,pmt::intern("corr_est"),pmt::from_bool(pmt::PMT_T));
+            //add_item_tag(1,nitems_written(1)+i,pmt::intern("phase_est"),pmt::from_float(phase));
+          }
         }
+
       }
       
       // Tell runtime system how many input items we consumed on
