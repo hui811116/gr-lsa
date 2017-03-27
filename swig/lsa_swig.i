@@ -28,6 +28,8 @@
 #include "lsa/correlate_sync_cc.h"
 #include "lsa/symbol_queue_receiver_cc.h"
 #include "lsa/symbol_level_ic_cc.h"
+#include "lsa/sync_symbol_to_sample_ff.h"
+#include "lsa/symbol_sync_receiver_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -67,3 +69,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, correlate_sync_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, symbol_queue_receiver_cc);
 %include "lsa/symbol_level_ic_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, symbol_level_ic_cc);
+%include "lsa/sync_symbol_to_sample_ff.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, sync_symbol_to_sample_ff);
+%include "lsa/symbol_sync_receiver_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, symbol_sync_receiver_cc);

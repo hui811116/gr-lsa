@@ -36,5 +36,7 @@ install(FILES
     protocol_parser_b.h
     correlate_sync_cc.h
     symbol_queue_receiver_cc.h
-    symbol_level_ic_cc.h DESTINATION include/lsa
+    symbol_level_ic_cc.h
+    sync_symbol_to_sample_ff.h
+    symbol_sync_receiver_cc.h DESTINATION include/lsa
 )

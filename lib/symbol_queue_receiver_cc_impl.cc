@@ -241,6 +241,10 @@ namespace gr {
           add_item_tag(0,nitems_written(0)+i, pmt::intern("queue_size"), pmt::from_long((long)d_qsize));
           add_item_tag(0,nitems_written(0)+i, pmt::intern("counter"), pmt::from_long(d_counter));
           add_item_tag(0,nitems_written(0)+i, pmt::intern("payload"), pmt::from_long(d_payload_len*8/d_pld_bps));
+
+          if(have_sync){
+            add_item_tag(1,nitems_written(1)+i, pmt::intern("LSA_hdr"),pmt::PMT_T);
+          }
         }
       }
       // Tell runtime system how many input items we consumed on
