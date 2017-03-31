@@ -54,8 +54,6 @@ namespace gr {
     /*
      * The private constructor
      */
-    static int ios[]={sizeof(gr_complex), sizeof(float), sizeof(float)};
-    static std::vector<int> iosig(ios, ios+sizeof(ios)/sizeof(int));
     modified_polyphase_time_sync_cc_impl::modified_polyphase_time_sync_cc_impl(double sps, float loop_bw,
            const std::vector<float> &taps,
            unsigned int filter_size,
@@ -65,7 +63,7 @@ namespace gr {
            const std::string& intf_tagname)
       : gr::block("modified_polyphase_time_sync_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::makev(1, 3, iosig)),
+              gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
   d_updated(false), d_nfilters(filter_size),
   d_max_dev(max_rate_deviation),
   d_osps(osps), d_error(0), d_out_idx(0)
@@ -233,13 +231,6 @@ void
       // for samples
       gr_complex *out = (gr_complex *) output_items[0];
 
-      /*std::vector<tag_t> tags_s1;
-      get_tags_in_range(tags_s1,1,nitems_read(1),nitems_read(1)+noutput_items);
-      for(int i=0;i<tags_s1.size();++i){
-        add_item_tag(1,tags_s1[i]);
-      }*/
-
-
       if(d_updated) {
         std::vector<float> dtaps;
         create_diff_taps(d_updated_taps, dtaps);
@@ -249,11 +240,9 @@ void
   return 0;        // history requirements may have changed.
       }
 
-      float *err = NULL, *outrate = NULL, *outk = NULL;
-      if(output_items.size() == 3) {
-  //err = (float *) output_items[1];
-  outrate = (float*)output_items[1];
-  outk = (float*)output_items[2];
+      float *err = NULL, *outk = NULL;
+      if(output_items.size() == 2) {
+        outk = (float*)output_items[1];
       }
 
       std::vector<tag_t> tags;
@@ -339,8 +328,6 @@ void
           d_out_idx++;
 
     if(output_items.size() == 3) {
-      //err[i] = d_error;
-      outrate[i] = d_rate_f;
       outk[i] = d_k;
     }
 

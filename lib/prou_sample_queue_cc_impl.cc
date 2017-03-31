@@ -31,19 +31,23 @@ namespace gr {
   namespace lsa {
 
     prou_sample_queue_cc::sptr
-    prou_sample_queue_cc::make(const std::string& sensing_tagname, bool debug)
+    prou_sample_queue_cc::make(const std::string& sensing_tagname, int sps,bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new prou_sample_queue_cc_impl(sensing_tagname, debug));
+        (new prou_sample_queue_cc_impl(sensing_tagname,sps,debug));
     }
 
     /*
      * The private constructor
      */
-    prou_sample_queue_cc_impl::prou_sample_queue_cc_impl(const std::string& sensing_tagname, bool debug)
+
+    prou_sample_queue_cc_impl::prou_sample_queue_cc_impl(
+      const std::string& sensing_tagname, 
+      int sps,
+      bool debug)
       : gr::block("prou_sample_queue_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(2, 2, sizeof(gr_complex))),
+              gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(gr_complex))),
       d_sample_cap(1024*1024)
     {
       d_sample_idx = 0;
@@ -54,14 +58,20 @@ namespace gr {
       message_port_register_in(d_info_port);
       set_msg_handler(d_info_port, boost::bind(&prou_sample_queue_cc_impl::info_msg_handler, this, _1));
 
+      if(sps<0){
+        throw std::invalid_argument("Sample per symbol cannot be negative");
+      }
+      d_sps = sps;
+
       d_update_time = std::clock();
       d_timeout = 0.5;
       d_last_time = d_update_time;
       d_current_time = d_update_time;
-      //d_retx_count = 0;
       d_sensing_tagname = pmt::string_to_symbol(sensing_tagname);
       
       d_debug = debug;
+
+      set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -78,10 +88,9 @@ namespace gr {
       long int time;
       int counter=0, qidx, qsize, offset, sample_len;
       bool sensing_state=false;
-      pmt::pmt_t tag_info;
-      if(pmt::dict_has_key(msg, d_sensing_tagname)){
-        sensing_state = pmt::to_bool(pmt::dict_ref(msg, d_sensing_tagname, pmt::PMT_NIL));
-      }
+      bool hdr = false;
+      int output_len = 0;
+
       if(pmt::dict_has_key(msg, pmt::intern("ctime")))
       {
         time = pmt::to_long(pmt::dict_ref(msg, pmt::intern("ctime"), pmt::PMT_NIL));
@@ -90,6 +99,9 @@ namespace gr {
             //outdated info, skip
             return;
           }
+      if(pmt::dict_has_key(msg, pmt::intern("LSA_hdr"))){
+        hdr = true;  
+      }
       if(pmt::dict_has_key(msg, pmt::intern("queue_index")))
       {
         qidx = pmt::to_long(pmt::dict_ref(msg, pmt::intern("queue_index"), pmt::PMT_NIL));
@@ -101,31 +113,36 @@ namespace gr {
       if(pmt::dict_has_key(msg, pmt::intern("buffer_offset")))
       {
         offset = pmt::to_long(pmt::dict_ref(msg, pmt::intern("buffer_offset"), pmt::PMT_NIL));
+        offset*=d_sps;
       }
-      if(pmt::dict_has_key(msg, pmt::intern("payload")))
-      {
-        sample_len = pmt::to_long(pmt::dict_ref(msg, pmt::intern("payload"), pmt::PMT_NIL));
-      }
+      
       long int tmp_time;
       int tmp_idx;
       
-      if(!sensing_state){
-            for(int i=0;i<d_buffer_info.size();++i){
-              tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("ctime"),pmt::PMT_NIL));
-              tmp_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("buffer_index"),pmt::PMT_NIL));
-              if(time == tmp_time){
-                //found corresponding time index
-                // attach header info on sample
-                pmt::pmt_t info_tag = msg;
-                int info_index = tmp_idx + offset;
-                //this tag should be different from feedback, since it will be used by down stream
-                info_tag = pmt::dict_delete(info_tag, pmt::intern("buffer_offset"));
-                info_tag = pmt::dict_add(info_tag, pmt::intern("header_found"), pmt::from_long(info_index));
-                d_pkt_info.push_back(info_tag);
-                break;
-                }
-              }
-            }
+      for(int i=0;i<d_buffer_info.size();++i){
+        tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("ctime"),pmt::PMT_NIL));
+        tmp_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("buffer_index"),pmt::PMT_NIL));
+        if(time == tmp_time){
+        //found corresponding time index
+        // attach header info on sample
+        pmt::pmt_t info_tag = msg;
+        int info_index = tmp_idx + offset;
+        info_tag = pmt::dict_delete(info_tag, pmt::intern("buffer_offset"));
+                
+        //this tag should be different from feedback, since it will be used by down stream
+        if(!hdr){
+          info_tag = pmt::dict_add(info_tag, pmt::intern("sync_ready"),pmt::from_long(info_index));
+          info_tag = pmt::dict_add(info_tag, pmt::intern("ctime"),pmt::from_long(time));
+          d_sync_info.push_back(info_tag);
+        }
+        else{
+          //info_tag = pmt::dict_delete(info_tag, pmt::intern("LSA_hdr"));
+          info_tag = pmt::dict_add(info_tag, pmt::intern("header_found"), pmt::from_long(info_index));
+          d_pkt_info.push_back(info_tag);        
+        }
+        break;
+        }
+      }
             
     }
     void 
@@ -169,11 +186,10 @@ namespace gr {
       int noutput_items, 
       int ninput_items)
     {
-      int count =0;
       int output_size;
-      int end_idx ,hdr_idx;
-      int pkt_count=0;
+      int end_idx=d_sample_idx;
       int tmp_pld; 
+      int count =0;
       long int tmp_time, hdr_time;
       if(ninput_items>0){
         memcpy(out,in, sizeof(gr_complex)*ninput_items);
@@ -182,49 +198,76 @@ namespace gr {
       }
         output_size = d_sample_size - d_sample_idx;
         output_size = (output_size > noutput_items) ? noutput_items : output_size;
-        end_idx = 0;
-        while(pkt_count<d_pkt_info.size()){
-          hdr_idx = pmt::to_long(pmt::dict_ref(d_pkt_info[pkt_count],pmt::intern("header_found"),pmt::PMT_NIL));
-          tmp_pld = pmt::to_long(pmt::dict_ref(d_pkt_info[pkt_count],pmt::intern("payload"),pmt::PMT_NIL));
-          end_idx = hdr_idx + tmp_pld;
-          if(end_idx>output_size){
+        // reset count to find sync ready
+        for(count=0;count<d_sync_info.size();++count){
+          int tmp_idx = pmt::to_long(pmt::dict_ref(d_sync_info[count],pmt::intern("sync_ready"),pmt::PMT_NIL));
+          if(tmp_idx > d_sample_idx+output_size){
             break;
           }
-          pkt_count++;
+          end_idx = tmp_idx;
         }
-        // When timeout, samples should be passed to downstream
-        long int time_check = d_update_time;
-        if(!d_buffer_info.empty()){
-          long int time_check = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("ctime"),pmt::PMT_NIL));  
-        }        
-        
-        if( ((d_current_time-time_check)/CLOCKS_PER_SEC)>=d_timeout ){
-          // Timeout, force output
-        }
-        else if(end_idx==0){
-          produce(1,0);
-          return;
-        }
+        // sync ready, prepare to output
+        if(end_idx > d_sample_idx){
+          for(int i=0;i<count;++i){
+            int sync_idx = pmt::to_long(pmt::dict_ref(d_sync_info[i],pmt::intern("sync_ready"),pmt::PMT_NIL));
+            long int sync_time = pmt::to_long(pmt::dict_ref(d_sync_info[i],pmt::intern("ctime"),pmt::PMT_NIL));
+            add_item_tag(1,nitems_written(1)+ sync_idx-d_sample_idx, pmt::intern("ctime"),pmt::from_long(sync_time));
+          }
+          d_sync_info.erase(d_sync_info.begin(),d_sync_info.begin()+count);
+          //sync ready
+          // add tags in header
+          while(!d_pkt_info.empty()){
+            int tmp_idx = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("header_found"),pmt::PMT_NIL)) ;
+            tmp_pld = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("payload"),pmt::PMT_NIL) );
+            tmp_pld*= d_sps;
+            if(tmp_idx >= (d_sample_idx + output_size)){
+              break;
+            }
+            d_last_time = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
+            //d_pkt_info[0] = pmt::dict_delete(d_pkt_info[0],pmt::intern("ctime"));
+            pmt::pmt_t dict = pmt::dict_items(d_pkt_info[0]);
+            while(!pmt::is_null(dict)){
+              pmt::pmt_t tmp_pair = pmt::car(dict);
+              add_item_tag(1,nitems_written(1)+ tmp_idx-d_sample_idx,pmt::car(tmp_pair),pmt::cdr(tmp_pair));
+              dict = pmt::cdr(dict);
+            }
+            d_pkt_info.erase(d_pkt_info.begin());
+          }
+          for(int i=0;i<d_buffer_info.size();++i){
+            int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("buffer_index"),pmt::PMT_NIL));
+            tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("ctime"),pmt::PMT_NIL));
+            if((offset>=d_sample_idx) && (offset< d_sample_idx+output_size) ){
+              add_item_tag(1,nitems_written(1)+offset-d_sample_idx,pmt::intern("ctime"),pmt::from_long(tmp_time));
+            }
+            if(offset >= d_sample_idx + output_size ){
+              break;
+            }
+          }
+          //reset count to search buffer
+          /*count=0;
+          while(count < d_buffer_info.size()){
+            int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("buffer_index"),pmt::PMT_NIL));
+            tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("ctime"),pmt::PMT_NIL));
+            if((offset>d_sample_idx) && (offset< d_sample_idx+output_size) ){
+              add_item_tag(1,nitems_written(1)+offset-d_sample_idx,pmt::intern("ctime"),pmt::from_long(tmp_time));
+            }
+            if(offset >= d_sample_idx + output_size ){
+              break;
+            }
+            count++;
+          }
+          if(count>1){
+            d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+count-1);
+          }*/
 
-        while(!d_pkt_info.empty()){
-          hdr_idx = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("header_found"),pmt::PMT_NIL));
-          if(hdr_idx >= (d_sample_idx + output_size)){
-            break;
-          }          
-          d_last_time = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
-          d_pkt_info[0] = pmt::dict_delete(d_pkt_info[0],pmt::intern("ctime"));
-          pmt::pmt_t dict = pmt::dict_items(d_pkt_info[0]);
-          while(!pmt::is_null(dict)){
-            pmt::pmt_t tmp_pair = pmt::car(dict);
-            add_item_tag(1,nitems_written(1)+ hdr_idx-d_sample_idx,pmt::car(tmp_pair),pmt::cdr(tmp_pair));
-            dict = pmt::cdr(dict);
-          }
-          d_pkt_info.erase(d_pkt_info.begin());
+          memcpy(sample_out, d_sample_buffer+d_sample_idx, sizeof(gr_complex)* output_size);
+          produce(1,output_size);
+          d_sample_idx += output_size;
         }
-        produce(1,output_size);
-        memcpy(sample_out, d_sample_buffer+d_sample_idx, sizeof(gr_complex)*output_size);
+        else{
+          produce(1,0);
+        }
         
-        d_sample_idx+= output_size;
     }
 
     void
@@ -263,8 +306,20 @@ namespace gr {
             new_pkt_info.push_back(d_pkt_info[i]);
           }
         }
-        d_update_time = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
         d_pkt_info = new_pkt_info;
+
+        std::vector<pmt::pmt_t> new_sync_info;
+        for(int i=0;i<d_sync_info.size();++i){
+          int offset = pmt::to_long(pmt::dict_ref(d_sync_info[i],pmt::intern("sync_ready"),pmt::PMT_NIL));
+          if(offset - tmp_idx >=0){
+            d_sync_info[i] = pmt::dict_delete(d_sync_info[i],pmt::intern("sync_ready"));
+            d_sync_info[i] = pmt::dict_add(d_sync_info[i], pmt::intern("sync_ready"),pmt::from_long(offset-tmp_idx));
+            new_sync_info.push_back(d_sync_info[i]);
+          }
+        }
+        d_sync_info = new_sync_info;
+
+        d_update_time = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
         memcpy(d_sample_buffer, d_sample_buffer+tmp_idx, sizeof(gr_complex)* (d_sample_size-tmp_idx));
 
         d_sample_idx =0;
@@ -279,7 +334,9 @@ namespace gr {
       int items_reqd=0;
       int space_left = d_sample_cap-d_sample_size;
       items_reqd = (space_left >noutput_items) ?noutput_items : space_left;
-      ninput_items_required[0] = items_reqd;
+
+      for(int i=0;i<ninput_items_required.size();++i)
+        ninput_items_required[i] = items_reqd;
     }
 
     int
@@ -289,6 +346,7 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
+
       gr_complex *out = (gr_complex *) output_items[0];
       gr_complex *sample = (gr_complex *) output_items[1];
       
@@ -296,6 +354,7 @@ namespace gr {
       int consume_count =0;
 
       if( 2*d_sample_size >= d_sample_cap){
+        
         if(d_debug){
           std::cout<<"before update:"<<std::endl;
           std::cout<<"buffer size:"<<d_buffer_info.size()<<" ,pkt_hdr_size:"<<d_pkt_info.size()<<std::endl;
@@ -303,6 +362,7 @@ namespace gr {
           std::cout<<"current time:"<<d_current_time<<" ,update_time:"<<d_update_time<<" ,last_time:"<<d_last_time<<std::endl;
         }
         update_sample_buffer();
+        
         if(d_debug){
           std::cout<<"after update:"<<std::endl;
           std::cout<<"buffer size:"<<d_buffer_info.size()<<" ,pkt_hdr_size:"<<d_pkt_info.size()<<std::endl;

@@ -21,7 +21,6 @@
 #include "lsa/modified_polyphase_time_sync_cc.h"
 #include "lsa/modified_costas_loop_cc.h"
 #include "lsa/prou_sample_queue_cc.h"
-#include "lsa/symbol_receiver_c.h"
 #include "lsa/interference_canceller_cc.h"
 #include "lsa/burst_tagger_cc.h"
 #include "lsa/protocol_parser_b.h"
@@ -54,8 +53,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, modified_polyphase_time_sync_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, modified_costas_loop_cc);
 %include "lsa/prou_sample_queue_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, prou_sample_queue_cc);
-%include "lsa/symbol_receiver_c.h"
-GR_SWIG_BLOCK_MAGIC2(lsa, symbol_receiver_c);
+
 %include "lsa/interference_canceller_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_canceller_cc);
 

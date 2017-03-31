@@ -36,6 +36,7 @@ namespace gr {
       gr_complex* d_sample_buffer;
       std::vector<pmt::pmt_t> d_pkt_info;
       std::vector<pmt::pmt_t> d_buffer_info;
+      std::vector<pmt::pmt_t> d_sync_info;
 
       int d_sample_idx;
       const unsigned int d_sample_cap;
@@ -46,9 +47,7 @@ namespace gr {
       long int d_last_time;
       float d_timeout;
 
-      //for sensing and retransmission
-      //std::vector<bool> d_retx_status;
-      //int d_retx_count;
+      int d_sps;   
 
       bool d_debug;
       //helper function
@@ -73,7 +72,10 @@ namespace gr {
       // message handler
       void info_msg_handler(pmt::pmt_t msg);
       
-      prou_sample_queue_cc_impl(const std::string& sensing_tagname, bool debug);
+      prou_sample_queue_cc_impl(
+        const std::string& sensing_tagname, 
+        int sps,
+        bool debug);
       ~prou_sample_queue_cc_impl();
 
       // Where all the action really happens

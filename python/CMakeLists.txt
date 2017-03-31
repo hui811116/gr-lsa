@@ -49,7 +49,6 @@ GR_ADD_TEST(qa_interference_energy_detector_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURR
 GR_ADD_TEST(qa_modified_polyphase_time_sync_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_modified_polyphase_time_sync_cc.py)
 GR_ADD_TEST(qa_modified_costas_loop_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_modified_costas_loop_cc.py)
 GR_ADD_TEST(qa_prou_sample_queue_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_prou_sample_queue_cc.py)
-GR_ADD_TEST(qa_symbol_receiver_c ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_symbol_receiver_c.py)
 GR_ADD_TEST(qa_interference_canceller_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_interference_canceller_cc.py)
 GR_ADD_TEST(qa_burst_tagger_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_burst_tagger_cc.py)
 GR_ADD_TEST(qa_protocol_parser_b ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_protocol_parser_b.py)

@@ -33,7 +33,6 @@ list(APPEND lsa_sources
     modified_polyphase_time_sync_cc_impl.cc
     modified_costas_loop_cc_impl.cc
     prou_sample_queue_cc_impl.cc
-    symbol_receiver_c_impl.cc
     interference_canceller_cc_impl.cc
     burst_tagger_cc_impl.cc
     protocol_parser_b_impl.cc 

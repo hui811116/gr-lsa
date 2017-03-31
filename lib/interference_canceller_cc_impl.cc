@@ -58,6 +58,9 @@ namespace gr {
     /*
      * The private constructor
      */
+    static int ios[]={sizeof(gr_complex),sizeof(float),sizeof(float)};
+    static std::vector<int> iosig(ios,ios+sizeof(ios)/sizeof(int));
+
     interference_canceller_cc_impl::interference_canceller_cc_impl(const std::vector<gr_complex>& clean_preamble,
       const std::string& sensing_tagname,
       int sps,
@@ -65,7 +68,7 @@ namespace gr {
       int hdr_bits,
       bool debug)
       : gr::block("interference_canceller_cc",
-              gr::io_signature::make(1, 1, sizeof(gr_complex)),
+              gr::io_signature::makev(3, 3, iosig),
               gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
       d_cap(1024*4096),
       d_clean_preamble(clean_preamble),
@@ -74,7 +77,8 @@ namespace gr {
       d_sensing_tagname = pmt::string_to_symbol(sensing_tagname);
       d_sample_buffer = new gr_complex[d_cap];
       d_sample_size =0;
-      d_sample_idx =0;
+      d_sync_size =0;
+      //d_sample_idx =0;
       d_output_buffer = new gr_complex[d_cap];
       d_output_size =0;
       d_output_idx = 0;
@@ -94,6 +98,9 @@ namespace gr {
       set_tag_propagation_policy(TPP_DONT);
 
       d_last_info_idx = 0;
+
+      //for sync
+      d_phase_buffer = new float[d_cap];
     }
 
     /*
@@ -110,6 +117,7 @@ namespace gr {
       d_retx_buffer.clear();
 
       volk_free(d_eng_buffer);
+      delete [] d_phase_buffer;
     }
 
     void
@@ -162,12 +170,8 @@ namespace gr {
       int cur_pkt_begin,next_pkt_begin, retx_idx;
       int count =0;
       int test_pkt_len, cur_payload, fixed_pkt_len;
-      float phase_shift, freq_offset;
       gr_complex sample_fix;
       pmt::pmt_t tmp_dict;
-
-      //std::map<int,int> idx_iter_map;
-      //std::map<int,int>::iterator it;
 
       buffer_info.assign(d_buffer_info.begin(),d_buffer_info.begin()+d_last_info_idx+1);
       info_index.assign(d_info_index.begin(),d_info_index.begin()+d_last_info_idx+1);
@@ -175,84 +179,7 @@ namespace gr {
         int test_pkt_len = pmt::to_long(pmt::dict_ref(buffer_info[i],pmt::intern("payload"),pmt::PMT_NIL));
         coerced_packet_len.push_back(test_pkt_len+d_hdr_sample_len);
       }
-      //FIXME
-      // this part meant for fixing payload length
-      /*while(count < d_info_index.size()){
-        tmp_dict = d_buffer_info[count];
-        cur_payload = pmt::to_long(pmt::dict_ref(tmp_dict, pmt::intern("payload"), pmt::PMT_NIL));
-        cur_pkt_begin = d_info_index[count];
-        idx_iter_map.insert( std::pair<int,int>(d_info_index[count],count) );
-        if(cur_pkt_begin + cur_payload + d_hdr_sample_len > end_idx){
-          if( abs(cur_pkt_begin + cur_payload + d_hdr_sample_len - end_idx) <=d_sps ){
-            next_pkt_begin = end_idx;  
-          }
-          else{
-            break;  
-          }
-        }
-        else{
-          next_pkt_begin = d_info_index[count+1];  
-        }
-        test_pkt_len = next_pkt_begin - cur_pkt_begin - (cur_payload + d_hdr_sample_len);
-        if( abs(test_pkt_len)<=d_sps ){
-          fixed_pkt_len = cur_payload + d_hdr_sample_len + test_pkt_len;
-        }
-        else{
-          //not in the range of next header information
-          fixed_pkt_len = cur_payload + d_hdr_sample_len;
-        }
-        coerced_packet_len.push_back(fixed_pkt_len);
-        buffer_info.push_back(tmp_dict);
-        info_index.push_back(cur_pkt_begin);
-        count++;
-      }*/
       
-      //create copy of retransmission
-      for(int i=0;i<d_retx_count;++i){
-        //fix its own impairments first?
-        phase_shift = pmt::to_float(pmt::dict_ref(d_retx_info[i],pmt::intern("phase_est"),pmt::PMT_NIL));
-        freq_offset = pmt::to_float(pmt::dict_ref(d_retx_info[i],pmt::intern("freq_est"),pmt::PMT_NIL));
-        freq_offset/= static_cast<float>(d_sps);
-        //NOTE: this offset is estimated after header been found,
-        //      to find the estimate the begin of packet, a naive way is to shift back 
-        phase_shift-= freq_offset*d_hdr_sample_len;
-        while(phase_shift>=TWO_PI){
-          phase_shift-=TWO_PI;
-        }
-        while(phase_shift<=-TWO_PI){
-          phase_shift+=TWO_PI;
-        }
-        //FIXME
-        // 1. carrier frequency and phase correction for retransmission.
-        // this method performs so poor!
-        // 2. use coerced packet len to copy retransmission
-        //it = idx_iter_map.find(d_retx_pkt_index[i]);
-        //if(it == idx_iter_map.end()){
-          //throw std::runtime_error("cannot found the index of retransmission, terminate");
-        //}
-        //if(coerced_packet_len[it->second] > d_retx_pkt_size[i]+d_sps*2){
-          //resize to fit samples, normally should not happen...
-          //delete [] d_retx_buffer[i];
-          //d_retx_buffer[i] = new gr_complex[coerced_packet_len[it->second] + d_sps*2];
-        //}
-        //memcpy(d_retx_buffer[i], d_sample_buffer+(it->first), sizeof(gr_complex)*coerced_packet_len[it->second]);
-        //d_retx_pkt_size[i] = coerced_packet_len[it->second];
-        
-        for(int j=0;j<d_retx_pkt_size[i]+2*d_sps;++j){
-          sample_fix = d_sample_buffer[d_retx_pkt_index[i]+j] * gr_expj(-phase_shift);
-          d_retx_buffer[i][j] = sample_fix;
-          phase_shift += freq_offset;
-          while(phase_shift>=TWO_PI){
-            phase_shift-= TWO_PI;
-          }
-          while(phase_shift<=-TWO_PI){
-            phase_shift+= TWO_PI;
-          }
-        }
-        // this is for non correcting case
-        //memcpy(d_retx_buffer[i],d_sample_buffer+d_retx_pkt_index[i], sizeof(gr_complex)* (d_retx_pkt_size[i]+2*d_sps) );
-      }
-
     }
 
     void
@@ -270,6 +197,17 @@ namespace gr {
           qs = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_size"),pmt::PMT_NIL));
           std::cout<<"["<<i<<"]"<<" ,index:"<<d_info_index[i]<<" counter:"<<ct<<" ,queue_index:"<<qi<<" ,queue_size:"<<qs<<std::endl;
         }
+        std::map<long int, int>::iterator samp_it,sync_it;
+        std::cout<<"----------------------------------------"<<std::endl;
+        std::cout<<"Sample map:"<<std::endl;
+        for(samp_it=d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
+          std::cout<<"time:"<<samp_it->first<<" ,index:"<<samp_it->second<<std::endl;
+        }
+        std::cout<<"---------------------------------------"<<std::endl;
+        std::cout<<"Sync map;"<<std::endl;
+        for(sync_it=d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
+          std::cout<<"time:"<<sync_it->first<<" ,index"<<sync_it->second<<std::endl;
+        }
         std::cout<<"***************************************"<<std::endl;
       }
 
@@ -284,25 +222,17 @@ namespace gr {
       int retx_size = d_retx_buffer.size();
       int total_size;
       int pld_len;
-      float phase_shift, freq_offset;
       gr_complex* retx, corrected_sample;
       pmt::pmt_t tmp_dict;
 
+      // cfo, phase correction
       // fixing packet len
       sync_hdr_index(packet_len, buffer_info, info_index, end_idx);
 
+
       cei_pkt_counter = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
       pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::PMT_NIL));
-      phase_shift = pmt::to_float(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("phase_est"),pmt::PMT_NIL));
-      freq_offset = pmt::to_float(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("freq_est"),pmt::PMT_NIL));
-      freq_offset/=static_cast<float>(d_sps);
-      phase_shift += freq_offset*pld_len;
-      while(phase_shift>=TWO_PI){
-        phase_shift-=TWO_PI;
-      }
-      while(phase_shift<=-TWO_PI){
-        phase_shift+=TWO_PI;
-      }
+      
       
       cei_sample_counter = d_retx_pkt_size[cei_pkt_counter];
       retx = d_retx_buffer[cei_pkt_counter];
@@ -329,14 +259,7 @@ namespace gr {
       while(total_size>0){
         total_size--;
         cei_sample_counter--;
-        corrected_sample = gr_expj(phase_shift)*retx[cei_sample_counter];
-        d_output_buffer[d_output_size+total_size] = d_sample_buffer[total_size] - corrected_sample;
-
-        phase_shift-=freq_offset;
-        while(phase_shift>=TWO_PI)
-          phase_shift-=TWO_PI;
-        while(phase_shift<=-TWO_PI)
-          phase_shift+=TWO_PI;
+        d_output_buffer[d_output_size+total_size] = d_sample_buffer[total_size] - retx[cei_sample_counter];
 
         if(!info_index.empty()){
           int idx = info_index.back();
@@ -346,17 +269,6 @@ namespace gr {
             buffer_info.pop_back();
             info_index.pop_back();
             packet_len.pop_back();
-            if(!buffer_info.empty()){
-              phase_shift = pmt::to_float(pmt::dict_ref(buffer_info.back(),pmt::intern("phase_est"),pmt::PMT_NIL));
-              freq_offset = pmt::to_float(pmt::dict_ref(buffer_info.back(),pmt::intern("freq_est"),pmt::PMT_NIL));
-              freq_offset/=static_cast<float>(d_sps);
-              pld_len = pmt::to_long(pmt::dict_ref(buffer_info.back(),pmt::intern("payload"),pmt::PMT_NIL));
-              phase_shift+=freq_offset * pld_len;
-              while(phase_shift>=TWO_PI)
-                phase_shift-=TWO_PI;
-              while(phase_shift<=-TWO_PI)
-                phase_shift+=TWO_PI;
-            }
           }
           else if((cei_sample_counter==0) && (idx<total_size) ){
             cei_sample_counter++;
@@ -371,7 +283,7 @@ namespace gr {
         }
         
       }
-
+      //fixing header part
       d_output_size = d_out_index.back();
       update_system_index(end_idx);
     }
@@ -448,20 +360,35 @@ namespace gr {
     {
       int qsize,qidx;
       int pld_len, sample_idx;
-      int valid_size;
+      int valid_size, sync_size;
+      long int time_check;
+      std::map<long int, int>::iterator it, samp_it;
       if(d_buffer_info.empty()){
         return false;
       }
       else{
         //update index
         while(d_last_info_idx<d_buffer_info.size()){
+          time_check = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("ctime"),pmt::PMT_NIL));
+          it = d_sync_map.find(time_check);
+          if(it == d_sync_map.end()){
+            //sync info not yet received
+            return false;
+          }
+          samp_it = d_samp_map.find(time_check);
+          if(samp_it == d_samp_map.end()){
+            std::cout<<"error: time not found:"<<time_check<<"<--key"<<std::endl;
+            throw std::runtime_error("Time not matched in sample map and buffer info");
+          }
+
           pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::PMT_NIL));
           valid_size = d_info_index[d_last_info_idx] + pld_len + d_hdr_sample_len;
+          //calculate the valid sync info size
+          sync_size = d_info_index[d_last_info_idx] - samp_it->second + it->second + d_hdr_sample_len + pld_len;
           qidx = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
           qsize = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_size"),pmt::PMT_NIL));
-          if( (valid_size+4096) > d_sample_size){
+          if( ((valid_size+1024) > d_sample_size) || ((sync_size+1024) > d_sync_size) ){
             //samples not enough
-            //save 4096 for stablity
             return false;
           }
           if((qsize!=d_retx_buffer.size()) && !d_retx_buffer.empty()){
@@ -488,18 +415,49 @@ namespace gr {
     interference_canceller_cc_impl::update_system_hdr()
     {
       //removed till d_last_info_idx;
+      // updating sync info
+      std::map<long int, int>::iterator samp_it, sync_it;
+      long int update_time = pmt::to_long(
+        pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("ctime"),
+          pmt::PMT_NIL));
+      int update_idx;
+      sync_it = d_sync_map.find(update_time);
+      if(sync_it==d_sync_map.end()){
+        throw std::runtime_error("find no time info");
+      }
+      update_idx = sync_it->second;
+      d_sync_map.erase(d_sync_map.begin(),sync_it);
+      for(sync_it =d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
+        d_sync_map[sync_it->first] = sync_it->second-update_idx;
+      }
+      memcpy(d_phase_buffer,d_phase_buffer+update_idx,sizeof(float)*(d_sync_size-update_idx));
+      d_sync_size-=update_idx;
+
+      // handling sample information
+      // reset for sample
+      samp_it = d_samp_map.find(update_time);
+      if(samp_it == d_samp_map.end()){
+        throw std::runtime_error("find no time info");
+      }
+      // reset update_idx for tracking index
+      update_idx = samp_it->second;
+
       int rm_idx = d_info_index[d_last_info_idx];
       d_info_index.erase(d_info_index.begin(),d_info_index.begin()+d_last_info_idx);
       d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+d_last_info_idx);
       for(int k=0;k<d_info_index.size();++k){
-        d_info_index[k]-= rm_idx;
-        d_info_index[k] = (d_info_index[k]<0) ? 0 : d_info_index[k];
+        d_info_index[k]-= update_idx;
       }
-      int rest_len = d_sample_size - rm_idx;
-      memcpy(d_sample_buffer, d_sample_buffer+rm_idx, sizeof(gr_complex)*rest_len);
-      d_sample_size-= rm_idx;
-      d_sample_idx =0;
-
+      int rest_len = d_sample_size - update_idx;
+      memcpy(d_sample_buffer, d_sample_buffer+update_idx, sizeof(gr_complex)*rest_len);
+      d_sample_size-= update_idx;
+      //d_sample_idx -= update_idx;
+      
+      d_samp_map.erase(d_samp_map.begin(),samp_it);
+      for(samp_it=d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
+        d_samp_map[samp_it->first] = samp_it->second - update_idx;
+      }
+      //reset retransmission info
       d_retx_count =0;
       d_retx_info.clear();
       d_retx_pkt_size.clear();
@@ -516,12 +474,41 @@ namespace gr {
     void
     interference_canceller_cc_impl::update_system_index(int queue_index)
     {
+      std::map<long int,int>::iterator samp_it,sync_it;
+      int block_index;
+      long int time_ref;
+      for(samp_it=d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
+        if(samp_it->second > queue_index){
+          break;  
+        }
+          block_index = samp_it->second;
+          time_ref = samp_it->first;  
+      }
+      // track back by one block
+      samp_it--;
+      d_samp_map.erase(d_samp_map.begin(),samp_it);
+      for(samp_it=d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
+        d_samp_map[samp_it->first] = samp_it->second-block_index;
+      }
+      sync_it = d_sync_map.find(time_ref);
+      int sync_block_idx = sync_it->second;
+      if(sync_it==d_sync_map.end()){
+        throw std::runtime_error("searching time index in sync buffer failed");
+      }
+      d_sync_map.erase(d_sync_map.begin(),sync_it);
+      for(sync_it=d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
+        d_sync_map[sync_it->first] = sync_it->second - sync_block_idx;
+      }
+
+      //DEBUG required      
       // move samples
-      int new_size = d_sample_size-queue_index;
-      memcpy(d_sample_buffer, d_sample_buffer+queue_index, sizeof(gr_complex)*new_size);
+      int new_size = d_sample_size-block_index;
+      memcpy(d_sample_buffer, d_sample_buffer+block_index, sizeof(gr_complex)*new_size);
+      memcpy(d_phase_buffer,d_phase_buffer+sync_block_idx,sizeof(float)*(d_sync_size-sync_block_idx));
+      d_sync_size-=sync_block_idx;
 
       d_sample_size = new_size;
-      d_sample_idx = 0;
+      //d_sample_idx -= block_index;
 
       std::vector<int> new_info_index;
       std::vector<int> new_end_idx;
@@ -534,7 +521,7 @@ namespace gr {
           rm_count++;
           continue;
         }
-        new_info_index.push_back(d_info_index[i]-queue_index);
+        new_info_index.push_back(d_info_index[i]-block_index);
       }
       d_info_index = new_info_index;
       // update buffer info
@@ -545,7 +532,7 @@ namespace gr {
       d_last_info_idx = 0;
       // update end index
       for(int i=0;i<d_end_index.size();++i){
-        d_end_index[i] -= queue_index;
+        d_end_index[i] -= block_index;
         if(d_end_index[i]>=0){
           new_end_idx.push_back(d_end_index[i]);
         }
@@ -601,12 +588,14 @@ namespace gr {
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
       int items_reqd=0;
-
+      int sync_reqd =0;
       int space = d_cap -d_sample_size;
-
+      int sync_space = d_cap - d_sync_size;
       items_reqd = (noutput_items>space) ? space : noutput_items;
-      for(int i=0;i<ninput_items_required.size();++i){
-             ninput_items_required[i] = items_reqd;
+      sync_reqd = (noutput_items>sync_space)?sync_space:noutput_items;
+      ninput_items_required[0] = items_reqd;
+      for(int i=1;i<ninput_items_required.size();++i){
+             ninput_items_required[i] = sync_reqd;
           }    
     }
 
@@ -617,30 +606,53 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
+      const float* in_sync_p=(const float*) input_items[1];
+      const float* in_sync_k=(const float*) input_items[2];
       gr_complex *out = (gr_complex *) output_items[0];
       bool have_eng = output_items.size()>=2;
       float* eng =(have_eng) ?  (float*) output_items[1] : NULL;
       int count = 0; //for outputs
       int nin = (ninput_items[0]>noutput_items) ? noutput_items : ninput_items[0];
+      int nsync= (ninput_items[1]>noutput_items) ? noutput_items : ninput_items[1];
       // maintain queue size
-      if(d_cap-d_sample_size < noutput_items){
-        update_system_index(d_cap/2);
+      //GR_LOG_DEBUG(d_logger,"Before update checking");
+      if( (d_cap-d_sample_size < noutput_items) || (d_cap - d_sync_size < noutput_items) ){
+        update_system_index(d_cap/2); //FIXME
       }
-      nin = (d_cap - d_sample_size > nin) ? nin : (d_cap - d_sample_size);
-      // handle sample_size properly;
-      memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)* nin);
+      //GR_LOG_DEBUG(d_logger,"Getting tags");
+      std::vector<tag_t> sample_time, sync_time;
+      get_tags_in_range(sample_time,0,nitems_read(0),nitems_read(0)+nin,pmt::intern("ctime"));
+      get_tags_in_range(sync_time,1,nitems_read(1),nitems_read(1)+nsync,pmt::intern("ctime"));
+
+      for(int i=0;i<sample_time.size();++i){
+        long int tmp_time = pmt::to_long(sample_time[i].value);
+        int offset = (int) d_sample_size + sample_time[i].offset - nitems_read(0);
+        d_samp_map.insert(std::pair<long int,int>(tmp_time,offset));
+      }
+      for(int i=0;i<sync_time.size();++i){
+        long int tmp_time = pmt::to_long(sync_time[i].value);
+        int offset = (int) d_sync_size + sync_time[i].offset - nitems_read(1);
+        d_sync_map.insert(std::pair<long int,int>(tmp_time, offset));
+      }
+      //GR_LOG_DEBUG(d_logger, "Before copying signals");
+      memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)*nin);
+      memcpy(d_phase_buffer+d_sync_size, in_sync_p , sizeof(float)*nsync);
+      
       std::vector<tag_t> tags;
       get_tags_in_window(tags, 0,0 ,nin, pmt::intern("header_found"));
       // insert tags as dictionaries. 
       tags_handler(tags, nin);
       // update sample size
-      d_sample_size+=nin; 
+      d_sample_size+=nin;
+      d_sync_size+=nsync;
+      //GR_LOG_DEBUG(d_logger,"Before detector");
       // detecting interference cancellation availability 
       // is faster by checking tag-by-tag.  
       if(cancellation_detector()){
         do_interference_cancellation();
       }
       // output status checking
+      //GR_LOG_DEBUG(d_logger, "Before output");
       if(!d_out_index.empty()){
         output_result(noutput_items, out, eng);
       }
@@ -648,7 +660,9 @@ namespace gr {
         produce(0,0);
         produce(1,0);
       }
-      consume_each(nin);
+      consume(0,nin);
+      consume(1,nsync);
+      consume(2,nsync);
 
       return WORK_CALLED_PRODUCE;
     }

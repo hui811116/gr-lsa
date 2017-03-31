@@ -41,12 +41,12 @@ namespace gr {
     /*
      * The private constructor
      */
-    static int ios[]  = {sizeof(gr_complex), sizeof(float), sizeof(float), sizeof(float), sizeof(float)};
+    static int ios[]  = {sizeof(gr_complex), sizeof(float), sizeof(float)};
     static std::vector<int> iosig(ios, ios + sizeof(ios)/sizeof(int));
     modified_costas_loop_cc_impl::modified_costas_loop_cc_impl(float loop_bw, int order, bool use_snr, const std::string& intf_tagname)
       : gr::block("modified_costas_loop_cc",
-              gr::io_signature::make3(1,3, sizeof(gr_complex), sizeof(float), sizeof(float)),
-              gr::io_signature::makev(1,5,iosig)),
+              gr::io_signature::make2(1,2, sizeof(gr_complex), sizeof(float)),
+              gr::io_signature::makev(1,3,iosig)),
       blocks::control_loop(loop_bw, 1.0, -1.0),
   d_order(order), d_error(0), d_noise(1.0), d_phase_detector(NULL)
     {
@@ -204,15 +204,12 @@ namespace gr {
 
       gr_complex *optr = (gr_complex *) output_items[0];
       
-      float *foptr = (float*) output_items[1];
-      float *poptr = (float*) output_items[2];
-      float *poly_freq = (float*) output_items[3];
-      float *poly_phase = (float*) output_items[4];
-      bool write_foptr = output_items.size() >= 5;
-      bool have_poly = input_items.size() >=3;
+      float *poptr = (float*) output_items[1];
+      float *poly_phase = (float*) output_items[2];
+      bool write_foptr = output_items.size() >= 3;
+      bool have_poly = input_items.size() >=2;
       if(have_poly){
-        plf_freq = (float*)input_items[1];
-        plf_phase = (float*)input_items[2];
+        plf_phase = (float*)input_items[1];
       }
       gr_complex nco_out;
       std::vector<tag_t> intf_tags;
@@ -258,13 +255,9 @@ namespace gr {
           phase_wrap();
           frequency_limit();
           d_prev_time_count++;
-          foptr[i] = d_freq;
           poptr[i] = d_phase;
           // direct copy
-          //poly_freq[i] = plf_freq[i];
-          //poly_phase[i] = plf_phase[i];
         }
-        memcpy(poly_freq, plf_freq,sizeof(float)*noutput_items);
         memcpy(poly_phase, plf_phase, sizeof(float)*noutput_items);
       }
         

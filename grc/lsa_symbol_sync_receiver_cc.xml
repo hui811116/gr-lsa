@@ -50,17 +50,7 @@
     <type>complex</type>
   </sink>
   <sink>
-    <name>freq</name>
-    <type>float</type>
-    <optional>1</optional>
-  </sink>
-  <sink>
     <name>phase</name>
-    <type>float</type>
-    <optional>1</optional>
-  </sink>
-  <sink>
-    <name>time rate</name>
     <type>float</type>
     <optional>1</optional>
   </sink>
@@ -76,17 +66,7 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>freq out</name>
-    <type>float</type>
-    <optional>1</optional>
-  </source>
-  <source>
     <name>phase out</name>
-    <type>float</type>
-    <optional>1</optional>
-  </source>
-  <source>
-    <name>time rate out</name>
     <type>float</type>
     <optional>1</optional>
   </source>
@@ -95,5 +75,9 @@
     <type>float</type>
     <optional>1</optional>
   </source>
-
+  <source>
+    <name>msg</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
 </block>

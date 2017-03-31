@@ -59,15 +59,18 @@ namespace gr {
       long int d_current_time;
       int d_symbol_count;
       pmt::pmt_t d_timetag;
+      pmt::pmt_t d_msg_port;
 
       uint16_t _get_bit16(int begin_idx);
       uint8_t _get_bit8(int begin_idx);
+      bool insert_symbol(const gr_complex& symbol);
+      bool parse_header();
+      void msg_out(int noutput_items, bool hdr);
 
      public:
 
       bool set_accesscode(const std::string& accesscode);
-      bool insert_symbol(const gr_complex& symbol);
-      bool parse_header();
+      
       size_t header_nbits() const;
 
       symbol_sync_receiver_cc_impl(

@@ -31,15 +31,7 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <sink>
-    <name>freq</name>
-    <type>float</type>
-  </sink>
-  <sink>
     <name>phase</name>
-    <type>float</type>
-  </sink>
-  <sink>
-    <name>time rate</name>
     <type>float</type>
   </sink>
   <sink>
@@ -53,15 +45,7 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>freq</name>
-    <type>float</type>
-  </source>
-  <source>
     <name>phase</name>
-    <type>float</type>
-  </source>
-  <source>
-    <name>time rate</name>
     <type>float</type>
   </source>
   <source>

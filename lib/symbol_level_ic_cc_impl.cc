@@ -48,7 +48,7 @@ namespace gr {
     /*
      * The private constructor
      */
-    static int ios[] = {sizeof(gr_complex), sizeof(float),sizeof(float),sizeof(float),sizeof(float)};
+    static int ios[] = {sizeof(gr_complex), sizeof(float),sizeof(float)};
     static std::vector<int> iosig(ios, ios+ sizeof(ios)/sizeof(int));
     symbol_level_ic_cc_impl::symbol_level_ic_cc_impl(
       const std::string& accesscode,
@@ -57,7 +57,7 @@ namespace gr {
       bool debug
       )
       : gr::block("symbol_level_ic_cc",
-              gr::io_signature::makev(1, 5, iosig),
+              gr::io_signature::makev(1, 3, iosig),
               gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
       d_cap(1024*1024),
       d_clean_preamble(clean_preamble)
@@ -292,8 +292,8 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      const float *freq, *phase, *rate_f,*rate_k;
-      bool have_sync = (input_items.size()>=5);
+      const float *phase, *rate_k;
+      bool have_sync = (input_items.size()>=3);
       bool out_eng = (output_items.size()>=2);
       float* eng;
       if(out_eng){
@@ -301,10 +301,8 @@ namespace gr {
       }
       
       if(have_sync){
-        freq = (const float*) input_items[1];
-        phase = (const float*) input_items[2];
-        rate_f = (const float*) input_items[3];
-        rate_k = (const float*) input_items[4]; 
+        phase = (const float*) input_items[1];
+        rate_k = (const float*) input_items[2]; 
       }
       //checking buffer size;
       if(d_buf_size == d_cap){

@@ -54,10 +54,8 @@ namespace gr {
     /*
      * The private constructor
      */
-    static int ios[]={sizeof(gr_complex), sizeof(float), sizeof(float), sizeof(float), sizeof(float)};
+    static int ios[]={sizeof(gr_complex), sizeof(float), sizeof(float)};
     static std::vector<int> iosig(ios,ios+sizeof(ios)/sizeof(int));
-    static int os[]={sizeof(float), sizeof(float),sizeof(float),sizeof(float)};
-    static std::vector<int> osig(os,os+sizeof(os)/sizeof(int));
 
     symbol_sync_receiver_cc_impl::symbol_sync_receiver_cc_impl(
       const std::string& accesscode,
@@ -65,9 +63,12 @@ namespace gr {
       const gr::digital::constellation_sptr& pld_const,
       bool debug)
       : gr::sync_block("symbol_sync_receiver_cc",
-              gr::io_signature::makev(1, 5, iosig),
-              gr::io_signature::makev(0, 4, osig))
+              gr::io_signature::makev(1, 3, iosig),
+              gr::io_signature::make2(0, 2, sizeof(float),sizeof(float)))
     {
+      if(!set_accesscode(accesscode)){
+        throw std::invalid_argument("Invalid accesscode!");
+      }
       d_hdr_const = hdr_const->base();
       d_pld_const = pld_const->base();
 
@@ -79,9 +80,13 @@ namespace gr {
 
       d_symbol_count=0;
       d_timetag = pmt::string_to_symbol("ctime");
+      d_msg_port = pmt::mp("msg");
 
       d_debug = debug;
+      d_state = SEARCH;
 
+      set_tag_propagation_policy(TPP_DONT);
+      message_port_register_out(d_msg_port);
     }
 
     /*
@@ -159,7 +164,7 @@ namespace gr {
     {
       unsigned long tmp=0UL;
       for(int i=0;i<16;++i){
-        tmp |= ((d_input[begin_idx+i])? 1 : 0) << (15-i);  
+        tmp |= (d_input[begin_idx+i]) << (15-i);  
         // NOTE: this is how bits arrangement should be like
       }
       return tmp;
@@ -169,7 +174,7 @@ namespace gr {
     {
       unsigned char tmp=0;
       for(int i=0;i<8;++i){
-        tmp |= ((d_input[begin_idx+i])? 1:0 ) << (7-i);
+        tmp |= (d_input[begin_idx+i]) << (7-i);
       }
       return tmp;
     }
@@ -195,28 +200,45 @@ namespace gr {
       return false;
     }
 
+    void
+    symbol_sync_receiver_cc_impl::msg_out(int noutput_items, bool hdr)
+    {
+      pmt::pmt_t msg = pmt::make_dict();
+      msg = pmt::dict_add(msg, pmt::intern("ctime"),pmt::from_long(d_current_time));
+      msg = pmt::dict_add(msg, pmt::intern("buffer_offset"),pmt::from_long(d_symbol_count));
+      if(!hdr){
+        // for sync info
+        msg = pmt::dict_add(msg, pmt::intern("output_items"),pmt::from_long(noutput_items));
+      }
+      else{
+        // for header info
+        msg = pmt::dict_add(msg, pmt::intern("LSA_hdr"),pmt::PMT_T);
+        msg = pmt::dict_add(msg, pmt::intern("queue_index"),pmt::from_long(d_qidx));
+        msg = pmt::dict_add(msg, pmt::intern("queue_size"),pmt::from_long(d_qsize));
+        msg = pmt::dict_add(msg, pmt::intern("payload"),pmt::from_long(8*d_pld_len/d_pld_bps));
+        //for debug
+        msg = pmt::dict_add(msg, pmt::intern("counter"),pmt::from_long(d_counter));
+      }
+      message_port_pub(d_msg_port, msg);
+    }
+
+
     int
     symbol_sync_receiver_cc_impl::work(int noutput_items,
         gr_vector_const_void_star &input_items,
         gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      bool have_sync = (input_items.size()>=5) && (output_items.size()>=4);
-      const float* freq_in,*phase_in, *time_rate_in, *time_k_in;
-      float* freq_out,*phase_out,*time_rate_out, *time_k_out;
+      bool have_sync = (input_items.size()>=3) && (output_items.size()>=2);
+      const float *phase_in, *time_k_in;
+      float* phase_out, *time_k_out;
       if(have_sync){
-        freq_in = (const float*)input_items[1];
-        phase_in = (const float*)input_items[2];
-        time_rate_in = (const float*)input_items[3];
-        time_k_in = (const float*)input_items[4];
+        phase_in = (const float*)input_items[1];
+        time_k_in = (const float*)input_items[2];
 
-        freq_out = (float*)output_items[0];
-        phase_out = (float*)output_items[1];
-        time_rate_out = (float*)output_items[2];
-        time_k_out = (float*)output_items[3];
-        memcpy(freq_out, freq_in,sizeof(float)*noutput_items);
+        phase_out = (float*)output_items[0];
+        time_k_out = (float*)output_items[1];
         memcpy(phase_out, phase_in, sizeof(float)*noutput_items);
-        memcpy(time_rate_out,time_rate_in,sizeof(float)*noutput_items);
         memcpy(time_k_out,time_k_in,sizeof(float)*noutput_items);
       }
 
@@ -224,28 +246,26 @@ namespace gr {
       get_tags_in_range(time_tag, 0, nitems_read(0),nitems_read(0)+noutput_items, d_timetag);
 
       for(int i=0;i<noutput_items;++i){
-        while(!time_tag.empty()){
+        if(!time_tag.empty()){
           uint64_t offset = time_tag[0].offset-nitems_read(0);
           if(i==offset){
             d_current_time = pmt::to_long(time_tag[0].value);
             d_symbol_count=0;
+            //for sync purpose
+            add_item_tag(0,nitems_written(0)+i,time_tag[0].key,time_tag[0].value);
+            msg_out(noutput_items,false);
+            time_tag.erase(time_tag.begin());
           }
-          time_tag.erase(time_tag.begin());
         }
-        if(insert_symbol(in[i])){
-          if(d_debug){
-            std::cout<<"<debug>counter:"<<d_counter<<" ,payload:"<<d_pld_len/d_pld_bps
-            <<" ,queue_index:"<<d_qidx<<" ,queue_size:"<<d_qsize<<std::endl;
-          }          
+        if(insert_symbol(in[i])){          
           if(have_sync){
             add_item_tag(0,nitems_written(0)+i,pmt::intern("LSA_hdr"),pmt::PMT_T);
             add_item_tag(0,nitems_written(0)+i,pmt::intern("queue_index"),pmt::from_long(d_qidx));
             add_item_tag(0,nitems_written(0)+i,pmt::intern("queue_size"),pmt::from_long(d_qsize));
             add_item_tag(0,nitems_written(0)+i,pmt::intern("counter"),pmt::from_long(d_counter));
-            add_item_tag(0,nitems_written(0)+i,pmt::intern("payload"),pmt::from_long(d_pld_len/d_pld_bps));
-            add_item_tag(0,nitems_written(0)+i,pmt::intern("ctime"),pmt::from_long(d_current_time));
-            add_item_tag(0,nitems_written(0)+i,pmt::intern("buffer_offset"),pmt::from_long(d_symbol_count));
+            add_item_tag(0,nitems_written(0)+i,pmt::intern("payload"),pmt::from_long(d_pld_len*8/d_pld_bps));
           }
+          msg_out(noutput_items, true);
         }
         d_symbol_count++;
       }

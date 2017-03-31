@@ -46,7 +46,10 @@ namespace gr {
        * class. lsa::prou_sample_queue_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(const std::string& sensing_tagname, bool debug);
+      static sptr make(
+        const std::string& sensing_tagname, 
+        int sps,
+        bool debug);
     };
 
   } // namespace lsa

@@ -49,17 +49,7 @@
     <type>complex</type>
   </sink>
   <sink>
-    <name>freq</name>
-    <type>float</type>
-    <optional>1</optional>
-  </sink>
-  <sink>
     <name>phase</name>
-    <type>float</type>
-    <optional>1</optional>
-  </sink>
-  <sink>
-    <name>rate_f</name>
     <type>float</type>
     <optional>1</optional>
   </sink>

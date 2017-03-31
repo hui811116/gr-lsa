@@ -48,16 +48,14 @@ namespace gr {
     /*
      * The private constructor
      */
-    static int ios[]={sizeof(float),sizeof(float),sizeof(float),sizeof(float)};
-    static std::vector<int> iosig(ios,ios+sizeof(iosig)/sizeof(int));
 
     sync_symbol_to_sample_ff_impl::sync_symbol_to_sample_ff_impl(
       int sps,
       int nfilts,
       const std::string& hdr_tagname)
       : gr::sync_interpolator("sync_symbol_to_sample_ff",
-              gr::io_signature::makev(4, 4, iosig),
-              gr::io_signature::makev(4, 4, iosig), sps)
+              gr::io_signature::make2(2, 2, sizeof(float),sizeof(float)),
+              gr::io_signature::make2(2, 2, sizeof(float),sizeof(float)), sps)
     {
       if(sps <0){
         throw std::invalid_argument("Parameter samples per symbol cannot be negative");
@@ -70,6 +68,8 @@ namespace gr {
       d_hdr_tagname = pmt::string_to_symbol(hdr_tagname);
       set_tag_propagation_policy(TPP_DONT);
       set_output_multiple(d_sps);
+      set_history(2);
+      // additional sample for calculating differences
     }
 
     /*
@@ -84,14 +84,10 @@ namespace gr {
         gr_vector_const_void_star &input_items,
         gr_vector_void_star &output_items)
     {
-      const float *in_freq = (const float *) input_items[0];
-      const float *in_phase = (const float *) input_items[1];
-      const float *in_time_freq = (const float *) input_items[2];
-      const float *in_time_phase = (const float *) input_items[3];
-      float *out_freq = (float *) output_items[0];
-      float *out_phase = (float *) output_items[1];
-      float *out_time_freq = (float *) output_items[2];
-      float *out_time_phase = (float *) output_items[3];
+      const float *in_phase = (const float *) input_items[0];
+      const float *in_time_phase = (const float *) input_items[1];
+      float *out_phase = (float *) output_items[0];
+      float *out_time_phase = (float *) output_items[1];
 
       std::vector<tag_t> tags;
       get_tags_in_range(tags,0, nitems_read(0),nitems_read(0)+noutput_items/d_sps);
@@ -105,14 +101,12 @@ namespace gr {
       float smp_phase, smp_time_phase;
       for(int i=0;i<noutput_items/d_sps;++i){
         smp_phase = in_phase[i];
-        smp_freq = in_freq[i]/static_cast<float>(d_sps);
+        smp_freq = (in_phase[i+1]-in_phase[i])/static_cast<float>(d_sps);
         smp_time_phase = in_time_phase[i];
-        smp_time_freq = in_time_freq[i]/static_cast<float>(d_sps);
+        smp_time_freq = (in_time_phase[i+1]-in_time_phase[i])/static_cast<float>(d_sps);
         for(int j=0;j<d_sps;++j){
-          out_freq[i+j] = smp_freq;
           out_phase[i+j] = smp_phase + smp_freq;
           smp_phase+= smp_freq;
-          out_time_freq[i+j] = smp_time_freq; 
           out_time_phase[i+j] = smp_time_phase + smp_time_freq;
           smp_time_phase += smp_time_freq;
           while(smp_phase>TWO_PI)
@@ -125,9 +119,6 @@ namespace gr {
             smp_time_phase+=d_nfilts;
         }
       }
-
-      // Do <+signal processing+>
-
       // Tell runtime system how many output items we produced.
       return noutput_items;
     }
