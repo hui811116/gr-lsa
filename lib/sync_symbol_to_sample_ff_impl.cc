@@ -101,9 +101,19 @@ namespace gr {
       float smp_phase, smp_time_phase;
       for(int i=0;i<noutput_items/d_sps;++i){
         smp_phase = in_phase[i];
-        smp_freq = (in_phase[i+1]-in_phase[i])/static_cast<float>(d_sps);
+        smp_freq = (in_phase[i+1]-in_phase[i]);
+        while(smp_freq>=TWO_PI)
+          smp_freq-=TWO_PI;
+        while(smp_freq<= -TWO_PI)
+          smp_freq+=TWO_PI;
+        smp_freq /=static_cast<float>(d_sps);
         smp_time_phase = in_time_phase[i];
-        smp_time_freq = (in_time_phase[i+1]-in_time_phase[i])/static_cast<float>(d_sps);
+        smp_time_freq =in_time_phase[i+1]-in_time_phase[i];
+        while(smp_time_freq >= d_nfilts)
+          smp_time_freq-= d_nfilts;
+        while(smp_time_freq < 0)
+          smp_time_freq+= d_nfilts;
+        smp_time_freq /= static_cast<float>(d_sps);
         for(int j=0;j<d_sps;++j){
           out_phase[i+j] = smp_phase + smp_freq;
           smp_phase+= smp_freq;
