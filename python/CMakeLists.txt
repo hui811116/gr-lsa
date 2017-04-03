@@ -55,5 +55,5 @@ GR_ADD_TEST(qa_protocol_parser_b ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR
 GR_ADD_TEST(qa_correlate_sync_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_correlate_sync_cc.py)
 GR_ADD_TEST(qa_symbol_queue_receiver_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_symbol_queue_receiver_cc.py)
 GR_ADD_TEST(qa_symbol_level_ic_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_symbol_level_ic_cc.py)
-GR_ADD_TEST(qa_sync_symbol_to_sample_ff ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_sync_symbol_to_sample_ff.py)
 GR_ADD_TEST(qa_symbol_sync_receiver_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_symbol_sync_receiver_cc.py)
+GR_ADD_TEST(qa_expand_symbal_to_sample_ff ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_expand_symbal_to_sample_ff.py)

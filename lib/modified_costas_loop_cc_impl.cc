@@ -254,7 +254,7 @@ namespace gr {
           advance_loop(d_error);
           phase_wrap();
           frequency_limit();
-          d_prev_time_count++;
+          //d_prev_time_count++;
           poptr[i] = d_phase;
           // direct copy
         }

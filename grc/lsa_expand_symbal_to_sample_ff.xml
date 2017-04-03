@@ -1,17 +1,17 @@
 <?xml version="1.0"?>
 <block>
-  <name>Sync Symbol to Sample</name>
-  <key>lsa_sync_symbol_to_sample_ff</key>
+  <name>Expand Sync</name>
+  <key>lsa_expand_symbal_to_sample_ff</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.sync_symbol_to_sample_ff($sps,$nfilts,$tagname)</make>
+  <make>lsa.expand_symbal_to_sample_ff($sps, $nfilts)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <param>
-    <name>Sample per symbol</name>
+    <name>Samples per symbol</name>
     <key>sps</key>
     <type>int</type>
   </param>
@@ -20,11 +20,8 @@
     <key>nfilts</key>
     <type>int</type>
   </param>
-  <param>
-    <name>Header tagname</name>
-    <key>tagname</key>
-    <type>string</type>
-  </param>
+
+
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type
@@ -35,21 +32,20 @@
     <type>float</type>
   </sink>
   <sink>
-    <name>time k</name>
+    <name>time</name>
     <type>float</type>
   </sink>
-
   <!-- Make one 'source' node per output. Sub-nodes:
        * name (an identifier for the GUI)
        * type
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>phase</name>
+    <name>out phase</name>
     <type>float</type>
   </source>
   <source>
-    <name>time k</name>
+    <name>out time</name>
     <type>float</type>
   </source>
 </block>

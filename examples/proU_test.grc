@@ -1131,6 +1131,53 @@
     </param>
   </block>
   <block>
+    <key>lsa_expand_symbal_to_sample_ff</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1248, 992)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>180</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_expand_symbal_to_sample_ff_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>nfilts</key>
+      <value>32</value>
+    </param>
+    <param>
+      <key>sps</key>
+      <value>2</value>
+    </param>
+  </block>
+  <block>
     <key>lsa_interference_canceller_cc</key>
     <param>
       <key>bps</key>
@@ -1478,57 +1525,6 @@
     <param>
       <key>pld_const</key>
       <value>mod</value>
-    </param>
-  </block>
-  <block>
-    <key>lsa_sync_symbol_to_sample_ff</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1264, 1000)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>180</value>
-    </param>
-    <param>
-      <key>tagname</key>
-      <value>"LSA_hdr"</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>lsa_sync_symbol_to_sample_ff_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>nfilts</key>
-      <value>nfilts</value>
-    </param>
-    <param>
-      <key>sps</key>
-      <value>sps</value>
     </param>
   </block>
   <block>
@@ -3028,6 +3024,18 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>lsa_expand_symbal_to_sample_ff_0</source_block_id>
+    <sink_block_id>lsa_interference_canceller_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>1</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_expand_symbal_to_sample_ff_0</source_block_id>
+    <sink_block_id>lsa_interference_canceller_cc_0</sink_block_id>
+    <source_key>1</source_key>
+    <sink_key>2</sink_key>
+  </connection>
+  <connection>
     <source_block_id>lsa_interference_canceller_cc_0</source_block_id>
     <sink_block_id>qtgui_time_sink_x_0</sink_block_id>
     <source_key>1</source_key>
@@ -3038,12 +3046,6 @@
     <sink_block_id>qtgui_time_sink_x_1</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_symbol_sync_receiver_cc_0</sink_block_id>
-    <source_key>1</source_key>
-    <sink_key>1</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
@@ -3060,20 +3062,14 @@
   <connection>
     <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
     <sink_block_id>lsa_symbol_sync_receiver_cc_0</sink_block_id>
+    <source_key>1</source_key>
+    <sink_key>1</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
+    <sink_block_id>lsa_symbol_sync_receiver_cc_0</sink_block_id>
     <source_key>2</source_key>
     <sink_key>2</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_symbol_sync_receiver_cc_0</sink_block_id>
-    <source_key>3</source_key>
-    <sink_key>3</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_symbol_sync_receiver_cc_0</sink_block_id>
-    <source_key>4</source_key>
-    <sink_key>4</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
@@ -3086,12 +3082,6 @@
     <sink_block_id>lsa_correlate_sync_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
-    <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
-    <source_key>2</source_key>
-    <sink_key>2</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_prou_sample_queue_cc_0</source_block_id>
@@ -3113,12 +3103,6 @@
   </connection>
   <connection>
     <source_block_id>lsa_symbol_sync_receiver_cc_0</source_block_id>
-    <sink_block_id>lsa_sync_symbol_to_sample_ff_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_symbol_sync_receiver_cc_0</source_block_id>
     <sink_block_id>blocks_message_debug_0</sink_block_id>
     <source_key>msg</source_key>
     <sink_key>print</sink_key>
@@ -3131,44 +3115,14 @@
   </connection>
   <connection>
     <source_block_id>lsa_symbol_sync_receiver_cc_0</source_block_id>
-    <sink_block_id>lsa_sync_symbol_to_sample_ff_0</sink_block_id>
-    <source_key>1</source_key>
-    <sink_key>1</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_symbol_sync_receiver_cc_0</source_block_id>
-    <sink_block_id>lsa_sync_symbol_to_sample_ff_0</sink_block_id>
-    <source_key>3</source_key>
-    <sink_key>3</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_symbol_sync_receiver_cc_0</source_block_id>
-    <sink_block_id>lsa_sync_symbol_to_sample_ff_0</sink_block_id>
-    <source_key>2</source_key>
-    <sink_key>2</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_sync_symbol_to_sample_ff_0</source_block_id>
-    <sink_block_id>lsa_interference_canceller_cc_0</sink_block_id>
+    <sink_block_id>lsa_expand_symbal_to_sample_ff_0</sink_block_id>
     <source_key>0</source_key>
-    <sink_key>1</sink_key>
+    <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_sync_symbol_to_sample_ff_0</source_block_id>
-    <sink_block_id>lsa_interference_canceller_cc_0</sink_block_id>
+    <source_block_id>lsa_symbol_sync_receiver_cc_0</source_block_id>
+    <sink_block_id>lsa_expand_symbal_to_sample_ff_0</sink_block_id>
     <source_key>1</source_key>
-    <sink_key>2</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_sync_symbol_to_sample_ff_0</source_block_id>
-    <sink_block_id>lsa_interference_canceller_cc_0</sink_block_id>
-    <source_key>3</source_key>
-    <sink_key>4</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_sync_symbol_to_sample_ff_0</source_block_id>
-    <sink_block_id>lsa_interference_canceller_cc_0</sink_block_id>
-    <source_key>2</source_key>
-    <sink_key>3</sink_key>
+    <sink_key>1</sink_key>
   </connection>
 </flow_graph>

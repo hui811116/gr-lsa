@@ -18,38 +18,36 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDED_LSA_SYNC_SYMBOL_TO_SAMPLE_FF_IMPL_H
-#define INCLUDED_LSA_SYNC_SYMBOL_TO_SAMPLE_FF_IMPL_H
+#ifndef INCLUDED_LSA_EXPAND_SYMBAL_TO_SAMPLE_FF_IMPL_H
+#define INCLUDED_LSA_EXPAND_SYMBAL_TO_SAMPLE_FF_IMPL_H
 
-#include <lsa/sync_symbol_to_sample_ff.h>
-#include <pmt/pmt.h>
+#include <lsa/expand_symbal_to_sample_ff.h>
 
 namespace gr {
   namespace lsa {
 
-    class sync_symbol_to_sample_ff_impl : public sync_symbol_to_sample_ff
+    class expand_symbal_to_sample_ff_impl : public expand_symbal_to_sample_ff
     {
      private:
       // Nothing to declare in this block.
-      pmt::pmt_t d_hdr_tagname;
       int d_sps;
       int d_nfilts;
 
      public:
-      sync_symbol_to_sample_ff_impl(
-        int sps,
-        int nfilts,
-        const std::string& hdr_tagname);
-      ~sync_symbol_to_sample_ff_impl();
+      expand_symbal_to_sample_ff_impl(int sps, int nfilts);
+      ~expand_symbal_to_sample_ff_impl();
 
       // Where all the action really happens
-      int work(int noutput_items,
-         gr_vector_const_void_star &input_items,
-         gr_vector_void_star &output_items);
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+
+      int general_work(int noutput_items,
+           gr_vector_int &ninput_items,
+           gr_vector_const_void_star &input_items,
+           gr_vector_void_star &output_items);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SYNC_SYMBOL_TO_SAMPLE_FF_IMPL_H */
+#endif /* INCLUDED_LSA_EXPAND_SYMBAL_TO_SAMPLE_FF_IMPL_H */
 

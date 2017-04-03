@@ -19,11 +19,11 @@
  */
 
 
-#ifndef INCLUDED_LSA_SYNC_SYMBOL_TO_SAMPLE_FF_H
-#define INCLUDED_LSA_SYNC_SYMBOL_TO_SAMPLE_FF_H
+#ifndef INCLUDED_LSA_EXPAND_SYMBAL_TO_SAMPLE_FF_H
+#define INCLUDED_LSA_EXPAND_SYMBAL_TO_SAMPLE_FF_H
 
 #include <lsa/api.h>
-#include <gnuradio/sync_interpolator.h>
+#include <gnuradio/block.h>
 
 namespace gr {
   namespace lsa {
@@ -33,27 +33,24 @@ namespace gr {
      * \ingroup lsa
      *
      */
-    class LSA_API sync_symbol_to_sample_ff : virtual public gr::sync_interpolator
+    class LSA_API expand_symbal_to_sample_ff : virtual public gr::block
     {
      public:
-      typedef boost::shared_ptr<sync_symbol_to_sample_ff> sptr;
+      typedef boost::shared_ptr<expand_symbal_to_sample_ff> sptr;
 
       /*!
-       * \brief Return a shared_ptr to a new instance of lsa::sync_symbol_to_sample_ff.
+       * \brief Return a shared_ptr to a new instance of lsa::expand_symbal_to_sample_ff.
        *
-       * To avoid accidental use of raw pointers, lsa::sync_symbol_to_sample_ff's
+       * To avoid accidental use of raw pointers, lsa::expand_symbal_to_sample_ff's
        * constructor is in a private implementation
-       * class. lsa::sync_symbol_to_sample_ff::make is the public interface for
+       * class. lsa::expand_symbal_to_sample_ff::make is the public interface for
        * creating new instances.
        */
-      static sptr make(
-        int sps,
-        int nfilts,
-        const std::string& hdr_tagname);
+      static sptr make(int sps, int nfilts);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SYNC_SYMBOL_TO_SAMPLE_FF_H */
+#endif /* INCLUDED_LSA_EXPAND_SYMBAL_TO_SAMPLE_FF_H */
 
