@@ -18,17 +18,16 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CC_IMPL_H
-#define INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CC_IMPL_H
+#ifndef INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CF_IMPL_H
+#define INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CF_IMPL_H
 
-#include <lsa/symbol_sync_receiver_cc.h>
+#include <lsa/symbol_sync_receiver_cf.h>
 #include <pmt/pmt.h>
-
 
 namespace gr {
   namespace lsa {
 
-    class symbol_sync_receiver_cc_impl : public symbol_sync_receiver_cc
+    class symbol_sync_receiver_cf_impl : public symbol_sync_receiver_cf
     {
      private:
       int d_state;
@@ -68,26 +67,28 @@ namespace gr {
       void msg_out(int noutput_items, bool hdr);
 
      public:
+      symbol_sync_receiver_cf_impl(
+        const std::string& accesscode,
+        const gr::digital::constellation_sptr& hdr_const,
+        const gr::digital::constellation_sptr& pld_const,
+        bool debug);
+      ~symbol_sync_receiver_cf_impl();
 
       bool set_accesscode(const std::string& accesscode);
       
       size_t header_nbits() const;
 
-      symbol_sync_receiver_cc_impl(
-        const std::string& accesscode,
-        const gr::digital::constellation_sptr& hdr_const,
-        const gr::digital::constellation_sptr& pld_const,
-        bool debug);
-      ~symbol_sync_receiver_cc_impl();
-
       // Where all the action really happens
-      int work(int noutput_items,
-         gr_vector_const_void_star &input_items,
-         gr_vector_void_star &output_items);
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+
+      int general_work(int noutput_items,
+           gr_vector_int &ninput_items,
+           gr_vector_const_void_star &input_items,
+           gr_vector_void_star &output_items);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CC_IMPL_H */
+#endif /* INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CF_IMPL_H */
 

@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
   <name>Symbol Sync Receiver</name>
-  <key>lsa_symbol_sync_receiver_cc</key>
+  <key>lsa_symbol_sync_receiver_cf</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.symbol_sync_receiver_cc($acccode,$hdr_const,$pld_const, $debug)</make>
+  <make>lsa.symbol_sync_receiver_cf($acccode,$hdr_const,$pld_const, $debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name

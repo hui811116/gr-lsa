@@ -23,7 +23,7 @@
 #endif
 
 #include <gnuradio/io_signature.h>
-#include "symbol_sync_receiver_cc_impl.h"
+#include "symbol_sync_receiver_cf_impl.h"
 #include <gnuradio/math.h>
 #include <gnuradio/expj.h>
 #include <ctime>
@@ -31,21 +31,20 @@
 
 namespace gr {
   namespace lsa {
-
     enum syncState{
       SEARCH,
       WAIT_HDR
     };
 
-    symbol_sync_receiver_cc::sptr
-    symbol_sync_receiver_cc::make(
+    symbol_sync_receiver_cf::sptr
+    symbol_sync_receiver_cf::make(
       const std::string& accesscode,
       const gr::digital::constellation_sptr& hdr_const,
       const gr::digital::constellation_sptr& pld_const,
       bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new symbol_sync_receiver_cc_impl(
+        (new symbol_sync_receiver_cf_impl(
           accesscode,
           hdr_const,
           pld_const,
@@ -55,16 +54,13 @@ namespace gr {
     /*
      * The private constructor
      */
-    static int ios[]={sizeof(gr_complex), sizeof(float), sizeof(float)};
-    static std::vector<int> iosig(ios,ios+sizeof(ios)/sizeof(int));
-
-    symbol_sync_receiver_cc_impl::symbol_sync_receiver_cc_impl(
+    symbol_sync_receiver_cf_impl::symbol_sync_receiver_cf_impl(
       const std::string& accesscode,
       const gr::digital::constellation_sptr& hdr_const,
       const gr::digital::constellation_sptr& pld_const,
       bool debug)
-      : gr::sync_block("symbol_sync_receiver_cc",
-              gr::io_signature::makev(1, 3, iosig),
+      : gr::block("symbol_sync_receiver_cf",
+              gr::io_signature::make3(1, 3, sizeof(gr_complex),sizeof(float),sizeof(float)),
               gr::io_signature::make2(0, 2, sizeof(float),sizeof(float)))
     {
       if(!set_accesscode(accesscode)){
@@ -93,12 +89,11 @@ namespace gr {
     /*
      * Our virtual destructor.
      */
-    symbol_sync_receiver_cc_impl::~symbol_sync_receiver_cc_impl()
+    symbol_sync_receiver_cf_impl::~symbol_sync_receiver_cf_impl()
     {
     }
-
     bool
-    symbol_sync_receiver_cc_impl::set_accesscode(const std::string& accesscode)
+    symbol_sync_receiver_cf_impl::set_accesscode(const std::string& accesscode)
     {
       d_accesscode_len = accesscode.length();
       if(d_accesscode_len >64){
@@ -113,13 +108,13 @@ namespace gr {
     }
 
     size_t
-    symbol_sync_receiver_cc_impl::header_nbits() const
+    symbol_sync_receiver_cf_impl::header_nbits() const
     {
       return d_accesscode_len + 8+8+16*2+16;
     }
 
     bool 
-    symbol_sync_receiver_cc_impl::insert_symbol(const gr_complex& symbol)
+    symbol_sync_receiver_cf_impl::insert_symbol(const gr_complex& symbol)
     {
       unsigned char hold_byte;
       hold_byte = d_hdr_const->decision_maker(&symbol);
@@ -161,7 +156,7 @@ namespace gr {
     }
 
     uint16_t
-    symbol_sync_receiver_cc_impl::_get_bit16(int begin_idx)
+    symbol_sync_receiver_cf_impl::_get_bit16(int begin_idx)
     {
       unsigned long tmp=0UL;
       for(int i=0;i<16;++i){
@@ -171,7 +166,7 @@ namespace gr {
       return tmp;
     }
     uint8_t
-    symbol_sync_receiver_cc_impl::_get_bit8(int begin_idx)
+    symbol_sync_receiver_cf_impl::_get_bit8(int begin_idx)
     {
       unsigned char tmp=0;
       for(int i=0;i<8;++i){
@@ -181,7 +176,7 @@ namespace gr {
     }
 
     bool
-    symbol_sync_receiver_cc_impl::parse_header()
+    symbol_sync_receiver_cf_impl::parse_header()
     {
       uint16_t len0,len1;    
       len0 = _get_bit16(16);
@@ -202,7 +197,7 @@ namespace gr {
     }
 
     void
-    symbol_sync_receiver_cc_impl::msg_out(int noutput_items, bool hdr)
+    symbol_sync_receiver_cf_impl::msg_out(int noutput_items, bool hdr)
     {
       pmt::pmt_t msg = pmt::make_dict();
       msg = pmt::dict_add(msg, pmt::intern("ctime"),pmt::from_long(d_current_time));
@@ -223,32 +218,33 @@ namespace gr {
       message_port_pub(d_msg_port, msg);
     }
 
+    void
+    symbol_sync_receiver_cf_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
+    {
+      /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
+      for(int i=0;i<ninput_items_required.size();++i){
+        ninput_items_required[i] = noutput_items;
+      }
+    }
 
     int
-    symbol_sync_receiver_cc_impl::work(int noutput_items,
-        gr_vector_const_void_star &input_items,
-        gr_vector_void_star &output_items)
+    symbol_sync_receiver_cf_impl::general_work (int noutput_items,
+                       gr_vector_int &ninput_items,
+                       gr_vector_const_void_star &input_items,
+                       gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      bool have_sync = (input_items.size()>=3) && (output_items.size()>=2);
-      const float *phase_in;
-      const float *time_k_in;
-      float* phase_out, *time_k_out;
-      if(have_sync){
-        phase_in = (const float*)input_items[1];
-        time_k_in = (const float*)input_items[2];
+      const float* phase = NULL;
+      const float* time = NULL;
+      float *out_phase = NULL;
+      float *out_time = NULL;
+      
+      bool have_sync = (input_items.size()>=3);
+      bool out_sync = (output_items.size()>=2);
 
-        phase_out = (float*)output_items[0];
-        time_k_out = (float*)output_items[1];
-        memcpy(phase_out, phase_in, sizeof(float)*noutput_items);
-        memcpy(time_k_out,time_k_in,sizeof(float)*noutput_items);
-      }
-
+      // Do <+signal processing+>
       std::vector<tag_t> time_tag;
-      //BUG here
       get_tags_in_range(time_tag, 0, nitems_read(0),nitems_read(0)+noutput_items, d_timetag);
-      //GR_LOG_DEBUG(d_logger,"Before insert symbols");
-      //std::cout<<"noutput_items:"<<noutput_items<<std::endl;
       for(int i=0;i<noutput_items;++i){
         if(!time_tag.empty()){
           int offset = time_tag[0].offset-nitems_read(0);
@@ -257,28 +253,39 @@ namespace gr {
             d_symbol_count=0;
             //for sync purpose
             add_item_tag(0,nitems_written(0)+i,time_tag[0].key,time_tag[0].value);
-            //GR_LOG_DEBUG(d_logger,"false msg out");
             msg_out(noutput_items,false);
             time_tag.erase(time_tag.begin());
           }
         }
         if(insert_symbol(in[i])){          
-          if(have_sync){
+          if(out_sync){
             add_item_tag(0,nitems_written(0)+i,pmt::intern("LSA_hdr"),pmt::PMT_T);
             add_item_tag(0,nitems_written(0)+i,pmt::intern("queue_index"),pmt::from_long(d_qidx));
             add_item_tag(0,nitems_written(0)+i,pmt::intern("queue_size"),pmt::from_long(d_qsize));
             add_item_tag(0,nitems_written(0)+i,pmt::intern("counter"),pmt::from_long(d_counter));
             add_item_tag(0,nitems_written(0)+i,pmt::intern("payload"),pmt::from_long(d_pld_len*8/d_pld_bps));
           }
-          //GR_LOG_DEBUG(d_logger,"true msg out");
           msg_out(noutput_items, true);
         }
         d_symbol_count++;
       }
-      //GR_LOG_DEBUG(d_logger,"Return output");
-      //std::cout<<"noutput_items"<<noutput_items<<std::endl;
+      if(have_sync){
+        phase = (const float*) input_items[1];
+        time = (const float*) input_items[2];
+        if(out_sync){
+          out_phase = (float *) output_items[0];
+          out_time = (float *) output_items[1];
+          memcpy(out_phase,phase, sizeof(float)*noutput_items);
+          memcpy(out_time,time,sizeof(float)*noutput_items);  
+          produce(0,noutput_items);
+          produce(1,noutput_items);
+        }
+        consume(1,noutput_items);
+        consume(2,noutput_items);
+      }
+      consume(0,noutput_items);
       // Tell runtime system how many output items we produced.
-      return noutput_items;
+      return WORK_CALLED_PRODUCE;
     }
 
   } /* namespace lsa */

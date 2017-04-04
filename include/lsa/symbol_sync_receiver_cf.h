@@ -19,11 +19,11 @@
  */
 
 
-#ifndef INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CC_H
-#define INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CC_H
+#ifndef INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CF_H
+#define INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CF_H
 
 #include <lsa/api.h>
-#include <gnuradio/sync_block.h>
+#include <gnuradio/block.h>
 #include <gnuradio/digital/constellation.h>
 
 namespace gr {
@@ -34,29 +34,28 @@ namespace gr {
      * \ingroup lsa
      *
      */
-    class LSA_API symbol_sync_receiver_cc : virtual public gr::sync_block
+    class LSA_API symbol_sync_receiver_cf : virtual public gr::block
     {
      public:
-      typedef boost::shared_ptr<symbol_sync_receiver_cc> sptr;
+      typedef boost::shared_ptr<symbol_sync_receiver_cf> sptr;
 
       /*!
-       * \brief Return a shared_ptr to a new instance of lsa::symbol_sync_receiver_cc.
+       * \brief Return a shared_ptr to a new instance of lsa::symbol_sync_receiver_cf.
        *
-       * To avoid accidental use of raw pointers, lsa::symbol_sync_receiver_cc's
+       * To avoid accidental use of raw pointers, lsa::symbol_sync_receiver_cf's
        * constructor is in a private implementation
-       * class. lsa::symbol_sync_receiver_cc::make is the public interface for
+       * class. lsa::symbol_sync_receiver_cf::make is the public interface for
        * creating new instances.
        */
       static sptr make(
         const std::string& accesscode,
         const gr::digital::constellation_sptr& hdr_const,
         const gr::digital::constellation_sptr& pld_const,
-        bool debug
-        );
+        bool debug);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CC_H */
+#endif /* INCLUDED_LSA_SYMBOL_SYNC_RECEIVER_CF_H */
 

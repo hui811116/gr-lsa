@@ -1263,7 +1263,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1288, 824)</value>
+      <value>(1296, 856)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1492,7 +1492,7 @@
     </param>
   </block>
   <block>
-    <key>lsa_symbol_sync_receiver_cc</key>
+    <key>lsa_symbol_sync_receiver_cf</key>
     <param>
       <key>acccode</key>
       <value>accesscode</value>
@@ -1519,7 +1519,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1528, 824)</value>
+      <value>(1544, 856)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1531,7 +1531,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>lsa_symbol_sync_receiver_cc_0</value>
+      <value>lsa_symbol_sync_receiver_cf_0</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -2352,7 +2352,13 @@
   </connection>
   <connection>
     <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_symbol_sync_receiver_cc_0</sink_block_id>
+    <sink_block_id>lsa_symbol_sync_receiver_cf_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
+    <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -2361,12 +2367,6 @@
     <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
     <source_key>1</source_key>
     <sink_key>1</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_modified_polyphase_time_sync_cc_0</source_block_id>
-    <sink_block_id>lsa_modified_costas_loop_cc_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_prou_sample_queue_cc_0</source_block_id>
@@ -2393,7 +2393,7 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_symbol_sync_receiver_cc_0</source_block_id>
+    <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>
     <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
     <source_key>msg</source_key>
     <sink_key>sensing_info</sink_key>

@@ -72,6 +72,8 @@ namespace gr {
       d_debug = debug;
 
       set_tag_propagation_policy(TPP_DONT);
+      set_min_noutput_items(512);
+      set_output_multiple(d_sps);
     }
 
     /*
@@ -340,7 +342,8 @@ namespace gr {
       append_samples(in,ninput_items[0],noutput_items,consume_count,d_current_time);
       if(consume_count>0){
         memcpy(out,in,sizeof(gr_complex)*consume_count);
-        add_item_tag(0,nitems_written(0),pmt::intern("ctime"),pmt::from_long(d_current_time),pmt::intern(alias()));
+        std::cout<<"nitems_written:"<<nitems_written(0)<<" ninput:"<<ninput_items[0]<<" noutput:"<<noutput_items<<std::endl;
+        add_item_tag(0,nitems_written(0)+50,pmt::intern("ctime"),pmt::from_long(d_current_time),pmt::intern(alias()));
         produce(0,consume_count);
       }
       else{

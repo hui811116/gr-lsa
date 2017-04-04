@@ -1442,7 +1442,7 @@
     </param>
   </block>
   <block>
-    <key>lsa_symbol_sync_receiver_cc</key>
+    <key>lsa_symbol_sync_receiver_cf</key>
     <param>
       <key>acccode</key>
       <value>accesscode</value>
@@ -1461,15 +1461,15 @@
     </param>
     <param>
       <key>debug</key>
-      <value>True</value>
+      <value>False</value>
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>True</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1512, 560)</value>
+      <value>(1528, 560)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1481,7 +1481,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>lsa_symbol_sync_receiver_cc_0</value>
+      <value>lsa_symbol_sync_receiver_cf_0</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -2665,19 +2665,19 @@
   </connection>
   <connection>
     <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_symbol_sync_receiver_cc_0</sink_block_id>
+    <sink_block_id>lsa_symbol_sync_receiver_cf_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_symbol_sync_receiver_cc_0</sink_block_id>
+    <sink_block_id>lsa_symbol_sync_receiver_cf_0</sink_block_id>
     <source_key>1</source_key>
     <sink_key>1</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_modified_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_symbol_sync_receiver_cc_0</sink_block_id>
+    <sink_block_id>lsa_symbol_sync_receiver_cf_0</sink_block_id>
     <source_key>2</source_key>
     <sink_key>2</sink_key>
   </connection>
@@ -2716,17 +2716,5 @@
     <sink_block_id>blocks_repack_bits_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_symbol_sync_receiver_cc_0</source_block_id>
-    <sink_block_id>lsa_expand_symbal_to_sample_ff_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_symbol_sync_receiver_cc_0</source_block_id>
-    <sink_block_id>lsa_expand_symbal_to_sample_ff_0</sink_block_id>
-    <source_key>1</source_key>
-    <sink_key>1</sink_key>
   </connection>
 </flow_graph>
