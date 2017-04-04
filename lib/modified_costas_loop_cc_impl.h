@@ -34,9 +34,7 @@ namespace gr {
       float d_error;
       float d_noise;
 
-      float d_prev_phase;
-      float d_prev_freq;
-      uint64_t d_prev_time_count;
+      float d_prev_freq;      
       bool d_intf_state;
 
       pmt::pmt_t d_intf_tagname;

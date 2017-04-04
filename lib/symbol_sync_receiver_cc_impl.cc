@@ -27,6 +27,7 @@
 #include <gnuradio/math.h>
 #include <gnuradio/expj.h>
 #include <ctime>
+#include <pmt/pmt.h>
 
 namespace gr {
   namespace lsa {
@@ -230,7 +231,8 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       bool have_sync = (input_items.size()>=3) && (output_items.size()>=2);
-      const float *phase_in, *time_k_in;
+      const float *phase_in;
+      const float *time_k_in;
       float* phase_out, *time_k_out;
       if(have_sync){
         phase_in = (const float*)input_items[1];
@@ -243,16 +245,19 @@ namespace gr {
       }
 
       std::vector<tag_t> time_tag;
+      //BUG here
       get_tags_in_range(time_tag, 0, nitems_read(0),nitems_read(0)+noutput_items, d_timetag);
-
+      //GR_LOG_DEBUG(d_logger,"Before insert symbols");
+      //std::cout<<"noutput_items:"<<noutput_items<<std::endl;
       for(int i=0;i<noutput_items;++i){
         if(!time_tag.empty()){
-          uint64_t offset = time_tag[0].offset-nitems_read(0);
+          int offset = time_tag[0].offset-nitems_read(0);
           if(i==offset){
             d_current_time = pmt::to_long(time_tag[0].value);
             d_symbol_count=0;
             //for sync purpose
             add_item_tag(0,nitems_written(0)+i,time_tag[0].key,time_tag[0].value);
+            //GR_LOG_DEBUG(d_logger,"false msg out");
             msg_out(noutput_items,false);
             time_tag.erase(time_tag.begin());
           }
@@ -265,11 +270,13 @@ namespace gr {
             add_item_tag(0,nitems_written(0)+i,pmt::intern("counter"),pmt::from_long(d_counter));
             add_item_tag(0,nitems_written(0)+i,pmt::intern("payload"),pmt::from_long(d_pld_len*8/d_pld_bps));
           }
+          //GR_LOG_DEBUG(d_logger,"true msg out");
           msg_out(noutput_items, true);
         }
         d_symbol_count++;
       }
-
+      //GR_LOG_DEBUG(d_logger,"Return output");
+      //std::cout<<"noutput_items"<<noutput_items<<std::endl;
       // Tell runtime system how many output items we produced.
       return noutput_items;
     }

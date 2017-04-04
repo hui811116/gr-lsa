@@ -24,7 +24,7 @@
 
 #include <gnuradio/io_signature.h>
 #include "prou_sample_queue_cc_impl.h"
-
+#include <pmt/pmt.h>
 #include <ctime>
 
 namespace gr {
@@ -48,7 +48,7 @@ namespace gr {
       : gr::block("prou_sample_queue_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(gr_complex))),
-      d_sample_cap(1024*1024)
+      d_sample_cap(1024*2048)
     {
       d_sample_idx = 0;
       d_sample_size =0;
@@ -86,7 +86,7 @@ namespace gr {
     prou_sample_queue_cc_impl::info_msg_handler(pmt::pmt_t msg)
     {
       long int time;
-      int counter=0, qidx, qsize, offset, sample_len;
+      int counter=0, qidx, qsize, offset;
       bool sensing_state=false;
       bool hdr = false;
       int output_len = 0;
@@ -136,7 +136,10 @@ namespace gr {
           d_sync_info.push_back(info_tag);
         }
         else{
-          //info_tag = pmt::dict_delete(info_tag, pmt::intern("LSA_hdr"));
+          int tmp_pld = pmt::to_long(pmt::dict_ref(info_tag, pmt::intern("payload"),pmt::PMT_NIL));
+          tmp_pld*=d_sps;
+          info_tag = pmt::dict_delete(info_tag,pmt::intern("payload"));
+          info_tag = pmt::dict_add(info_tag,pmt::intern("payload"),pmt::from_long(tmp_pld));
           info_tag = pmt::dict_add(info_tag, pmt::intern("header_found"), pmt::from_long(info_index));
           d_pkt_info.push_back(info_tag);        
         }
@@ -159,23 +162,18 @@ namespace gr {
       }
       int space_left = d_sample_cap - d_sample_size;
       pmt::pmt_t mark_sample = pmt::make_dict();
-      if(ninput_items <= space_left){
-            memcpy(d_sample_buffer+d_sample_size, in , sizeof(gr_complex)*ninput_items);
-            consume_count = ninput_items;
-          }
-          else{
-            memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)*space_left);
-            consume_count = space_left;
-          }
-          if( (consume_count !=0) ){
-            if((d_sample_size ==0)||(d_update_time==0) ){
-              d_update_time =time;
-            }
-            mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_long(time));
-            mark_sample = pmt::dict_add(mark_sample, pmt::intern("buffer_index"), pmt::from_long(d_sample_size));
-            d_sample_size+= consume_count;
-            d_buffer_info.push_back(mark_sample);
-          }
+      consume_count = (space_left>ninput_items)? ninput_items : space_left;
+      consume_count = (consume_count>noutput_items)? noutput_items : consume_count;
+      memcpy(d_sample_buffer+d_sample_size,in,sizeof(gr_complex)*consume_count);
+      if( (consume_count !=0) ){
+        if((d_sample_size ==0)||(d_update_time==0) ){
+          d_update_time =time;
+        }
+        mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_long(time));
+        mark_sample = pmt::dict_add(mark_sample, pmt::intern("buffer_index"), pmt::from_long(d_sample_size));
+        d_sample_size+= consume_count;
+        d_buffer_info.push_back(mark_sample);
+      }
     }    
 
     void
@@ -191,11 +189,7 @@ namespace gr {
       int tmp_pld; 
       int count =0;
       long int tmp_time, hdr_time;
-      if(ninput_items>0){
-        memcpy(out,in, sizeof(gr_complex)*ninput_items);
-        add_item_tag(0,nitems_written(0),pmt::intern("ctime"),pmt::from_long(d_current_time));
-        produce(0,ninput_items);
-      }
+      
         output_size = d_sample_size - d_sample_idx;
         output_size = (output_size > noutput_items) ? noutput_items : output_size;
         // reset count to find sync ready
@@ -224,7 +218,6 @@ namespace gr {
               break;
             }
             d_last_time = pmt::to_long(pmt::dict_ref(d_pkt_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
-            //d_pkt_info[0] = pmt::dict_delete(d_pkt_info[0],pmt::intern("ctime"));
             pmt::pmt_t dict = pmt::dict_items(d_pkt_info[0]);
             while(!pmt::is_null(dict)){
               pmt::pmt_t tmp_pair = pmt::car(dict);
@@ -236,30 +229,13 @@ namespace gr {
           for(int i=0;i<d_buffer_info.size();++i){
             int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("buffer_index"),pmt::PMT_NIL));
             tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("ctime"),pmt::PMT_NIL));
-            if((offset>=d_sample_idx) && (offset< d_sample_idx+output_size) ){
+            if((offset>=d_sample_idx) && (offset< (d_sample_idx+output_size))){
               add_item_tag(1,nitems_written(1)+offset-d_sample_idx,pmt::intern("ctime"),pmt::from_long(tmp_time));
             }
-            if(offset >= d_sample_idx + output_size ){
+            else if(offset >= (d_sample_idx + output_size) ){
               break;
             }
           }
-          //reset count to search buffer
-          /*count=0;
-          while(count < d_buffer_info.size()){
-            int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("buffer_index"),pmt::PMT_NIL));
-            tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("ctime"),pmt::PMT_NIL));
-            if((offset>d_sample_idx) && (offset< d_sample_idx+output_size) ){
-              add_item_tag(1,nitems_written(1)+offset-d_sample_idx,pmt::intern("ctime"),pmt::from_long(tmp_time));
-            }
-            if(offset >= d_sample_idx + output_size ){
-              break;
-            }
-            count++;
-          }
-          if(count>1){
-            d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+count-1);
-          }*/
-
           memcpy(sample_out, d_sample_buffer+d_sample_idx, sizeof(gr_complex)* output_size);
           produce(1,output_size);
           d_sample_idx += output_size;
@@ -274,57 +250,47 @@ namespace gr {
     prou_sample_queue_cc_impl::update_sample_buffer()
     {
       if(d_buffer_info.empty()){
-          throw std::runtime_error("Cannot have empty buffer info but half of sample capacity");
+        throw std::runtime_error("No buffer info but have full queue");
+      }
+      int rm_idx = d_sample_cap/2;
+      int rm_count = 0;
+      for(rm_count=0;rm_count<d_buffer_info.size();++rm_count){
+        int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[rm_count],pmt::intern("buffer_index"),pmt::PMT_NIL));
+        if(offset >= rm_idx){
+          rm_idx = offset;
+          break;
         }
-        // update buffer info according to time.
-        // you cannot guarantee every packet header can be found!
-        long int tmp_time;
-        int tmp_idx, hdr_idx;
-        int rm_count=0;
-        while(!d_buffer_info.empty()){
-          tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[rm_count],pmt::intern("ctime"),pmt::PMT_NIL));
-          if(((d_current_time-tmp_time)/(float)CLOCKS_PER_SEC <d_timeout) ){
-            break;
-          }
+      }
+      d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+rm_count+1);
+      for(int i=0;i<d_buffer_info.size();++i){
+        int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("buffer_index"),pmt::PMT_NIL));
+        d_buffer_info[i] = pmt::dict_delete(d_buffer_info[i],pmt::intern("buffer_index"));
+        d_buffer_info[i] = pmt::dict_add(d_buffer_info[i],pmt::intern("buffer_index"),pmt::from_long(offset-rm_idx));
+      }
+      rm_count = 0;
+      for(int i = 0;i <d_pkt_info.size();++i){
+        int offset = pmt::to_long(pmt::dict_ref(d_pkt_info[i],pmt::intern("header_found"),pmt::PMT_NIL));
+        d_pkt_info[i] = pmt::dict_delete(d_pkt_info[i],pmt::intern("header_found"));
+        d_pkt_info[i] = pmt::dict_add(d_pkt_info[i],pmt::intern("header_found"),pmt::from_long(offset -rm_idx));
+        if((offset-rm_idx)<0)
+          rm_count++;
+      }
+      d_pkt_info.erase(d_pkt_info.begin(),d_pkt_info.begin()+rm_count);
+      rm_count=0;
+      for(int i=0;i<d_sync_info.size();++i){
+        int offset = pmt::to_long(pmt::dict_ref(d_sync_info[i],pmt::intern("sync_ready"),pmt::PMT_NIL));
+        d_sync_info[i] = pmt::dict_delete(d_sync_info[i],pmt::intern("sync_ready"));
+        d_sync_info[i] = pmt::dict_add(d_sync_info[i],pmt::intern("sync_ready"),pmt::from_long(offset-rm_idx));
+        if((offset-rm_idx)<0){
           rm_count++;
         }
-        if(rm_count==0)
-          return;
-        d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+rm_count);
-        tmp_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("buffer_index"),pmt::PMT_NIL));
-        for(int i=0;i<d_buffer_info.size();++i){
-          int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("buffer_index"),pmt::PMT_NIL));
-          d_buffer_info[i] = pmt::dict_delete(d_buffer_info[i],pmt::intern("buffer_index"));
-          d_buffer_info[i] = pmt::dict_add(d_buffer_info[i],pmt::intern("buffer_index"),pmt::from_long(offset-tmp_idx));
-        }
-        std::vector<pmt::pmt_t> new_pkt_info;
-        for(int i=0;i<d_pkt_info.size();++i){
-          int offset = pmt::to_long(pmt::dict_ref(d_pkt_info[i],pmt::intern("header_found"),pmt::PMT_NIL));
-          if(offset - tmp_idx >=0){
-            d_pkt_info[i] = pmt::dict_delete(d_pkt_info[i],pmt::intern("header_found"));
-            d_pkt_info[i] = pmt::dict_add(d_pkt_info[i],pmt::intern("header_found"),pmt::from_long(offset-tmp_idx));
-            new_pkt_info.push_back(d_pkt_info[i]);
-          }
-        }
-        d_pkt_info = new_pkt_info;
+      }
+      d_sync_info.erase(d_sync_info.begin(),d_sync_info.begin()+rm_count);
+      memcpy(d_sample_buffer,d_sample_buffer+rm_idx,sizeof(gr_complex)*(d_sample_size-rm_idx));
+      d_sample_idx = ((d_sample_idx -rm_idx)<0)?0 : (d_sample_idx-rm_idx) ;
+      d_sample_size-=rm_idx;
+      d_update_time = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
 
-        std::vector<pmt::pmt_t> new_sync_info;
-        for(int i=0;i<d_sync_info.size();++i){
-          int offset = pmt::to_long(pmt::dict_ref(d_sync_info[i],pmt::intern("sync_ready"),pmt::PMT_NIL));
-          if(offset - tmp_idx >=0){
-            d_sync_info[i] = pmt::dict_delete(d_sync_info[i],pmt::intern("sync_ready"));
-            d_sync_info[i] = pmt::dict_add(d_sync_info[i], pmt::intern("sync_ready"),pmt::from_long(offset-tmp_idx));
-            new_sync_info.push_back(d_sync_info[i]);
-          }
-        }
-        d_sync_info = new_sync_info;
-
-        d_update_time = pmt::to_long(pmt::dict_ref(d_buffer_info[0],pmt::intern("ctime"),pmt::PMT_NIL));
-        memcpy(d_sample_buffer, d_sample_buffer+tmp_idx, sizeof(gr_complex)* (d_sample_size-tmp_idx));
-
-        d_sample_idx =0;
-        d_sample_size-= tmp_idx;
-        
     }
 
     void
@@ -353,7 +319,7 @@ namespace gr {
       d_current_time = std::clock();
       int consume_count =0;
 
-      if( 2*d_sample_size >= d_sample_cap){
+      if( d_sample_size == d_sample_cap){
         
         if(d_debug){
           std::cout<<"before update:"<<std::endl;
@@ -370,9 +336,16 @@ namespace gr {
           std::cout<<"current time:"<<d_current_time<<" ,update_time:"<<d_update_time<<" ,last_time:"<<d_last_time<<std::endl;
           std::cout<<"****************************************************************************************"<<std::endl;
         }
-      }
-      
+      }      
       append_samples(in,ninput_items[0],noutput_items,consume_count,d_current_time);
+      if(consume_count>0){
+        memcpy(out,in,sizeof(gr_complex)*consume_count);
+        add_item_tag(0,nitems_written(0),pmt::intern("ctime"),pmt::from_long(d_current_time),pmt::intern(alias()));
+        produce(0,consume_count);
+      }
+      else{
+        produce(0,0);
+      }
       out_items_handler(out,sample,in,noutput_items, consume_count);
       consume_each(consume_count);
 

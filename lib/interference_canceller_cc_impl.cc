@@ -78,7 +78,9 @@ namespace gr {
       d_sample_buffer = new gr_complex[d_cap];
       d_sample_size =0;
       d_sync_size =0;
-      //d_sample_idx =0;
+
+      d_sync_buffer = new gr_complex[d_cap];
+
       d_output_buffer = new gr_complex[d_cap];
       d_output_size =0;
       d_output_idx = 0;
@@ -110,6 +112,7 @@ namespace gr {
     {
       delete [] d_sample_buffer;
       delete [] d_output_buffer;
+      delete [] d_sync_buffer;
       for(int i=0;i<d_retx_buffer.size();++i){
         if(d_retx_buffer[i]!=NULL)
         delete [] d_retx_buffer[i];
@@ -158,6 +161,38 @@ namespace gr {
     }
 
     void
+    interference_canceller_cc_impl::cfo_correction(
+      int end_idx)
+    {
+      std::map<long int, int>::iterator samp_it, sync_it;
+      std::map<long int, int>::iterator samp_beg, sync_beg;
+      for(samp_it= d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
+        if(samp_it->second>=end_idx){
+          samp_it--;
+          break;
+        }
+        sync_it = d_sync_map.find(samp_it->first);
+        if(sync_it==d_sync_map.end()){
+          throw std::runtime_error("Iterator of sync map did not find matched index");
+        }
+      }
+      samp_beg = d_samp_map.begin();
+      sync_beg = d_sync_map.find(samp_beg->first);
+      if(sync_beg == d_sync_map.end()){
+        throw std::runtime_error("Sync map does not have required sample index");
+      }
+      int samp_len = end_idx - samp_beg->second;
+      if((sync_beg->second+samp_len) >d_sync_size){
+        throw std::runtime_error("Synchronization information are not enough");
+      }
+      for(int i=0;i<samp_len;++i){
+        gr_complex est = gr_expj(-1* d_phase_buffer[sync_beg->second +i]);
+        d_sync_buffer[samp_beg->second+i]=d_sample_buffer[samp_beg->second+i] * est;
+      }
+      
+    }
+
+    void
     interference_canceller_cc_impl::sync_hdr_index(
       std::vector<int>& coerced_packet_len, 
       std::vector<pmt::pmt_t>& buffer_info,
@@ -189,6 +224,7 @@ namespace gr {
       {
         std::cout<<"***************************************"<<std::endl;
         std::cout<<"retx_buffer_size:"<<d_retx_buffer.size()<<" ,d_retx_count:"<<d_retx_count<<std::endl;
+        std::cout<<"sample size:"<<d_sample_size<<" ,sync_size:"<<d_sync_size<<std::endl;
         std::cout<<"Do interference cancellation:"<<std::endl;
         for(int i=0;i<(d_last_info_idx+1) ;++i){
           int ct, qi,qs;
@@ -211,7 +247,6 @@ namespace gr {
         std::cout<<"***************************************"<<std::endl;
       }
 
-
       int end_idx = d_end_index.front();
       d_end_index.erase(d_end_index.begin());
       //do signal processing here,
@@ -226,20 +261,28 @@ namespace gr {
       pmt::pmt_t tmp_dict;
 
       // cfo, phase correction
+      cfo_correction(end_idx);
+      // calculate offset in sync and sample      
       // fixing packet len
       sync_hdr_index(packet_len, buffer_info, info_index, end_idx);
 
+      //copy retransmission
+      for(int i=0;i<d_retx_count;++i){
+        memcpy(d_retx_buffer[i],d_sync_buffer+d_retx_pkt_index[i],
+          sizeof(gr_complex)*(d_retx_pkt_size[i]) );
+        //memcpy(d_retx_buffer[i], d_sample_buffer+d_retx_pkt_index[i],sizeof(gr_complex)* d_retx_pkt_size[i]);
+      }
 
       cei_pkt_counter = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
       pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::PMT_NIL));
       
-      
       cei_sample_counter = d_retx_pkt_size[cei_pkt_counter];
       retx = d_retx_buffer[cei_pkt_counter];
 
-      total_size = d_retx_pkt_index[cei_pkt_counter] + d_retx_pkt_size[cei_pkt_counter];
+      //total_size = d_retx_pkt_index[cei_pkt_counter] + d_retx_pkt_size[cei_pkt_counter];
+      total_size = d_info_index[d_last_info_idx]+pld_len+d_hdr_sample_len;
 
-      if(d_output_size+total_size > d_cap){
+      if((d_output_size+total_size) > d_cap){
         //clear output_buffer before doing interference cancellation
         GR_LOG_WARN(d_logger,"output size greater than buffer capacity");
         d_output_size =0;
@@ -259,7 +302,8 @@ namespace gr {
       while(total_size>0){
         total_size--;
         cei_sample_counter--;
-        d_output_buffer[d_output_size+total_size] = d_sample_buffer[total_size] - retx[cei_sample_counter];
+        d_output_buffer[d_output_size+total_size] = d_sample_buffer[total_size]-retx[cei_sample_counter];
+        //d_output_buffer[d_output_size+total_size] = d_sync_buffer[total_size] - retx[cei_sample_counter];
 
         if(!info_index.empty()){
           int idx = info_index.back();
@@ -451,7 +495,6 @@ namespace gr {
       int rest_len = d_sample_size - update_idx;
       memcpy(d_sample_buffer, d_sample_buffer+update_idx, sizeof(gr_complex)*rest_len);
       d_sample_size-= update_idx;
-      //d_sample_idx -= update_idx;
       
       d_samp_map.erase(d_samp_map.begin(),samp_it);
       for(samp_it=d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
@@ -499,16 +542,14 @@ namespace gr {
       for(sync_it=d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
         d_sync_map[sync_it->first] = sync_it->second - sync_block_idx;
       }
-
       //DEBUG required      
       // move samples
       int new_size = d_sample_size-block_index;
       memcpy(d_sample_buffer, d_sample_buffer+block_index, sizeof(gr_complex)*new_size);
       memcpy(d_phase_buffer,d_phase_buffer+sync_block_idx,sizeof(float)*(d_sync_size-sync_block_idx));
+      
       d_sync_size-=sync_block_idx;
-
       d_sample_size = new_size;
-      //d_sample_idx -= block_index;
 
       std::vector<int> new_info_index;
       std::vector<int> new_end_idx;
@@ -615,11 +656,11 @@ namespace gr {
       int nin = (ninput_items[0]>noutput_items) ? noutput_items : ninput_items[0];
       int nsync= (ninput_items[1]>noutput_items) ? noutput_items : ninput_items[1];
       // maintain queue size
-      //GR_LOG_DEBUG(d_logger,"Before update checking");
-      if( (d_cap-d_sample_size < noutput_items) || (d_cap - d_sync_size < noutput_items) ){
+      
+      if( ( (d_cap-d_sample_size) < noutput_items) || ( (d_cap - d_sync_size) < noutput_items) ){
         update_system_index(d_cap/2); //FIXME
       }
-      //GR_LOG_DEBUG(d_logger,"Getting tags");
+      
       std::vector<tag_t> sample_time, sync_time;
       get_tags_in_range(sample_time,0,nitems_read(0),nitems_read(0)+nin,pmt::intern("ctime"));
       get_tags_in_range(sync_time,1,nitems_read(1),nitems_read(1)+nsync,pmt::intern("ctime"));
@@ -645,14 +686,12 @@ namespace gr {
       // update sample size
       d_sample_size+=nin;
       d_sync_size+=nsync;
-      //GR_LOG_DEBUG(d_logger,"Before detector");
       // detecting interference cancellation availability 
       // is faster by checking tag-by-tag.  
       if(cancellation_detector()){
         do_interference_cancellation();
       }
       // output status checking
-      //GR_LOG_DEBUG(d_logger, "Before output");
       if(!d_out_index.empty()){
         output_result(noutput_items, out, eng);
       }

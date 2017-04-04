@@ -49,6 +49,8 @@ namespace gr {
       gr_complex* d_sample_buffer;
       gr_complex* d_output_buffer;
 
+      gr_complex* d_sync_buffer;
+
       //for sync purpose
       float* d_phase_buffer;
       int d_sync_size;
@@ -61,7 +63,6 @@ namespace gr {
       std::vector<int> d_out_info_idx;
 
       int d_sample_size;
-      //int d_sample_idx;
 
       //for retransmission
       std::vector<gr_complex*> d_retx_buffer;
@@ -91,6 +92,8 @@ namespace gr {
         std::vector<pmt::pmt_t>& buffer_info,
         std::vector<int>& info_index, 
         int end_idx);
+
+      void cfo_correction(int end_idx);
 
       bool cancellation_detector();
 

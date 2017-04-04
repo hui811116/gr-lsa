@@ -51,9 +51,7 @@ namespace gr {
   d_order(order), d_error(0), d_noise(1.0), d_phase_detector(NULL)
     {
       d_intf_tagname = pmt::string_to_symbol(intf_tagname);
-      d_prev_phase = 0;
       d_prev_freq = 0;
-      d_prev_time_count =0;
       d_intf_state = false;
 
       switch(d_order) {
@@ -198,18 +196,16 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *iptr = (gr_complex *) input_items[0];
-
-      const float* plf_freq = NULL;
       const float* plf_phase = NULL;
-
-      gr_complex *optr = (gr_complex *) output_items[0];
-      
-      float *poptr = (float*) output_items[1];
-      float *poly_phase = (float*) output_items[2];
+      gr_complex *optr = (gr_complex *) output_items[0];  
+      float *poptr = NULL;
+      float *poly_phase = NULL;
       bool write_foptr = output_items.size() >= 3;
       bool have_poly = input_items.size() >=2;
-      if(have_poly){
-        plf_phase = (float*)input_items[1];
+      if(have_poly && write_foptr){
+        plf_phase = (const float*)input_items[1];
+        poptr = (float*) output_items[1];
+        poly_phase = (float*) output_items[2];
       }
       gr_complex nco_out;
       std::vector<tag_t> intf_tags;
@@ -223,28 +219,23 @@ namespace gr {
       if(write_foptr && have_poly) {
         for(int i = 0; i < noutput_items; i++) {
           if(tags.size() > 0) {
-            if(tags[0].offset-nitems_read(0) == (size_t)i) {
+            if( (tags[0].offset-nitems_read(0)) == (size_t)i) {
               d_phase = (float)pmt::to_double(tags[0].value);
               tags.erase(tags.begin());
             }
           }
           if(!intf_tags.empty()){
-            if(intf_tags[0].offset-nitems_read(0) == (size_t)i) {
+            if( (intf_tags[0].offset-nitems_read(0)) == (size_t)i) {
             if(!d_intf_state && pmt::to_bool(intf_tags[0].value)){
-              d_prev_phase = d_phase;
               d_prev_freq = d_freq;
-              d_prev_time_count =0;
             }
-            else if(d_intf_state && pmt::to_bool(intf_tags[0].value)){
-              //d_phase = d_prev_phase + d_prev_freq * d_prev_time_count;
-              phase_wrap();
-              //d_freq = d_prev_freq;
+            else if(d_intf_state && !pmt::to_bool(intf_tags[0].value)){
+              d_freq = d_prev_freq;
             }
             intf_tags.erase(intf_tags.begin());
             }
           }
           
-
           nco_out = gr_expj(-d_phase);
           optr[i] = iptr[i] * nco_out;
 
@@ -254,7 +245,6 @@ namespace gr {
           advance_loop(d_error);
           phase_wrap();
           frequency_limit();
-          //d_prev_time_count++;
           poptr[i] = d_phase;
           // direct copy
         }
@@ -264,22 +254,18 @@ namespace gr {
       else {
         for(int i = 0; i < noutput_items; i++) {
           if(tags.size() > 0) {
-            if(tags[0].offset-nitems_read(0) == (size_t)i) {
+            if( (tags[0].offset-nitems_read(0)) == (size_t)i) {
               d_phase = (float)pmt::to_double(tags[0].value);
               tags.erase(tags.begin());
             }
           }
           if(!intf_tags.empty()){
-            if(intf_tags[0].offset-nitems_read(0) == (size_t)i) {
+            if((intf_tags[0].offset-nitems_read(0)) == (size_t)i) {
             if(!d_intf_state && pmt::to_bool(intf_tags[0].value)){
-              d_prev_phase = d_phase;
               d_prev_freq = d_freq;
-              d_prev_time_count =0;
             }
-            else if(d_intf_state && pmt::to_bool(intf_tags[0].value)){
-              //d_phase = d_prev_phase + d_prev_freq * d_prev_time_count;
-              phase_wrap();
-              //d_freq = d_prev_freq;
+            else if(d_intf_state && !pmt::to_bool(intf_tags[0].value)){
+              d_freq = d_prev_freq;
             }
             intf_tags.erase(intf_tags.begin());
             }
