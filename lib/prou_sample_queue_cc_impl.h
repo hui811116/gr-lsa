@@ -48,6 +48,8 @@ namespace gr {
       float d_timeout;
 
       int d_sps;   
+      int d_output_count;
+      const int d_min_output_items;
 
       bool d_debug;
       //helper function

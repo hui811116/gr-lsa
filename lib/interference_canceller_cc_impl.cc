@@ -70,7 +70,7 @@ namespace gr {
       : gr::block("interference_canceller_cc",
               gr::io_signature::makev(3, 3, iosig),
               gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
-      d_cap(1024*4096),
+      d_cap(1024*2048),
       d_clean_preamble(clean_preamble),
       d_sps(sps)
     {
@@ -98,6 +98,7 @@ namespace gr {
       d_buffer_info.clear();
       d_debug = debug;
       set_tag_propagation_policy(TPP_DONT);
+      set_output_multiple(d_sps);
 
       d_last_info_idx = 0;
 
@@ -270,7 +271,6 @@ namespace gr {
       for(int i=0;i<d_retx_count;++i){
         memcpy(d_retx_buffer[i],d_sync_buffer+d_retx_pkt_index[i],
           sizeof(gr_complex)*(d_retx_pkt_size[i]) );
-        //memcpy(d_retx_buffer[i], d_sample_buffer+d_retx_pkt_index[i],sizeof(gr_complex)* d_retx_pkt_size[i]);
       }
 
       cei_pkt_counter = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
@@ -279,7 +279,6 @@ namespace gr {
       cei_sample_counter = d_retx_pkt_size[cei_pkt_counter];
       retx = d_retx_buffer[cei_pkt_counter];
 
-      //total_size = d_retx_pkt_index[cei_pkt_counter] + d_retx_pkt_size[cei_pkt_counter];
       total_size = d_info_index[d_last_info_idx]+pld_len+d_hdr_sample_len;
 
       if((d_output_size+total_size) > d_cap){
@@ -302,8 +301,7 @@ namespace gr {
       while(total_size>0){
         total_size--;
         cei_sample_counter--;
-        d_output_buffer[d_output_size+total_size] = d_sample_buffer[total_size]-retx[cei_sample_counter];
-        //d_output_buffer[d_output_size+total_size] = d_sync_buffer[total_size] - retx[cei_sample_counter];
+        d_output_buffer[d_output_size+total_size] = d_sync_buffer[total_size] - retx[cei_sample_counter];
 
         if(!info_index.empty()){
           int idx = info_index.back();
@@ -656,11 +654,9 @@ namespace gr {
       int nin = (ninput_items[0]>noutput_items) ? noutput_items : ninput_items[0];
       int nsync= (ninput_items[1]>noutput_items) ? noutput_items : ninput_items[1];
       // maintain queue size
-      
       if( ( (d_cap-d_sample_size) < noutput_items) || ( (d_cap - d_sync_size) < noutput_items) ){
         update_system_index(d_cap/2); //FIXME
       }
-      
       std::vector<tag_t> sample_time, sync_time;
       get_tags_in_range(sample_time,0,nitems_read(0),nitems_read(0)+nin,pmt::intern("ctime"));
       get_tags_in_range(sync_time,1,nitems_read(1),nitems_read(1)+nsync,pmt::intern("ctime"));
@@ -675,7 +671,6 @@ namespace gr {
         int offset = (int) d_sync_size + sync_time[i].offset - nitems_read(1);
         d_sync_map.insert(std::pair<long int,int>(tmp_time, offset));
       }
-      //GR_LOG_DEBUG(d_logger, "Before copying signals");
       memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)*nin);
       memcpy(d_phase_buffer+d_sync_size, in_sync_p , sizeof(float)*nsync);
       
@@ -697,12 +692,13 @@ namespace gr {
       }
       else{
         produce(0,0);
-        produce(1,0);
+        if(have_eng)
+          produce(1,0);
       }
       consume(0,nin);
       consume(1,nsync);
       consume(2,nsync);
-
+      
       return WORK_CALLED_PRODUCE;
     }
 

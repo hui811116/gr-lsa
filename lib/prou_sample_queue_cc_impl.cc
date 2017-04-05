@@ -48,7 +48,8 @@ namespace gr {
       : gr::block("prou_sample_queue_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(gr_complex))),
-      d_sample_cap(1024*2048)
+      d_sample_cap(1024*2048),
+      d_min_output_items(4096)
     {
       d_sample_idx = 0;
       d_sample_size =0;
@@ -62,6 +63,7 @@ namespace gr {
         throw std::invalid_argument("Sample per symbol cannot be negative");
       }
       d_sps = sps;
+      d_output_count = d_min_output_items;
 
       d_update_time = std::clock();
       d_timeout = 0.5;
@@ -88,7 +90,7 @@ namespace gr {
     prou_sample_queue_cc_impl::info_msg_handler(pmt::pmt_t msg)
     {
       long int time;
-      int counter=0, qidx, qsize, offset;
+      int counter=0, qidx, qsize, offset=0;
       bool sensing_state=false;
       bool hdr = false;
       int output_len = 0;
@@ -187,26 +189,31 @@ namespace gr {
       int ninput_items)
     {
       int output_size;
-      int end_idx=d_sample_idx;
       int tmp_pld; 
       int count =0;
       long int tmp_time, hdr_time;
+      bool ready =false;
       
         output_size = d_sample_size - d_sample_idx;
         output_size = (output_size > noutput_items) ? noutput_items : output_size;
         // reset count to find sync ready
         for(count=0;count<d_sync_info.size();++count){
           int tmp_idx = pmt::to_long(pmt::dict_ref(d_sync_info[count],pmt::intern("sync_ready"),pmt::PMT_NIL));
-          if(tmp_idx > d_sample_idx+output_size){
+          if(tmp_idx >= (d_sample_idx) ){
+            ready = true;
             break;
           }
-          end_idx = tmp_idx;
         }
         // sync ready, prepare to output
-        if(end_idx > d_sample_idx){
-          for(int i=0;i<count;++i){
-            int sync_idx = pmt::to_long(pmt::dict_ref(d_sync_info[i],pmt::intern("sync_ready"),pmt::PMT_NIL));
-            long int sync_time = pmt::to_long(pmt::dict_ref(d_sync_info[i],pmt::intern("ctime"),pmt::PMT_NIL));
+        if(ready){
+          for(count=0;count<d_sync_info.size();++count){
+            int sync_idx = pmt::to_long(pmt::dict_ref(d_sync_info[count],pmt::intern("sync_ready"),pmt::PMT_NIL));
+            if(sync_idx >= (d_sample_idx + output_size)){
+              //count++;
+              break;
+            }
+            long int sync_time = pmt::to_long(pmt::dict_ref(d_sync_info[count],pmt::intern("ctime"),pmt::PMT_NIL));
+            //std::cout<<"sync_ctime:"<<sync_time<<" index:"<<sync_idx<<std::endl;
             add_item_tag(1,nitems_written(1)+ sync_idx-d_sample_idx, pmt::intern("ctime"),pmt::from_long(sync_time));
           }
           d_sync_info.erase(d_sync_info.begin(),d_sync_info.begin()+count);
@@ -342,8 +349,11 @@ namespace gr {
       append_samples(in,ninput_items[0],noutput_items,consume_count,d_current_time);
       if(consume_count>0){
         memcpy(out,in,sizeof(gr_complex)*consume_count);
-        std::cout<<"nitems_written:"<<nitems_written(0)<<" ninput:"<<ninput_items[0]<<" noutput:"<<noutput_items<<std::endl;
-        add_item_tag(0,nitems_written(0)+50,pmt::intern("ctime"),pmt::from_long(d_current_time),pmt::intern(alias()));
+        if(((int)(d_output_count/d_min_output_items))!=0){
+          add_item_tag(0,nitems_written(0),pmt::intern("ctime"),pmt::from_long(d_current_time),pmt::intern(alias()));
+          d_output_count%=d_min_output_items;
+        }
+        d_output_count+=consume_count;
         produce(0,consume_count);
       }
       else{

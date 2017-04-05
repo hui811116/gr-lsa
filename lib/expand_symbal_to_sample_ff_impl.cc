@@ -91,6 +91,12 @@ namespace gr {
       float p_freq, t_freq;
       float p_phase, t_phase;
       // Do <+signal processing+>
+      int consume=noutput_items/(int)relative_rate();
+      if(ninput_items[0]<(consume+history())){
+        consume_each(0);
+        return 0;
+      }
+
       for(int i=0;i<noutput_items;++i){
         if(i%d_sps == 0){
           p_phase = phase[i/d_sps];
@@ -128,9 +134,10 @@ namespace gr {
       // Tell runtime system how many input items we consumed on
       // each input stream.
       
-      int consume=noutput_items/(float)relative_rate();
+      
       consume_each (consume);
-
+      //std::cout<<"<debug>sync interp:"<<"consume:"<<consume<<std::endl;
+      //std::cout<<"noutput:"<<noutput_items<<" ,inputn:"<<ninput_items[0]<<std::endl;
       // Tell runtime system how many output items we produced.
       return consume*d_sps;
     }
