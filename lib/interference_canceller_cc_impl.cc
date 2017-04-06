@@ -174,6 +174,7 @@ namespace gr {
         }
         sync_it = d_sync_map.find(samp_it->first);
         if(sync_it==d_sync_map.end()){
+          std::cerr<<"<error>not found:"<<samp_it->first<<std::endl; 
           throw std::runtime_error("Iterator of sync map did not find matched index");
         }
       }

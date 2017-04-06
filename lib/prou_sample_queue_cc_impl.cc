@@ -173,10 +173,10 @@ namespace gr {
         if((d_sample_size ==0)||(d_update_time==0) ){
           d_update_time =time;
         }
-        mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_long(time));
-        mark_sample = pmt::dict_add(mark_sample, pmt::intern("buffer_index"), pmt::from_long(d_sample_size));
-        d_sample_size+= consume_count;
-        d_buffer_info.push_back(mark_sample);
+        //mark_sample = pmt::dict_add(mark_sample, pmt::intern("ctime"), pmt::from_long(time));
+        //mark_sample = pmt::dict_add(mark_sample, pmt::intern("buffer_index"), pmt::from_long(d_sample_size));
+        //d_sample_size+= consume_count;
+        //d_buffer_info.push_back(mark_sample);
       }
     }    
 
@@ -216,7 +216,9 @@ namespace gr {
             //std::cout<<"sync_ctime:"<<sync_time<<" index:"<<sync_idx<<std::endl;
             add_item_tag(1,nitems_written(1)+ sync_idx-d_sample_idx, pmt::intern("ctime"),pmt::from_long(sync_time));
           }
+          //std::cout<<"count:"<<count<<" ,sync_size:"<<d_sync_info.size()<<std::endl;
           d_sync_info.erase(d_sync_info.begin(),d_sync_info.begin()+count);
+          //std::cout<<"sync_size(end):"<<d_sync_info.size()<<std::endl;
           //sync ready
           // add tags in header
           while(!d_pkt_info.empty()){
@@ -350,11 +352,16 @@ namespace gr {
       if(consume_count>0){
         memcpy(out,in,sizeof(gr_complex)*consume_count);
         if(((int)(d_output_count/d_min_output_items))!=0){
+          pmt::pmt_t dict= pmt::make_dict();
+          dict = pmt::dict_add(dict,pmt::intern("ctime"),pmt::from_long(d_current_time));
+          dict = pmt::dict_add(dict,pmt::intern("buffer_index"),pmt::from_long(d_sample_size));
+          d_buffer_info.push_back(dict);
           add_item_tag(0,nitems_written(0),pmt::intern("ctime"),pmt::from_long(d_current_time),pmt::intern(alias()));
           d_output_count%=d_min_output_items;
         }
         d_output_count+=consume_count;
         produce(0,consume_count);
+        d_sample_size+=consume_count;
       }
       else{
         produce(0,0);
