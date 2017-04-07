@@ -124,6 +124,12 @@ namespace gr {
       int tmp_idx;
       
       for(int i=0;i<d_buffer_info.size();++i){
+        //if(!pmt::dict_has_key(d_buffer_info[i],pmt::intern("buffer_index"))){
+          //throw std::runtime_error("to long will fail, found no buffer index 1");
+        //}
+        //if(!pmt::dict_has_key(d_buffer_info[i],pmt::intern("ctime"))){
+          //throw std::runtime_error("to long will fail, found no ctime 1");
+        //}
         tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("ctime"),pmt::PMT_NIL));
         tmp_idx = pmt::to_long(pmt::dict_ref(d_buffer_info[i], pmt::intern("buffer_index"),pmt::PMT_NIL));
         if(time == tmp_time){
@@ -140,6 +146,9 @@ namespace gr {
           d_sync_info.push_back(info_tag);
         }
         else{
+          //if(!pmt::dict_has_key(info_tag,pmt::intern("payload"))){
+            //throw std::runtime_error("to long will fail, no payload found 1");
+          //}
           int tmp_pld = pmt::to_long(pmt::dict_ref(info_tag, pmt::intern("payload"),pmt::PMT_NIL));
           tmp_pld*=d_sps;
           info_tag = pmt::dict_delete(info_tag,pmt::intern("payload"));
@@ -212,13 +221,13 @@ namespace gr {
               //count++;
               break;
             }
+            //if(!pmt::dict_has_key(d_sync_info[count],pmt::intern("ctime"))){
+              //throw std::runtime_error("to long will fail, no ctime found 2");
+            //}
             long int sync_time = pmt::to_long(pmt::dict_ref(d_sync_info[count],pmt::intern("ctime"),pmt::PMT_NIL));
-            //std::cout<<"sync_ctime:"<<sync_time<<" index:"<<sync_idx<<std::endl;
             add_item_tag(1,nitems_written(1)+ sync_idx-d_sample_idx, pmt::intern("ctime"),pmt::from_long(sync_time));
           }
-          //std::cout<<"count:"<<count<<" ,sync_size:"<<d_sync_info.size()<<std::endl;
           d_sync_info.erase(d_sync_info.begin(),d_sync_info.begin()+count);
-          //std::cout<<"sync_size(end):"<<d_sync_info.size()<<std::endl;
           //sync ready
           // add tags in header
           while(!d_pkt_info.empty()){
@@ -237,7 +246,8 @@ namespace gr {
             }
             d_pkt_info.erase(d_pkt_info.begin());
           }
-          for(int i=0;i<d_buffer_info.size();++i){
+          count = 0;
+          for(count=0;count<d_buffer_info.size();++count){
             int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("buffer_index"),pmt::PMT_NIL));
             tmp_time = pmt::to_long(pmt::dict_ref(d_buffer_info[count],pmt::intern("ctime"),pmt::PMT_NIL));
             if((offset>=d_sample_idx) && (offset< (d_sample_idx+output_size))){
@@ -247,6 +257,14 @@ namespace gr {
               break;
             }
           }
+          //while(count>0){
+            //int offset = pmt::to_long(pmt::dict_ref(d_buffer_info[--count],pmt::intern("buffer_index"),pmt::PMT_NIL));
+            //if(offset < d_sample_idx){
+              //break;
+            //}
+          //}
+          //if(count > 0)
+            //d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+count);
           memcpy(sample_out, d_sample_buffer+d_sample_idx, sizeof(gr_complex)* output_size);
           produce(1,output_size);
           d_sample_idx += output_size;
