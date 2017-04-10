@@ -33,13 +33,14 @@ list(APPEND lsa_sources
     modified_polyphase_time_sync_cc_impl.cc
     modified_costas_loop_cc_impl.cc
     prou_sample_queue_cc_impl.cc
-    symbol_receiver_c_impl.cc
     interference_canceller_cc_impl.cc
     burst_tagger_cc_impl.cc
     protocol_parser_b_impl.cc 
     correlate_sync_cc_impl.cc
     symbol_queue_receiver_cc_impl.cc
-    symbol_level_ic_cc_impl.cc )
+    symbol_level_ic_cc_impl.cc
+    expand_symbal_to_sample_ff_impl.cc
+    symbol_sync_receiver_cf_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

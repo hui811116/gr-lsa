@@ -142,7 +142,7 @@ namespace gr {
 //**************************    
     void eng_det_cc_impl::set_threshold(float thres_db)
     {
-      d_threshold = pow(10,thres_db/10);
+      d_threshold = pow(10,thres_db/10.0f);
     }
     bool eng_det_cc_impl::set_bin_size(int bin)
     {

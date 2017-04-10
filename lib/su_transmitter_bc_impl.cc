@@ -186,25 +186,19 @@ namespace gr {
       if(pmt::dict_has_key(msg,pmt::intern("ctime"))){
         ctime = pmt::to_long(pmt::dict_ref(msg, pmt::intern("ctime"), pmt::PMT_NIL));
       }
+      if(!pmt::dict_has_key(msg,pmt::intern("LSA_hdr"))){
+        //no header info found, 
+        return;
+      }
 
-      std::vector<pmt::pmt_t> tag_keys;
-      std::vector<pmt::pmt_t> tag_vals;
       int rx_counter = -1;
       bool rx_sensing_info = false;
-      pmt::pmt_t dict_items(pmt::dict_items(msg));
-      while(!pmt::is_null(dict_items)) {
-        pmt::pmt_t this_item(pmt::car(dict_items));
-        tag_keys.push_back(pmt::car(this_item));
-        tag_vals.push_back(pmt::cdr(this_item));
-        dict_items = pmt::cdr(dict_items);
+      
+      if(pmt::dict_has_key(msg,d_sensingtagname)){
+        rx_sensing_info = pmt::to_bool(pmt::dict_ref(msg, d_sensingtagname,pmt::PMT_NIL));
       }
-      for(int i=0;i<tag_keys.size();++i){        
-        if(pmt::eqv(tag_keys[i],d_sensingtagname)){
-          rx_sensing_info = pmt::to_bool(tag_vals[i]);
-        }
-        if(pmt::eqv(tag_keys[i],d_rxindextagname)){
-          rx_counter = (int) pmt::to_long(tag_vals[i]);
-        }
+      if(pmt::dict_has_key(msg,d_rxindextagname)){
+        rx_counter = pmt::to_long(pmt::dict_ref(msg, d_rxindextagname,pmt::PMT_NIL));
       }
       
       switch(d_mode){

@@ -59,6 +59,14 @@
     <name>in</name>
     <type>complex</type>
   </sink>
+  <sink>
+    <name>phase</name>
+    <type>float</type>
+  </sink>
+  <sink>
+    <name>time_k</name>
+    <type>float</type>
+  </sink>
 
   <!-- Make one 'source' node per output. Sub-nodes:
        * name (an identifier for the GUI)

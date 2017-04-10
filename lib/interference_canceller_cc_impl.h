@@ -23,6 +23,7 @@
 
 #include <lsa/interference_canceller_cc.h>
 #include <pmt/pmt.h>
+#include <map>
 
 namespace gr {
   namespace lsa {
@@ -48,6 +49,12 @@ namespace gr {
       gr_complex* d_sample_buffer;
       gr_complex* d_output_buffer;
 
+      gr_complex* d_sync_buffer;
+
+      //for sync purpose
+      float* d_phase_buffer;
+      int d_sync_size;
+
       float* d_eng_buffer;
       int d_output_size;
       int d_output_idx;
@@ -56,7 +63,6 @@ namespace gr {
       std::vector<int> d_out_info_idx;
 
       int d_sample_size;
-      int d_sample_idx;
 
       //for retransmission
       std::vector<gr_complex*> d_retx_buffer;
@@ -72,6 +78,9 @@ namespace gr {
       std::vector<int> d_end_index;
       std::vector<int> d_out_index;
 
+      std::map<long int, int> d_sync_map;
+      std::map<long int, int> d_samp_map;
+
       void tags_handler(std::vector<tag_t>& tags, int nin);
       void update_system_index(int queue_index);
       void update_system_hdr();
@@ -83,6 +92,8 @@ namespace gr {
         std::vector<pmt::pmt_t>& buffer_info,
         std::vector<int>& info_index, 
         int end_idx);
+
+      void cfo_correction(int end_idx);
 
       bool cancellation_detector();
 

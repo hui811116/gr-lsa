@@ -23,7 +23,7 @@ from gnuradio import gr, gr_unittest
 from gnuradio import blocks
 import lsa_swig as lsa
 
-class qa_symbol_receiver_c (gr_unittest.TestCase):
+class qa_expand_symbal_to_sample_ff (gr_unittest.TestCase):
 
     def setUp (self):
         self.tb = gr.top_block ()
@@ -38,4 +38,4 @@ class qa_symbol_receiver_c (gr_unittest.TestCase):
 
 
 if __name__ == '__main__':
-    gr_unittest.run(qa_symbol_receiver_c, "qa_symbol_receiver_c.xml")
+    gr_unittest.run(qa_expand_symbal_to_sample_ff, "qa_expand_symbal_to_sample_ff.xml")

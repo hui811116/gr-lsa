@@ -1,56 +1,32 @@
 <?xml version="1.0"?>
 <block>
-  <name>LSA symbol receiver</name>
-  <key>lsa_symbol_receiver_c</key>
+  <name>Symbol Sync Receiver</name>
+  <key>lsa_symbol_sync_receiver_cf</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.symbol_receiver_c($accesscode, $hdr,$pld,$sense_tag,$sps,$queue,$debug)</make>
+  <make>lsa.symbol_sync_receiver_cf($acccode,$hdr_const,$pld_const, $debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <param>
-    <name>accesscode</name>
-    <key>accesscode</key>
+    <name>Access code</name>
+    <key>acccode</key>
     <type>string</type>
   </param>
   <param>
-    <name>Header constellation</name>
-    <key>hdr</key>
+    <name>Header Constellation</name>
+    <key>hdr_const</key>
     <type>raw</type>
   </param>
   <param>
-    <name>Payload constellation</name>
-    <key>pld</key>
+    <name>Payload Constellation</name>
+    <key>pld_const</key>
     <type>raw</type>
   </param>
   <param>
-    <name>sensing tagname</name>
-    <key>sense_tag</key>
-    <type>string</type>
-  </param>
-  <param>
-    <name>Samples per symbol</name>
-    <key>sps</key>
-    <type>int</type>
-  </param>
-  <param>
-    <name>queue mode</name>
-    <key>queue</key>
-    <value>False</value>
-    <type>bool</type>
-    <option>
-      <name>On</name>
-      <key>True</key>
-    </option>
-    <option>
-      <name>Off</name>
-      <key>False</key>
-    </option>
-  </param>
-  <param>
-    <name>debug mode</name>
+    <name>Debug mode</name>
     <key>debug</key>
     <value>False</value>
     <type>bool</type>
@@ -74,27 +50,15 @@
     <type>complex</type>
   </sink>
   <sink>
-    <name>freq</name>
-    <type>float</type>
-    <optional>1</optional>
-  </sink>
-  <sink>
     <name>phase</name>
     <type>float</type>
     <optional>1</optional>
   </sink>
   <sink>
-    <name>time rate f</name>
+    <name>time k</name>
     <type>float</type>
     <optional>1</optional>
   </sink>
-  <sink>
-    <name>time_k</name>
-    <type>float</type>
-    <optional>1</optional>
-  </sink>
-
-  
 
   <!-- Make one 'source' node per output. Sub-nodes:
        * name (an identifier for the GUI)
@@ -102,12 +66,17 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>info</name>
-    <type>message</type>
+    <name>phase out</name>
+    <type>float</type>
     <optional>1</optional>
   </source>
   <source>
-    <name>packet</name>
+    <name>time k out</name>
+    <type>float</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>msg</name>
     <type>message</type>
     <optional>1</optional>
   </source>

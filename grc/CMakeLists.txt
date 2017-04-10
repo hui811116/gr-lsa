@@ -25,11 +25,12 @@ install(FILES
     lsa_modified_polyphase_time_sync_cc.xml
     lsa_modified_costas_loop_cc.xml
     lsa_prou_sample_queue_cc.xml
-    lsa_symbol_receiver_c.xml
     lsa_interference_canceller_cc.xml
     lsa_burst_tagger_cc.xml
     lsa_protocol_parser_b.xml 
     lsa_correlate_sync_cc.xml
     lsa_symbol_queue_receiver_cc.xml
-    lsa_symbol_level_ic_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_symbol_level_ic_cc.xml
+    lsa_expand_symbal_to_sample_ff.xml
+    lsa_symbol_sync_receiver_cf.xml DESTINATION share/gnuradio/grc/blocks
 )

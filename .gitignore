@@ -10,3 +10,4 @@ examples/*
 tag
 *.tag
 *.orig
+.vscode

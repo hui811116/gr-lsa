@@ -18,42 +18,36 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef INCLUDED_LSA_EXPAND_SYMBAL_TO_SAMPLE_FF_IMPL_H
+#define INCLUDED_LSA_EXPAND_SYMBAL_TO_SAMPLE_FF_IMPL_H
 
-#ifndef INCLUDED_LSA_PROU_SAMPLE_QUEUE_CC_H
-#define INCLUDED_LSA_PROU_SAMPLE_QUEUE_CC_H
-
-#include <lsa/api.h>
-#include <gnuradio/block.h>
+#include <lsa/expand_symbal_to_sample_ff.h>
 
 namespace gr {
   namespace lsa {
 
-    /*!
-     * \brief <+description of block+>
-     * \ingroup lsa
-     *
-     */
-    class LSA_API prou_sample_queue_cc : virtual public gr::block
+    class expand_symbal_to_sample_ff_impl : public expand_symbal_to_sample_ff
     {
-     public:
-      typedef boost::shared_ptr<prou_sample_queue_cc> sptr;
+     private:
+      // Nothing to declare in this block.
+      int d_sps;
+      int d_nfilts;
 
-      /*!
-       * \brief Return a shared_ptr to a new instance of lsa::prou_sample_queue_cc.
-       *
-       * To avoid accidental use of raw pointers, lsa::prou_sample_queue_cc's
-       * constructor is in a private implementation
-       * class. lsa::prou_sample_queue_cc::make is the public interface for
-       * creating new instances.
-       */
-      static sptr make(
-        const std::string& sensing_tagname, 
-        int sps,
-        bool debug);
+     public:
+      expand_symbal_to_sample_ff_impl(int sps, int nfilts);
+      ~expand_symbal_to_sample_ff_impl();
+
+      // Where all the action really happens
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+
+      int general_work(int noutput_items,
+           gr_vector_int &ninput_items,
+           gr_vector_const_void_star &input_items,
+           gr_vector_void_star &output_items);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_PROU_SAMPLE_QUEUE_CC_H */
+#endif /* INCLUDED_LSA_EXPAND_SYMBAL_TO_SAMPLE_FF_IMPL_H */
 
