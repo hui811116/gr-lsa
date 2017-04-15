@@ -96,13 +96,11 @@ namespace gr {
       volk_32fc_magnitude_squared_32f(out_eng,in,noutput_items + history());
 
       // fixed bin, may be a parameter in future implementation
-      //add_item_tag(0,nitems_written(0),pmt::intern("ed_debug"),pmt::PMT_T,d_src_id);
 
       float float_test;
       for(int i=0;i<noutput_items;++i)
       {
           float_test=std::accumulate(out_eng+i,out_eng+i+d_bin-1,0.0);
-          //std::cout<<"debug:"<<"float_test:"<<float_test<<" ,threshold:"<<d_threshold<<std::endl;
           if(float_test >= d_threshold)
           {
             if(!d_state_reg){
@@ -117,13 +115,13 @@ namespace gr {
           else
           {
             if(d_state_reg){
-              //add_item_tag(0,nitems_written(0)+out_count, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
-              //if(have_eng){
-              //add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
-              //}
+              add_item_tag(0,nitems_written(0)+out_count, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
+              if(have_eng){
+                add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
+              }
               d_state_reg=false;
             } 
-            //out[out_count++] = in[i];
+            
           }
       }
       
