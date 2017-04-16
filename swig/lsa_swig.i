@@ -3,6 +3,7 @@
 #define LSA_API
 #define DIGITAL_API
 #define FILTER_API
+#define FFT_API
 
 %include "gnuradio.i"			// the common stuff
 
@@ -11,6 +12,7 @@
 
 %include "gnuradio/digital/constellation.h"
 %include "gnuradio/filter/fir_filter.h"
+#include "gnuradio/fft/fft.h"
 
 %{
 #include "lsa/eng_det_cc.h"
@@ -29,6 +31,7 @@
 #include "lsa/symbol_level_ic_cc.h"
 #include "lsa/expand_symbal_to_sample_ff.h"
 #include "lsa/symbol_sync_receiver_cf.h"
+#include "lsa/burst_synchronizer_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -72,3 +75,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, symbol_level_ic_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, expand_symbal_to_sample_ff);
 %include "lsa/symbol_sync_receiver_cf.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, symbol_sync_receiver_cf);
+%include "lsa/burst_synchronizer_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, burst_synchronizer_cc);

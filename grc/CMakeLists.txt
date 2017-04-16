@@ -32,5 +32,6 @@ install(FILES
     lsa_symbol_queue_receiver_cc.xml
     lsa_symbol_level_ic_cc.xml
     lsa_expand_symbal_to_sample_ff.xml
-    lsa_symbol_sync_receiver_cf.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_symbol_sync_receiver_cf.xml
+    lsa_burst_synchronizer_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

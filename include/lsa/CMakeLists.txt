@@ -37,5 +37,6 @@ install(FILES
     symbol_queue_receiver_cc.h
     symbol_level_ic_cc.h
     expand_symbal_to_sample_ff.h
-    symbol_sync_receiver_cf.h DESTINATION include/lsa
+    symbol_sync_receiver_cf.h
+    burst_synchronizer_cc.h DESTINATION include/lsa
 )

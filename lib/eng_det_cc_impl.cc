@@ -119,6 +119,7 @@ namespace gr {
               if(have_eng){
                 add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
               }
+              out[out_count++] = in[i];
               d_state_reg=false;
             } 
             
