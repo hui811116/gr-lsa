@@ -631,6 +631,53 @@
     </param>
   </block>
   <block>
+    <key>blocks_null_sink</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>bus_conns</key>
+      <value>[[0,],]</value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1208, 960)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_null_sink_0</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>complex</value>
+    </param>
+    <param>
+      <key>num_inputs</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
     <key>blocks_pdu_to_tagged_stream</key>
     <param>
       <key>alias</key>
@@ -1244,61 +1291,6 @@
     </param>
   </block>
   <block>
-    <key>digital_corr_est_cc</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(792, 960)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>digital_corr_est_cc_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>sps</key>
-      <value>sps</value>
-    </param>
-    <param>
-      <key>symbols</key>
-      <value>pre_smp</value>
-    </param>
-    <param>
-      <key>mark_delay</key>
-      <value>52</value>
-    </param>
-    <param>
-      <key>threshold</key>
-      <value>0.95</value>
-    </param>
-  </block>
-  <block>
     <key>digital_map_bb</key>
     <param>
       <key>alias</key>
@@ -1489,8 +1481,12 @@
       <value>1</value>
     </param>
     <param>
+      <key>taps</key>
+      <value>tx_rrc_taps</value>
+    </param>
+    <param>
       <key>_coordinate</key>
-      <value>(1024, 980)</value>
+      <value>(992, 976)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1499,6 +1495,10 @@
     <param>
       <key>id</key>
       <value>lsa_burst_synchronizer_cc_0</value>
+    </param>
+    <param>
+      <key>arity</key>
+      <value>4</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -1525,7 +1525,7 @@
     <key>lsa_eng_det_cc</key>
     <param>
       <key>bin</key>
-      <value>20</value>
+      <value>40</value>
     </param>
     <param>
       <key>alias</key>
@@ -1596,7 +1596,7 @@
     </param>
     <param>
       <key>entags</key>
-      <value>True</value>
+      <value>False</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1963,11 +1963,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1256, 988)</value>
+      <value>(800, 988)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -2239,7 +2239,7 @@
     </param>
     <param>
       <key>size</key>
-      <value>1024</value>
+      <value>1806</value>
     </param>
     <param>
       <key>srate</key>
@@ -2373,12 +2373,6 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>digital_corr_est_cc_0</source_block_id>
-    <sink_block_id>lsa_burst_synchronizer_cc_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
     <source_block_id>digital_map_bb_0</source_block_id>
     <sink_block_id>digital_chunks_to_symbols_xx_0</sink_block_id>
     <source_key>0</source_key>
@@ -2404,13 +2398,19 @@
   </connection>
   <connection>
     <source_block_id>lsa_burst_synchronizer_cc_0</source_block_id>
-    <sink_block_id>qtgui_time_sink_x_1</sink_block_id>
+    <sink_block_id>blocks_null_sink_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_eng_det_cc_0</source_block_id>
-    <sink_block_id>digital_corr_est_cc_0</sink_block_id>
+    <sink_block_id>lsa_burst_synchronizer_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_eng_det_cc_0</source_block_id>
+    <sink_block_id>qtgui_time_sink_x_1</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

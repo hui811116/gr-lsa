@@ -62,7 +62,7 @@ namespace gr {
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
         d_cap(1024*24)
     {
-      if(window.size()!=fft_size){
+      if(!window.empty() && window.size()!=fft_size){
         throw std::runtime_error("window size should be equal to fft size");
       }
       d_window = window;
@@ -126,8 +126,7 @@ namespace gr {
       if(size>2048){
         throw std::runtime_error("squaring size larger than available buffer size");
       }
-      int pwr = (int)log2(floor(d_arity));
-      volk_32fc_s32f_power_32fc(d_in_pwr,in,pwr,size);
+      volk_32fc_s32f_power_32fc(d_in_pwr,in,d_arity,size);
     }
 
 
@@ -181,8 +180,7 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      gr_complex *out = (gr_complex *) output_items[1];
-      gr_complex *hdr_out = (gr_complex*) output_items[0];
+      gr_complex *out = (gr_complex *) output_items[0];
       int nin = (noutput_items<ninput_items[0]) ? noutput_items: ninput_items[0];
       // copy samples out for this is still working project;
       std::vector<tag_t> tags;
@@ -204,13 +202,21 @@ namespace gr {
               d_state = false;
               consume = tags[i].offset - nitems_read(0)+1;
               if( ((d_samp_size + (consume-tmp_bgn))>= d_min_len)
-              && ((d_samp_size + (consume-tmp_bgn))<d_cap) ){
+              && ((d_samp_size + (consume-tmp_bgn))<=d_cap) ){
                 int con_len = tags[i].offset - nitems_read(0)-tmp_bgn+1;
                 consume = tags[i].offset - nitems_read(0)+1;
                 memcpy(d_sample_buffer+d_samp_size,in+tmp_bgn,sizeof(gr_complex)*con_len);
                 d_samp_size += con_len;
                 d_burst_status = LOCK_BURST;
-                break;
+                
+                consume_each(consume);
+                return 0;
+              }
+              else if((d_samp_size + (consume-tmp_bgn)) > d_cap){
+                d_state = false;
+                d_samp_size = 0;
+                consume_each(nin);
+                return 0;
               }
             }
           }
@@ -221,7 +227,8 @@ namespace gr {
             if( (buf_len + d_samp_size)>d_cap ){
               d_state = false;
               d_samp_size =0;
-              break;
+              consume_each(consume);
+              return 0;
             }
             if(buf_len>0)
               memcpy(d_sample_buffer+d_samp_size,in+tmp_bgn,sizeof(gr_complex)*buf_len);
@@ -245,6 +252,7 @@ namespace gr {
             d_sample_buffer[i]*=gr_expj(-phase_correction);
             phase_correction+=cfo_est;
           }
+          d_out_counter = 0;
           d_burst_status = OUTPUT_BURST;
           nout = 0;
         break;
@@ -252,17 +260,17 @@ namespace gr {
         case OUTPUT_BURST:
         {
           int samp_left = d_samp_size - d_out_counter;
-          nout = (samp_left < noutput_items) ? noutput_items : samp_left;
+          nout = (samp_left > noutput_items) ? noutput_items : samp_left;
           if(nout>0){
             if(d_out_counter == 0 ){
-              pmt::pmt_t tag;
-              add_item_tag(1,nitems_written(1),pmt::intern("burst_begin"),pmt::PMT_T);
+              add_item_tag(0,nitems_written(0),pmt::intern("burst_begin"),pmt::PMT_T);
             }
             memcpy(out,d_sample_buffer+d_out_counter,sizeof(gr_complex)*nout);
           }
           d_out_counter += nout;
           if(d_out_counter ==d_samp_size){
             d_burst_status = FIND_BURST;
+            d_samp_size = 0;
           }
         break;
         }
