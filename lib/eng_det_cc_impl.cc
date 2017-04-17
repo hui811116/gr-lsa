@@ -91,43 +91,44 @@ namespace gr {
         out_eng = (float*)output_items[1];
         have_eng = true;
       }
-
-      int out_count = 0;
-      volk_32fc_magnitude_squared_32f(out_eng,in,noutput_items + history());
+      memcpy(out,in,sizeof(gr_complex)*noutput_items);
+      volk_32fc_magnitude_squared_32f(d_eng,in,noutput_items + history());
 
       // fixed bin, may be a parameter in future implementation
 
       float float_test;
       for(int i=0;i<noutput_items;++i)
       {
-          float_test=std::accumulate(out_eng+i,out_eng+i+d_bin-1,0.0);
+          float_test=std::accumulate(d_eng+i,d_eng+i+d_bin-1,0.0)/(float)d_bin;
+          if(have_eng){
+            out_eng[i] = float_test;
+          }
           if(float_test >= d_threshold)
           {
             if(!d_state_reg){
-              add_item_tag(0,nitems_written(0)+out_count, pmt::intern("ed_begin"), pmt::PMT_T, d_src_id);
+              add_item_tag(0,nitems_written(0)+i, pmt::intern("ed_begin"), pmt::PMT_T, d_src_id);
               if(have_eng){
                 add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_begin"), pmt::PMT_T, d_src_id);
                 }
               d_state_reg=true;
             }
-            out[out_count++] = in[i];
+            //out[out_count++] = in[i];
           }// not yet found 
           else
           {
             if(d_state_reg){
-              add_item_tag(0,nitems_written(0)+out_count, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
+              add_item_tag(0,nitems_written(0)+i, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
               if(have_eng){
                 add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
               }
-              out[out_count++] = in[i];
               d_state_reg=false;
+              //out[out_count++] = in[i];
             } 
-            
           }
       }
       
       // Do <+signal processing+>
-      produce(0,out_count);
+      produce(0,noutput_items);
       if(have_eng)
         produce(1,noutput_items);
       // Tell runtime system how many input items we consumed on

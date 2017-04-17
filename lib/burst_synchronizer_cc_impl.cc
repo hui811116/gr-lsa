@@ -35,6 +35,10 @@ namespace gr {
   namespace lsa {
 
 #define TWO_PI (M_PI * 2.0f);
+static const float B_arr[16] = {0,1,0,0,
+                               -1.0F/3.0,-0.5,1.0F,-1.0F/6.0,
+                               0.5,-1.0F,0.5,0,
+                               -1.0F/6.0F,0.5,-0.5,1.0F/6.0};
 
     enum burstStatus{
       FIND_BURST,
@@ -44,10 +48,10 @@ namespace gr {
 
     burst_synchronizer_cc::sptr
     burst_synchronizer_cc::make(int min_len, int sps, const std::vector<float>& window,
-    int arity, const std::vector<float>& taps)
+    int arity, const std::vector<float>& taps, int decimate, float loop_bw)
     {
       return gnuradio::get_initial_sptr
-        (new burst_synchronizer_cc_impl(min_len,sps,window,arity,taps));
+        (new burst_synchronizer_cc_impl(min_len,sps,window,arity,taps, decimate, loop_bw));
     }
 
     /*
@@ -56,11 +60,13 @@ namespace gr {
     static int fft_size = 256;
     burst_synchronizer_cc_impl::burst_synchronizer_cc_impl(
       int min_len, int sps, const std::vector<float>& window,
-      int arity, const std::vector<float>& taps)
+      int arity, const std::vector<float>& taps, int decimate, float loop_bw)
       : gr::block("burst_synchronizer_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
-        d_cap(1024*24)
+        d_cap(1024*24), d_omega(2.0), d_omega_mid(2.0),
+        d_p_2T(0),d_p_1T(0),d_p_0T(0), d_c_2T(0), d_c_1T(0), d_c_0T(0),
+        d_omega_relative_limit(1e-2)
     {
       if(!window.empty() && window.size()!=fft_size){
         throw std::runtime_error("window size should be equal to fft size");
@@ -70,6 +76,7 @@ namespace gr {
       d_fft_out = (gr_complex*)volk_malloc(sizeof(gr_complex)*2048,volk_get_alignment());
       d_in_pwr = (gr_complex*)volk_malloc(sizeof(gr_complex)*2048,volk_get_alignment());
       d_dec_out = (gr_complex*) volk_malloc(sizeof(gr_complex)*2048,volk_get_alignment());
+      d_interp_out = (gr_complex*) volk_malloc(sizeof(gr_complex)*2048,volk_get_alignment());
       
       d_ntaps = (int)taps.size();
       d_taps = taps;
@@ -78,17 +85,29 @@ namespace gr {
       for(int i=0;i<d_ntaps;++i){
         d_volk_taps[i] = d_taps[i];
       }
+      if(decimate<0){
+        throw std::runtime_error("decimator cannot be negative");
+      }
+      d_decimate = decimate;
 
       d_sps = sps;
       d_min_len = min_len;
       d_sample_buffer = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
-      //d_sample_buffer = new gr_complex[d_cap];
       d_samp_size = 0;
       d_state = false;
       d_arity = arity;
       d_burst_status = FIND_BURST;
       d_out_counter = 0;
       set_tag_propagation_policy(TPP_DONT);
+
+      //clock recovery
+      d_mu = 0.5;
+      float crit = sqrt(2.0)/2.0;
+      float denom = 1+2*crit*loop_bw+loop_bw*loop_bw;
+      float Kp = 2.7;
+      d_gain_omega= 4*crit*loop_bw/denom/Kp;
+      d_gain_mu = 4*loop_bw*loop_bw/denom/Kp;
+      d_interp_size = 0;
     }
 
     /*
@@ -97,25 +116,86 @@ namespace gr {
     burst_synchronizer_cc_impl::~burst_synchronizer_cc_impl()
     {
       delete d_fft;
-      //delete [] d_sample_buffer;
       volk_free(d_sample_buffer);
       volk_free(d_fft_out);
       volk_free(d_in_pwr);
       volk_free(d_dec_out);
       volk_free(d_volk_taps);
+      volk_free(d_interp_out);
     }
     
-    void
-    burst_synchronizer_cc_impl::decimation_filter()
+    gr_complex
+    burst_synchronizer_cc_impl::interp_3(const gr_complex* in, const float& mu)
     {
-      int len = floor((d_samp_size-d_ntaps) /d_sps);
+      gr_complex v[4];
+      for(int i=0;i<4;++i){
+        v[i]=0;
+        for(int j=0;j<4;++j){
+          v[i] += B_arr[i*4+j]*in[j];
+        }
+      }
+      return ((v[3]*mu+v[2])*mu+v[1])*mu+v[0];
+    }
+
+    static inline gr_complex
+    slice(gr_complex x)
+    {
+      return gr_complex(((x.real()>1.0)? 1.0F : -1.0F),
+      ((x.imag()>1.0)?1.0F:-1.0F) );
+    }
+
+    void
+    burst_synchronizer_cc_impl::mm_time_recovery(gr_complex* out, const gr_complex* in, int size)
+    {
+      d_interp_size = 0;
+      d_omega_mid = 2.0;
+      d_mu = 1.0/d_omega_mid;
+      d_omega = 2.0;
+      d_p_2T = 0;d_p_1T = 0;d_p_0T = 0;
+      d_c_2T = 0;d_c_1T = 0;d_c_0T = 0;
+      int ii =0;
+      int oo=0;
+      float error=0;
+      gr_complex u;
+      while(ii< (size-3) )
+      {
+        d_p_2T = d_p_1T;
+        d_p_1T = d_p_0T;
+        d_p_0T = interp_3(&in[ii], d_mu);
+        
+        d_c_2T = d_c_1T;
+        d_c_1T = d_c_0T;
+        d_c_0T = slice(d_p_0T);
+
+        u = (d_p_0T - d_p_2T) * conj(d_c_1T) - (d_c_0T-d_c_2T)*conj(d_p_1T);
+        error = u.real();
+        out[oo++] = d_p_0T;
+
+        error = gr::branchless_clip(error,1.0);
+        d_omega = d_omega + d_gain_omega*error;
+        d_omega = d_omega_mid + gr::branchless_clip(d_omega-d_omega_mid,d_omega_relative_limit);
+
+        d_mu = d_mu + d_omega + d_gain_mu*error;
+        ii+=(int)floor(d_mu);
+        d_mu -= floor(d_mu);
+        if(ii<0){
+          ii=0;
+        }
+      }
+      d_interp_size = oo;
+    }
+
+
+    void
+    burst_synchronizer_cc_impl::decimation_filter(gr_complex* out, const gr_complex* in,int size)
+    {
+      int len = floor((size-d_ntaps) /d_decimate);
       if(len>2048){
         throw std::runtime_error("decimated output greater than max capacity");
       }
-      const gr_complex* ar;
+      //const gr_complex* ar;
       for(int i=0;i<len;++i){
-        ar = &d_sample_buffer[i*d_sps];
-        volk_32fc_32f_dot_prod_32fc_a(&d_dec_out[i],ar,d_volk_taps,d_ntaps);
+        volk_32fc_32f_dot_prod_32fc_a(&out[i],&in[i*d_decimate],d_volk_taps,d_ntaps);
       }
     }
 
@@ -147,7 +227,7 @@ namespace gr {
       memcpy(&d_fft_out[fft_size-len],&d_fft->get_outbuf()[0],sizeof(gr_complex)*len);
       volk_32fc_index_max_16u(&max_idx, d_fft_out,fft_size);
       float denom = (float)fft_size*d_arity;
-      return max_idx/denom; //M-PSK arity;
+      return (max_idx-fft_size/2)/denom; //M-PSK arity;
     }
 
     void
@@ -204,19 +284,14 @@ namespace gr {
               if( ((d_samp_size + (consume-tmp_bgn))>= d_min_len)
               && ((d_samp_size + (consume-tmp_bgn))<=d_cap) ){
                 int con_len = tags[i].offset - nitems_read(0)-tmp_bgn+1;
-                consume = tags[i].offset - nitems_read(0)+1;
                 memcpy(d_sample_buffer+d_samp_size,in+tmp_bgn,sizeof(gr_complex)*con_len);
                 d_samp_size += con_len;
-                d_burst_status = LOCK_BURST;
-                
+                d_burst_status = LOCK_BURST; 
                 consume_each(consume);
                 return 0;
               }
-              else if((d_samp_size + (consume-tmp_bgn)) > d_cap){
-                d_state = false;
+              else{
                 d_samp_size = 0;
-                consume_each(nin);
-                return 0;
               }
             }
           }
@@ -238,12 +313,14 @@ namespace gr {
         }
         case LOCK_BURST:
         {
-          int offset = d_sps;
-          int sub_size = d_samp_size/2;
+          
           // should do decimation first
-          decimation_filter();
-          squaring_core(d_dec_out+offset,sub_size);
+          decimation_filter(d_dec_out,d_sample_buffer, d_samp_size);
+          mm_time_recovery(d_interp_out,d_dec_out, d_samp_size/d_decimate);
+          int sub_size = d_interp_size/2;
+          squaring_core(d_interp_out,sub_size);
           float cfo_est = coarse_cfo_estimation(d_in_pwr,sub_size);
+          //std::cout<<"coarse cfo estimate:"<<cfo_est<<std::endl;
           // corrected to sample base cfo
           cfo_est = cfo_est * TWO_PI
           cfo_est/=(float)d_sps;
@@ -280,7 +357,6 @@ namespace gr {
           break;
         }
       }
-      
       consume_each(consume);
       return nout;
 

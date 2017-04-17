@@ -44,25 +44,39 @@ namespace gr {
       unsigned int d_ntaps;
       gr_complex* d_dec_out;
       
+      // clock recovery
+      float d_mu;
+      float d_omega;
+      float d_omega_mid;
+      float d_gain_mu;
+      float d_gain_omega;
+      float d_omega_relative_limit;
+
+      gr_complex d_p_2T, d_p_1T, d_p_0T, d_c_2T, d_c_1T, d_c_0T;
+      gr_complex * d_interp_out;
+      unsigned int d_interp_size;
+
       const unsigned int d_cap;
       unsigned int d_samp_size;
       int d_min_len;
       int d_sps;
+      int d_decimate;
       int d_arity;
       bool d_state;
       int d_burst_status;
 
       int d_out_counter;
 
-      //void process_burst();
-      //int output_for_coarse(int noutput_items, gr_complex* hdr_out);
+      gr_complex interp_3(const gr_complex* in, const float& mu);
+      void mm_time_recovery(gr_complex* out, const gr_complex* in, int size);
+      
       float coarse_cfo_estimation(const gr_complex* in, int input_data_size);
       void squaring_core(const gr_complex* in, int size);
-      void decimation_filter();
+      void decimation_filter(gr_complex* out, const gr_complex* in, int size);
      public:
       burst_synchronizer_cc_impl(int min_len, int sps, 
       const std::vector<float>& window, int arity,
-      const std::vector<float>& taps);
+      const std::vector<float>& taps, int decimate, float loop_bw);
       ~burst_synchronizer_cc_impl();
 
       // Where all the action really happens

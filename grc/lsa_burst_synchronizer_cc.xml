@@ -4,7 +4,7 @@
   <key>lsa_burst_synchronizer_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.burst_synchronizer_cc($minLen, $sps,$window,$arity,$taps)</make>
+  <make>lsa.burst_synchronizer_cc($minLen, $sps,$window,$arity,$taps,$decimate,$lp_bw)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -37,6 +37,16 @@
     <name>Filter taps</name>
     <key>taps</key>
     <type>float_vector</type>
+  </param>
+  <param>
+    <name>Decimation</name>
+    <key>decimate</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>MM loop bandwidth</name>
+    <key>lp_bw</key>
+    <type>float</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
