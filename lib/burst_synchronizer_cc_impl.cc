@@ -63,7 +63,7 @@ static const float B_arr[16] = {0,1,0,0,
       int arity, const std::vector<float>& taps, int decimate, float loop_bw)
       : gr::block("burst_synchronizer_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(1, 1, sizeof(gr_complex))),
+              gr::io_signature::make2(1, 2, sizeof(gr_complex),sizeof(gr_complex))),
         d_cap(1024*24), d_omega(2.0), d_omega_mid(2.0),
         d_p_2T(0),d_p_1T(0),d_p_0T(0), d_c_2T(0), d_c_1T(0), d_c_0T(0),
         d_omega_relative_limit(1e-2)
@@ -211,7 +211,8 @@ static const float B_arr[16] = {0,1,0,0,
 
 
     float
-    burst_synchronizer_cc_impl::coarse_cfo_estimation(const gr_complex* in, int input_data_size)
+    burst_synchronizer_cc_impl::coarse_cfo_estimation(const gr_complex* in, int input_data_size,
+    gr_complex* fft_out)
     {
       gr_complex* dst = d_fft->get_inbuf();
       if(d_window.size()){
@@ -226,6 +227,9 @@ static const float B_arr[16] = {0,1,0,0,
       memcpy(&d_fft_out[0],&d_fft->get_outbuf()[len],sizeof(gr_complex)*(fft_size-len));
       memcpy(&d_fft_out[fft_size-len],&d_fft->get_outbuf()[0],sizeof(gr_complex)*len);
       volk_32fc_index_max_16u(&max_idx, d_fft_out,fft_size);
+      if(fft_out!=NULL){
+        memcpy(fft_out,d_fft_out,fft_size);
+      }
       float denom = (float)fft_size*d_arity;
       return (max_idx-fft_size/2)/denom; //M-PSK arity;
     }
@@ -261,12 +265,15 @@ static const float B_arr[16] = {0,1,0,0,
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
+      gr_complex *fft_out =(output_items.size()>=2)?  (gr_complex*)output_items[1] : NULL;
+
       int nin = (noutput_items<ninput_items[0]) ? noutput_items: ninput_items[0];
       // copy samples out for this is still working project;
       std::vector<tag_t> tags;
 
       int tmp_bgn=0;
       int consume=0,nout = 0;
+      int fft_nout = 0;
       get_tags_in_window(tags, 0,0, nin);
 
       switch(d_burst_status){
@@ -288,7 +295,10 @@ static const float B_arr[16] = {0,1,0,0,
                 d_samp_size += con_len;
                 d_burst_status = LOCK_BURST; 
                 consume_each(consume);
-                return 0;
+                //return 0;
+                produce(0,0);
+                produce(1,0);
+                return WORK_CALLED_PRODUCE;
               }
               else{
                 d_samp_size = 0;
@@ -303,7 +313,10 @@ static const float B_arr[16] = {0,1,0,0,
               d_state = false;
               d_samp_size =0;
               consume_each(consume);
-              return 0;
+              //return 0;
+              produce(0,0);
+                produce(1,0);
+                return WORK_CALLED_PRODUCE;
             }
             if(buf_len>0)
               memcpy(d_sample_buffer+d_samp_size,in+tmp_bgn,sizeof(gr_complex)*buf_len);
@@ -317,9 +330,13 @@ static const float B_arr[16] = {0,1,0,0,
           // should do decimation first
           decimation_filter(d_dec_out,d_sample_buffer, d_samp_size);
           mm_time_recovery(d_interp_out,d_dec_out, d_samp_size/d_decimate);
-          int sub_size = d_interp_size/2;
-          squaring_core(d_interp_out,sub_size);
-          float cfo_est = coarse_cfo_estimation(d_in_pwr,sub_size);
+          //int sub_size = d_interp_size/2;
+          squaring_core(d_interp_out,d_interp_size);
+          int offset = 0;
+          if(d_interp_size < offset+fft_size){
+            throw std::runtime_error("interpolated symbol not enough for a offset plus fft size");
+          }
+          float cfo_est = coarse_cfo_estimation(d_in_pwr+offset,fft_size,fft_out);
           //std::cout<<"coarse cfo estimate:"<<cfo_est<<std::endl;
           // corrected to sample base cfo
           cfo_est = cfo_est * TWO_PI
@@ -332,6 +349,7 @@ static const float B_arr[16] = {0,1,0,0,
           d_out_counter = 0;
           d_burst_status = OUTPUT_BURST;
           nout = 0;
+          fft_nout = (fft_out==NULL)? 0:fft_size;
         break;
         }
         case OUTPUT_BURST:
@@ -358,7 +376,9 @@ static const float B_arr[16] = {0,1,0,0,
         }
       }
       consume_each(consume);
-      return nout;
+      produce(0,nout);
+      produce(1,fft_nout);
+      return WORK_CALLED_PRODUCE;
 
       //this is still a working project, should change the I/O flow in more complete scenario.
     }

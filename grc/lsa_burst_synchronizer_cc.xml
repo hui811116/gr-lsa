@@ -69,4 +69,9 @@
     <name>out</name>
     <type>complex</type>
   </source>
+  <source>
+    <name>coarse</name>
+    <type>complex</type>
+    <optional>1</optional>
+  </source>
 </block>

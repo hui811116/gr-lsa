@@ -70,7 +70,7 @@ namespace gr {
       gr_complex interp_3(const gr_complex* in, const float& mu);
       void mm_time_recovery(gr_complex* out, const gr_complex* in, int size);
       
-      float coarse_cfo_estimation(const gr_complex* in, int input_data_size);
+      float coarse_cfo_estimation(const gr_complex* in, int input_data_size, gr_complex* fft_out);
       void squaring_core(const gr_complex* in, int size);
       void decimation_filter(gr_complex* out, const gr_complex* in, int size);
      public:
