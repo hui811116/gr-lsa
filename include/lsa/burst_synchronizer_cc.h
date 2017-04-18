@@ -47,7 +47,8 @@ namespace gr {
        * creating new instances.
        */
       static sptr make(int min_len, int sps, const std::vector<float>& window, int arity,
-       float loop_bw);
+       float loop_bw,
+       const std::vector<gr_complex>& sync_word);
     };
 
   } // namespace lsa

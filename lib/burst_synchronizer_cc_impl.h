@@ -53,23 +53,35 @@ namespace gr {
       unsigned int d_samp_size;
       int d_min_len;
       int d_sps;
-      //int d_decimate;
       int d_arity;
       bool d_state;
       int d_burst_status;
-
       int d_out_counter;
+
+      int d_word_length;
+      int d_sync_idx;
+      gr_complex* d_sync_word;
+      gr_complex* d_corr_reg;
+
+      std::vector<float> d_kay_window;
+
+      pmt::pmt_t d_dict_for_burst;
 
       gr_complex interp_3(const gr_complex* in, const float& mu);
       void mm_time_recovery(gr_complex* out, const gr_complex* in, int size);
       
       float coarse_cfo_estimation(const gr_complex* in, int input_data_size);
+      float fine_cfo_estimation(gr_complex* z,const gr_complex* x, const gr_complex* c,const std::vector<float>& avg_coeff);
       void constellation_remove(gr_complex* in, int size);
-      //void decimation_filter(gr_complex* out, const gr_complex* in, int size);
+
+      bool set_sync_word(const std::vector<gr_complex>& sync);
+      void calc_kay_window(std::vector<float>& d_kay_window,int size);
+      int cross_correlation(gr_complex* out, const gr_complex* in, int size);
      public:
       burst_synchronizer_cc_impl(int min_len, int sps, 
       const std::vector<float>& window, int arity,
-      float loop_bw);
+      float loop_bw,
+      const std::vector<gr_complex>& sync_word);
       ~burst_synchronizer_cc_impl();
 
       // Where all the action really happens
