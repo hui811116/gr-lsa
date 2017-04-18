@@ -34,7 +34,7 @@
 namespace gr {
   namespace lsa {
 
-#define TWO_PI (M_PI * 2.0f);
+#define TWO_PI (M_PI * 2.0f)
 static const float B_arr[16] = {0,1,0,0,
                                -1.0F/3.0,-0.5,1.0F,-1.0F/6.0,
                                0.5,-1.0F,0.5,0,
@@ -48,23 +48,23 @@ static const float B_arr[16] = {0,1,0,0,
 
     burst_synchronizer_cc::sptr
     burst_synchronizer_cc::make(int min_len, int sps, const std::vector<float>& window,
-    int arity, const std::vector<float>& taps, int decimate, float loop_bw)
+    int arity, float loop_bw)
     {
       return gnuradio::get_initial_sptr
-        (new burst_synchronizer_cc_impl(min_len,sps,window,arity,taps, decimate, loop_bw));
+        (new burst_synchronizer_cc_impl(min_len,sps,window,arity,loop_bw));
     }
 
     /*
      * The private constructor
      */
-    static int fft_size = 256;
+    static int fft_size = 512;
     burst_synchronizer_cc_impl::burst_synchronizer_cc_impl(
       int min_len, int sps, const std::vector<float>& window,
-      int arity, const std::vector<float>& taps, int decimate, float loop_bw)
+      int arity, float loop_bw)
       : gr::block("burst_synchronizer_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make2(1, 2, sizeof(gr_complex),sizeof(gr_complex))),
-        d_cap(1024*24), d_omega(2.0), d_omega_mid(2.0),
+              gr::io_signature::make(1, 1, sizeof(gr_complex))),
+        d_cap(8192), d_omega(2.0), d_omega_mid(2.0),
         d_p_2T(0),d_p_1T(0),d_p_0T(0), d_c_2T(0), d_c_1T(0), d_c_0T(0),
         d_omega_relative_limit(1e-2)
     {
@@ -74,21 +74,7 @@ static const float B_arr[16] = {0,1,0,0,
       d_window = window;
       d_fft = new gr::fft::fft_complex(fft_size,true,1);
       d_fft_out = (gr_complex*)volk_malloc(sizeof(gr_complex)*2048,volk_get_alignment());
-      d_in_pwr = (gr_complex*)volk_malloc(sizeof(gr_complex)*2048,volk_get_alignment());
-      d_dec_out = (gr_complex*) volk_malloc(sizeof(gr_complex)*2048,volk_get_alignment());
-      d_interp_out = (gr_complex*) volk_malloc(sizeof(gr_complex)*2048,volk_get_alignment());
-      
-      d_ntaps = (int)taps.size();
-      d_taps = taps;
-      std::reverse(d_taps.begin(),d_taps.end());
-      d_volk_taps = (float*) volk_malloc(sizeof(float)*d_ntaps,volk_get_alignment());
-      for(int i=0;i<d_ntaps;++i){
-        d_volk_taps[i] = d_taps[i];
-      }
-      if(decimate<0){
-        throw std::runtime_error("decimator cannot be negative");
-      }
-      d_decimate = decimate;
+      d_interp_out = (gr_complex*) volk_malloc(sizeof(gr_complex)*8192,volk_get_alignment());
 
       d_sps = sps;
       d_min_len = min_len;
@@ -105,8 +91,10 @@ static const float B_arr[16] = {0,1,0,0,
       float crit = sqrt(2.0)/2.0;
       float denom = 1+2*crit*loop_bw+loop_bw*loop_bw;
       float Kp = 2.7;
-      d_gain_omega= 4*crit*loop_bw/denom/Kp;
-      d_gain_mu = 4*loop_bw*loop_bw/denom/Kp;
+      //d_gain_omega= 4*crit*loop_bw/denom/Kp;
+      //d_gain_mu = 4*loop_bw*loop_bw/denom/Kp;
+      d_gain_omega=0.25*0.175*0.175;
+      d_gain_mu = 0.175;
       d_interp_size = 0;
     }
 
@@ -118,9 +106,6 @@ static const float B_arr[16] = {0,1,0,0,
       delete d_fft;
       volk_free(d_sample_buffer);
       volk_free(d_fft_out);
-      volk_free(d_in_pwr);
-      volk_free(d_dec_out);
-      volk_free(d_volk_taps);
       volk_free(d_interp_out);
     }
     
@@ -185,36 +170,45 @@ static const float B_arr[16] = {0,1,0,0,
       d_interp_size = oo;
     }
 
-
     void
-    burst_synchronizer_cc_impl::decimation_filter(gr_complex* out, const gr_complex* in,int size)
+    burst_synchronizer_cc_impl::constellation_remove(gr_complex* in, int size)
     {
-      int len = floor((size-d_ntaps) /d_decimate);
-      if(len>2048){
-        throw std::runtime_error("decimated output greater than max capacity");
-      }
-      //const gr_complex* ar;
-      for(int i=0;i<len;++i){
-        volk_32fc_32f_dot_prod_32fc_a(&out[i],&in[i*d_decimate],d_volk_taps,d_ntaps);
-      }
-    }
-
-    void
-    burst_synchronizer_cc_impl::squaring_core(const gr_complex* in, int size)
-    {
-      //initialization
-      if(size>2048){
+      // specific for PSK modulation
+      if(size>d_cap){
         throw std::runtime_error("squaring size larger than available buffer size");
       }
-      volk_32fc_s32f_power_32fc(d_in_pwr,in,d_arity,size);
+      float tmp_arg;
+      for(int i=0;i<size;++i){
+        tmp_arg = arg(in[i]) * d_arity;
+        while(tmp_arg>TWO_PI)
+          tmp_arg-=TWO_PI;
+        while(tmp_arg<-TWO_PI)
+          tmp_arg+=TWO_PI;
+        in[i] = abs(in[i])*gr_expj(tmp_arg);
+      }
+      //change to phase scalar;
+      //volk_32fc_s32f_power_32fc(d_in_pwr,in,d_arity,size);
     }
 
 
     float
-    burst_synchronizer_cc_impl::coarse_cfo_estimation(const gr_complex* in, int input_data_size,
-    gr_complex* fft_out)
+    burst_synchronizer_cc_impl::coarse_cfo_estimation(const gr_complex* in, int input_data_size)
     {
+      /*gr_complex* cos_test = d_fft->get_inbuf();
+      float test_f = 0.1;
+      for(int i=0;i<fft_size;++i){
+        cos_test[i] = gr_expj(TWO_PI*test_f*i);
+      }
+      d_fft->execute();
+      unsigned int len = (unsigned int)(ceil(fft_size/2.0));
+      memcpy(&d_fft_out[0],&d_fft->get_outbuf()[len],sizeof(gr_complex)*(fft_size-len));
+      memcpy(&d_fft_out[fft_size-len],&d_fft->get_outbuf()[0],sizeof(gr_complex)*len);
+      return 0;*/
+      
       gr_complex* dst = d_fft->get_inbuf();
+      if(input_data_size<fft_size){
+        memset(&dst[0],0,fft_size);
+      }
       if(d_window.size()){
         volk_32fc_32f_multiply_32fc(&dst[0],in,&d_window[0],fft_size);
       }
@@ -227,11 +221,9 @@ static const float B_arr[16] = {0,1,0,0,
       memcpy(&d_fft_out[0],&d_fft->get_outbuf()[len],sizeof(gr_complex)*(fft_size-len));
       memcpy(&d_fft_out[fft_size-len],&d_fft->get_outbuf()[0],sizeof(gr_complex)*len);
       volk_32fc_index_max_16u(&max_idx, d_fft_out,fft_size);
-      if(fft_out!=NULL){
-        memcpy(fft_out,d_fft_out,fft_size);
-      }
       float denom = (float)fft_size*d_arity;
-      return (max_idx-fft_size/2)/denom; //M-PSK arity;
+      return (max_idx-fft_size/2.0f)/denom; //M-PSK arity;
+      
     }
 
     void
@@ -265,7 +257,6 @@ static const float B_arr[16] = {0,1,0,0,
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      gr_complex *fft_out =(output_items.size()>=2)?  (gr_complex*)output_items[1] : NULL;
 
       int nin = (noutput_items<ninput_items[0]) ? noutput_items: ninput_items[0];
       // copy samples out for this is still working project;
@@ -273,12 +264,12 @@ static const float B_arr[16] = {0,1,0,0,
 
       int tmp_bgn=0;
       int consume=0,nout = 0;
-      int fft_nout = 0;
       get_tags_in_window(tags, 0,0, nin);
 
       switch(d_burst_status){
         case FIND_BURST:
         {
+          consume=nin;
           for(int i=0;i<tags.size();++i){
             if((!d_state) && (pmt::eqv(pmt::intern("ed_begin"),tags[i].key))){
               d_state = true;
@@ -295,10 +286,7 @@ static const float B_arr[16] = {0,1,0,0,
                 d_samp_size += con_len;
                 d_burst_status = LOCK_BURST; 
                 consume_each(consume);
-                //return 0;
-                produce(0,0);
-                produce(1,0);
-                return WORK_CALLED_PRODUCE;
+                return 0;
               }
               else{
                 d_samp_size = 0;
@@ -313,10 +301,7 @@ static const float B_arr[16] = {0,1,0,0,
               d_state = false;
               d_samp_size =0;
               consume_each(consume);
-              //return 0;
-              produce(0,0);
-                produce(1,0);
-                return WORK_CALLED_PRODUCE;
+              return 0;
             }
             if(buf_len>0)
               memcpy(d_sample_buffer+d_samp_size,in+tmp_bgn,sizeof(gr_complex)*buf_len);
@@ -327,29 +312,33 @@ static const float B_arr[16] = {0,1,0,0,
         case LOCK_BURST:
         {
           
-          // should do decimation first
-          decimation_filter(d_dec_out,d_sample_buffer, d_samp_size);
-          mm_time_recovery(d_interp_out,d_dec_out, d_samp_size/d_decimate);
-          //int sub_size = d_interp_size/2;
-          squaring_core(d_interp_out,d_interp_size);
+          // there may be bugs in decimator and timing loop
+          //decimation_filter(d_dec_out,d_sample_buffer, d_samp_size);
+          mm_time_recovery(d_interp_out,d_sample_buffer, d_samp_size);
+          constellation_remove(d_interp_out,d_interp_size);
+          //change to phase scalar
           int offset = 0;
-          if(d_interp_size < offset+fft_size){
-            throw std::runtime_error("interpolated symbol not enough for a offset plus fft size");
-          }
-          float cfo_est = coarse_cfo_estimation(d_in_pwr+offset,fft_size,fft_out);
-          //std::cout<<"coarse cfo estimate:"<<cfo_est<<std::endl;
+          float cfo_est = coarse_cfo_estimation(d_interp_out+offset,fft_size);
+          //std::cout<<"******************************************"<<std::endl;
+          //std::cout<<"checking fft outputs:"<<std::endl;
+          //for(int i=0;i<fft_size;++i){
+            //std::cout<<d_fft_out[i].real()<<","<<d_fft_out[i].imag()<<std::endl;
+          //}
           // corrected to sample base cfo
-          cfo_est = cfo_est * TWO_PI
+          cfo_est = cfo_est * TWO_PI;
           cfo_est/=(float)d_sps;
           float phase_correction = 0;
           for(int i=0;i<d_samp_size;++i){
             d_sample_buffer[i]*=gr_expj(-phase_correction);
             phase_correction+=cfo_est;
+            while(phase_correction>TWO_PI)
+              phase_correction-=TWO_PI;
+            while(phase_correction<-TWO_PI)
+              phase_correction+=TWO_PI;
           }
           d_out_counter = 0;
           d_burst_status = OUTPUT_BURST;
           nout = 0;
-          fft_nout = (fft_out==NULL)? 0:fft_size;
         break;
         }
         case OUTPUT_BURST:
@@ -365,6 +354,7 @@ static const float B_arr[16] = {0,1,0,0,
           d_out_counter += nout;
           if(d_out_counter ==d_samp_size){
             d_burst_status = FIND_BURST;
+            d_state = false;
             d_samp_size = 0;
           }
         break;
@@ -376,11 +366,7 @@ static const float B_arr[16] = {0,1,0,0,
         }
       }
       consume_each(consume);
-      produce(0,nout);
-      produce(1,fft_nout);
-      return WORK_CALLED_PRODUCE;
-
-      //this is still a working project, should change the I/O flow in more complete scenario.
+      return nout;
     }
 
   } /* namespace lsa */

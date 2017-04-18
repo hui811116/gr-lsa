@@ -36,13 +36,6 @@ namespace gr {
       // other members
       gr_complex* d_sample_buffer;
       gr_complex* d_fft_out;
-      // squaring loop
-      gr_complex* d_in_pwr;
-      // decimation filter
-      std::vector<float> d_taps;
-      float* d_volk_taps;
-      unsigned int d_ntaps;
-      gr_complex* d_dec_out;
       
       // clock recovery
       float d_mu;
@@ -60,7 +53,7 @@ namespace gr {
       unsigned int d_samp_size;
       int d_min_len;
       int d_sps;
-      int d_decimate;
+      //int d_decimate;
       int d_arity;
       bool d_state;
       int d_burst_status;
@@ -70,13 +63,13 @@ namespace gr {
       gr_complex interp_3(const gr_complex* in, const float& mu);
       void mm_time_recovery(gr_complex* out, const gr_complex* in, int size);
       
-      float coarse_cfo_estimation(const gr_complex* in, int input_data_size, gr_complex* fft_out);
-      void squaring_core(const gr_complex* in, int size);
-      void decimation_filter(gr_complex* out, const gr_complex* in, int size);
+      float coarse_cfo_estimation(const gr_complex* in, int input_data_size);
+      void constellation_remove(gr_complex* in, int size);
+      //void decimation_filter(gr_complex* out, const gr_complex* in, int size);
      public:
       burst_synchronizer_cc_impl(int min_len, int sps, 
       const std::vector<float>& window, int arity,
-      const std::vector<float>& taps, int decimate, float loop_bw);
+      float loop_bw);
       ~burst_synchronizer_cc_impl();
 
       // Where all the action really happens
