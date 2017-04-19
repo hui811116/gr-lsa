@@ -41,7 +41,8 @@ list(APPEND lsa_sources
     symbol_level_ic_cc_impl.cc
     expand_symbal_to_sample_ff_impl.cc
     symbol_sync_receiver_cf_impl.cc
-    burst_synchronizer_cc_impl.cc )
+    burst_synchronizer_cc_impl.cc
+    burst_parser_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

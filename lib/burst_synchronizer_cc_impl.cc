@@ -66,7 +66,8 @@ static const float B_arr[16] = {0,1,0,0,
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
         d_cap(8192), d_omega(2.0), d_omega_mid(2.0),
         d_p_2T(0),d_p_1T(0),d_p_0T(0), d_c_2T(0), d_c_1T(0), d_c_0T(0),
-        d_omega_relative_limit(1e-2)
+        d_omega_relative_limit(1e-2),
+        d_interp(new filter::mmse_fir_interpolator_cc())
     {
       if(!window.empty() && window.size()!=fft_size){
         throw std::runtime_error("window size should be equal to fft size");
@@ -106,6 +107,7 @@ static const float B_arr[16] = {0,1,0,0,
      */
     burst_synchronizer_cc_impl::~burst_synchronizer_cc_impl()
     {
+      delete d_interp;
       delete d_fft;
       volk_free(d_sample_buffer);
       volk_free(d_fft_out);
@@ -162,11 +164,13 @@ static const float B_arr[16] = {0,1,0,0,
       int oo=0;
       float error=0;
       gr_complex u;
-      while(ii< (size-3) )
+      int mlen = size-d_interp->ntaps()-16;
+      while(ii< (mlen) )
       {
         d_p_2T = d_p_1T;
         d_p_1T = d_p_0T;
-        d_p_0T = interp_3(&in[ii], d_mu);
+        //d_p_0T = interp_3(&in[ii], d_mu);
+        d_p_0T = d_interp->interpolate(&in[ii], d_mu);
         
         d_c_2T = d_c_1T;
         d_c_1T = d_c_0T;

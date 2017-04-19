@@ -23,6 +23,7 @@
 
 #include <lsa/burst_synchronizer_cc.h>
 #include <gnuradio/fft/fft.h>
+#include <gnuradio/filter/mmse_fir_interpolator_cc.h>
 
 namespace gr {
   namespace lsa {
@@ -30,6 +31,7 @@ namespace gr {
     class burst_synchronizer_cc_impl : public burst_synchronizer_cc
     {
      private:
+      gr::filter::mmse_fir_interpolator_cc *d_interp;
       // integrate FFT modules
       gr::fft::fft_complex* d_fft;
       std::vector<float> d_window;

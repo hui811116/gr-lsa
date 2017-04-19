@@ -58,3 +58,4 @@ GR_ADD_TEST(qa_symbol_level_ic_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DI
 GR_ADD_TEST(qa_expand_symbal_to_sample_ff ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_expand_symbal_to_sample_ff.py)
 GR_ADD_TEST(qa_symbol_sync_receiver_cf ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_symbol_sync_receiver_cf.py)
 GR_ADD_TEST(qa_burst_synchronizer_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_burst_synchronizer_cc.py)
+GR_ADD_TEST(qa_burst_parser_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_burst_parser_cc.py)

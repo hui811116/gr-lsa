@@ -32,6 +32,7 @@
 #include "lsa/expand_symbal_to_sample_ff.h"
 #include "lsa/symbol_sync_receiver_cf.h"
 #include "lsa/burst_synchronizer_cc.h"
+#include "lsa/burst_parser_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -77,3 +78,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, expand_symbal_to_sample_ff);
 GR_SWIG_BLOCK_MAGIC2(lsa, symbol_sync_receiver_cf);
 %include "lsa/burst_synchronizer_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, burst_synchronizer_cc);
+%include "lsa/burst_parser_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, burst_parser_cc);
