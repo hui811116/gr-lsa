@@ -76,7 +76,7 @@ namespace gr {
 
       bool set_sync_word(const std::vector<gr_complex>& sync);
       void calc_kay_window(std::vector<float>& d_kay_window,int size);
-      int cross_correlation(gr_complex* out, const gr_complex* in, int size);
+      int cross_correlation(gr_complex* out, const gr_complex* in, const gr_complex* sync_word, int in_size, int word_length);
      public:
       burst_synchronizer_cc_impl(int min_len, int sps, 
       const std::vector<float>& window, int arity,

@@ -240,6 +240,7 @@ static const float B_arr[16] = {0,1,0,0,
       for(int i=0;i<size;++i){
         d_kay_window[i] = 1.5*(size/(float)(size*size-1.0))*(1.0-(2*(i+1)-size)*(2*(i+1)-size)/(float)(size*size));
       }
+      float result = 0;
     }
 
     float
@@ -265,15 +266,19 @@ static const float B_arr[16] = {0,1,0,0,
     }
 
     int
-    burst_synchronizer_cc_impl::cross_correlation(gr_complex* out,const gr_complex* in, int size)
+    burst_synchronizer_cc_impl::cross_correlation(gr_complex* out,const gr_complex* in, const gr_complex* sync_word,
+    int in_size,int word_length)
     {
       unsigned short int max_idx;
-      volk_32fc_x2_conjugate_dot_prod_32fc(d_corr_reg, in, d_sync_word, size);
-      volk_32fc_index_max_16u(&max_idx , d_corr_reg, size);
+      int run_len = in_size - word_length+1;
+      for(int i=0;i<run_len;++i){
+        volk_32fc_x2_conjugate_dot_prod_32fc(&d_corr_reg[i], &in[i], d_sync_word, word_length);
+      }
+      volk_32fc_index_max_16u(&max_idx , d_corr_reg, run_len);
       float phase = fast_atan2f(d_corr_reg[max_idx].imag(),d_corr_reg[max_idx].real());
           if(d_corr_reg[max_idx].real()< 0.0)
             phase += M_PI;
-      volk_32fc_s32fc_multiply_32fc(out,in,gr_expj(-phase),size);
+      volk_32fc_s32fc_multiply_32fc(out,in,gr_expj(-phase),in_size);
       return (int)max_idx;
     }
 
@@ -389,15 +394,15 @@ static const float B_arr[16] = {0,1,0,0,
           // interpolated sample size overwrite sample buffer size
           // note that this also shift every symbol by a phase correcting term
           d_samp_size = d_interp_size;
-          d_sync_idx = cross_correlation(d_sample_buffer,d_interp_out, d_interp_size);
+          d_sync_idx = cross_correlation(d_sample_buffer,d_interp_out,d_sync_word, d_interp_size, d_word_length);
           dict = pmt::dict_add(dict, pmt::intern("sync_idx"),pmt::from_long(d_sync_idx));
           // fine cfo: Kay method (make sure SNR high enough)?
           // abuse buffer variable: d_fft to serve as container
           // abuse cfo_est
           cfo_est = fine_cfo_estimation(d_fft_out, d_sample_buffer+d_sync_idx,d_sync_word,d_kay_window);
           dict = pmt::dict_add(dict, pmt::intern("fine_cfo"),pmt::from_float(cfo_est));
-
           //phase correction second time (fine cfo)
+          
           phase_correction = 0;
           for(int i=0;i<d_samp_size;++i){
             d_sample_buffer[i]*=gr_expj(-phase_correction);
