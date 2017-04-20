@@ -4,8 +4,7 @@
   <key>lsa_burst_synchronizer_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.burst_synchronizer_cc($minLen, $sps,$window,$arity,$lp_bw,
-  $sync_word)</make>
+  <make>lsa.burst_synchronizer_cc($minLen, $window,$arity,$sync_word)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -18,12 +17,6 @@
     <type>int</type>
   </param>
   <param>
-    <name>samples per symbol</name>
-    <key>sps</key>
-    <value>4</value>
-    <type>int</type>
-  </param>
-  <param>
     <name>fft window</name>
     <key>window</key>
     <type>float_vector</type>
@@ -33,11 +26,6 @@
     <key>arity</key>
     <value>4</value>
     <type>int</type>
-  </param>
-  <param>
-    <name>MM loop bandwidth</name>
-    <key>lp_bw</key>
-    <type>float</type>
   </param>
   <param>
     <name>symbols</name>

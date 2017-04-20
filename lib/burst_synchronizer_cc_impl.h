@@ -31,7 +31,7 @@ namespace gr {
     class burst_synchronizer_cc_impl : public burst_synchronizer_cc
     {
      private:
-      gr::filter::mmse_fir_interpolator_cc *d_interp;
+      //gr::filter::mmse_fir_interpolator_cc *d_interp;
       // integrate FFT modules
       gr::fft::fft_complex* d_fft;
       std::vector<float> d_window;
@@ -40,6 +40,7 @@ namespace gr {
       gr_complex* d_fft_out;
       
       // clock recovery
+      /*
       float d_mu;
       float d_omega;
       float d_omega_mid;
@@ -50,11 +51,11 @@ namespace gr {
       gr_complex d_p_2T, d_p_1T, d_p_0T, d_c_2T, d_c_1T, d_c_0T;
       gr_complex * d_interp_out;
       unsigned int d_interp_size;
-
+*/
       const unsigned int d_cap;
       unsigned int d_samp_size;
       int d_min_len;
-      int d_sps;
+//      int d_sps;
       int d_arity;
       bool d_state;
       int d_burst_status;
@@ -69,8 +70,8 @@ namespace gr {
 
       pmt::pmt_t d_dict_for_burst;
 
-      gr_complex interp_3(const gr_complex* in, const float& mu);
-      void mm_time_recovery(gr_complex* out, const gr_complex* in, int size);
+ //     gr_complex interp_3(const gr_complex* in, const float& mu);
+ //     void mm_time_recovery(gr_complex* out, const gr_complex* in, int size);
       
       float coarse_cfo_estimation(const gr_complex* in, int input_data_size);
       float fine_cfo_estimation(gr_complex* z,const gr_complex* x, const gr_complex* c,const std::vector<float>& avg_coeff);
@@ -80,9 +81,7 @@ namespace gr {
       void calc_kay_window(std::vector<float>& d_kay_window,int size);
       int cross_correlation(gr_complex* out, const gr_complex* in, const gr_complex* sync_word, int in_size, int word_length);
      public:
-      burst_synchronizer_cc_impl(int min_len, int sps, 
-      const std::vector<float>& window, int arity,
-      float loop_bw,
+      burst_synchronizer_cc_impl(int min_len,const std::vector<float>& window, int arity,
       const std::vector<gr_complex>& sync_word);
       ~burst_synchronizer_cc_impl();
 

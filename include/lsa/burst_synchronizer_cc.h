@@ -46,8 +46,7 @@ namespace gr {
        * class. lsa::burst_synchronizer_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(int min_len, int sps, const std::vector<float>& window, int arity,
-       float loop_bw,
+      static sptr make(int min_len, const std::vector<float>& window, int arity,
        const std::vector<gr_complex>& sync_word);
     };
 
