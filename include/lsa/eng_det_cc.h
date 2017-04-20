@@ -47,6 +47,14 @@ namespace gr {
        * creating new instances.
        */
       static sptr make(float threshold=-3.0, int bin=5);
+
+      virtual float threshold() const =0;
+
+      virtual int bin() const =0;
+
+      virtual void set_threshold(float thres_db) = 0;
+      
+      virtual void set_bin(int bin) =0;
     };
 
   } // namespace lsa

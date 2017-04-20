@@ -57,6 +57,7 @@ namespace gr {
       d_out_counter = 0;
       d_state = false;
       d_burst_status= FIND_BURST;
+      set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -103,19 +104,22 @@ namespace gr {
       int consume=0,nout = 0;
       get_tags_in_window(tags, 0,0, nin);
       //for tagging debug
-      pmt::pmt_t dict = pmt::make_dict();
 
       switch(d_burst_status){
         case FIND_BURST:
         { 
           consume=nin;
           for(int i=0;i<tags.size();++i){
-            if((!d_state) && (pmt::eqv(pmt::intern("ed_begin"),tags[i].key))){
+            if(pmt::eqv(pmt::intern("ed_begin"),tags[i].key)){
+              if(d_state){
+                d_samp_size = 0;
+                d_burst_tags.clear();
+              }
               d_state = true;
               tmp_bgn = tags[i].offset - nitems_read(0);
               consume = tmp_bgn;
-            }
-            if((d_state) && (pmt::eqv(pmt::intern("ed_end"),tags[i].key))){
+            } 
+            else if((d_state) && (pmt::eqv(pmt::intern("ed_end"),tags[i].key))){
               d_state = false;
               consume = tags[i].offset - nitems_read(0)+1;
               if( ((d_samp_size + (consume-tmp_bgn))>= d_min_len)
@@ -131,6 +135,13 @@ namespace gr {
               else{
                 d_samp_size = 0;
               }
+            }
+            else if( (!pmt::eqv(pmt::intern("ed_begin"),tags[i].key)) 
+            && (!pmt::eqv(pmt::intern("ed_end"),tags[i].key))
+            && d_state){
+              tag_t tmp_tag = tags[i];
+              tmp_tag.offset = tags[i].offset - nitems_read(0)+d_samp_size;
+              d_burst_tags.push_back(tmp_tag);
             }
           }
           if(d_state){
@@ -155,6 +166,16 @@ namespace gr {
           int samp_left = d_samp_size - d_out_counter;
           nout = (samp_left > noutput_items) ? noutput_items : samp_left;
           if(nout>0){
+            while(!d_burst_tags.empty()){
+              int offset = d_burst_tags[0].offset;
+              if((d_out_counter<= offset) && (offset<d_out_counter+nout) ){
+                add_item_tag(0,nitems_written(0)+offset-d_out_counter,d_burst_tags[0].key,d_burst_tags[0].value);
+                d_burst_tags.erase(d_burst_tags.begin());
+              }
+              else{
+                break;
+              }
+            }
             if(d_out_counter == 0 ){
               add_item_tag(0,nitems_written(0),pmt::intern("burst_begin"),pmt::PMT_T);
             }

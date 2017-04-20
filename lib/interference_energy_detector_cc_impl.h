@@ -37,17 +37,14 @@ namespace gr {
       float d_ed_thres;
       float d_voe_thres;
 
-      pmt::pmt_t d_voe_tagname;
-      pmt::pmt_t d_ed_tagname;
       pmt::pmt_t d_src_id;
 
       bool d_debug;
-      bool d_state;
+      bool d_state_ed;
+      bool d_state_voe;
 
      public:
       interference_energy_detector_cc_impl(
-        const std::string& ed_tagname,
-        const std::string& voe_tagname,
         float ed_threshold,
         float voe_threshold,
         size_t blocklength,

@@ -50,12 +50,19 @@ namespace gr {
        */
 
       static sptr make(
-        const std::string& ed_tagname,
-        const std::string& voe_tagname,
         float ed_threshold,
         float voe_threshold,
         size_t blocklength,
         bool debug);
+
+      virtual void set_ed_threshold(float threshold_db)=0;
+      virtual float ed_threshold() const =0;
+
+      virtual void set_voe_threshold(float threshold_db) =0;
+      virtual float voe_threshold() const =0;
+
+      virtual void set_blocklength(size_t blocklength) =0;
+      virtual size_t blocklength() const =0;
     };
 
   } // namespace lsa

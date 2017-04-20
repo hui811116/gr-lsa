@@ -52,10 +52,8 @@ namespace gr {
       d_cap(24*1024)
     {
       set_threshold(threshold);
-      set_bin_size(bin);
+      set_bin(bin);
       set_tag_propagation_policy(TPP_DONT);
-      set_history(d_bin);
-      
       
       d_eng = (float*) volk_malloc(sizeof(float)*d_cap, volk_get_alignment());
     }
@@ -140,26 +138,31 @@ namespace gr {
 //**************************
 //    SET functions
 //**************************    
-    void eng_det_cc_impl::set_threshold(float thres_db)
+    void 
+    eng_det_cc_impl::set_threshold(float thres_db)
     {
       d_threshold = pow(10,thres_db/10.0f);
     }
-    bool eng_det_cc_impl::set_bin_size(int bin)
+    void 
+    eng_det_cc_impl::set_bin(int bin)
     {
       if(bin<0){
         throw std::runtime_error("Invalid bin size");
       }
       d_bin=bin;
+      set_history(d_bin);
     }
 //***************************
 //   GET functions
 //***************************
-    float eng_det_cc_impl::threshold() const
+    float 
+    eng_det_cc_impl::threshold() const
     {
       return 10*log10(d_threshold);
     }
 
-    int eng_det_cc_impl::bin_size() const
+    int 
+    eng_det_cc_impl::bin() const
     {
       return d_bin;
     }

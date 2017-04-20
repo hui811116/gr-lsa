@@ -53,8 +53,8 @@ namespace gr {
       void set_threshold(float thres_db);
       float threshold() const;
 
-      bool set_bin_size(int bin);
-      int bin_size() const;
+      void set_bin(int bin);
+      int bin() const;
 
     };
 

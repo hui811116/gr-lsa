@@ -33,8 +33,6 @@ namespace gr {
 
     interference_energy_detector_cc::sptr
     interference_energy_detector_cc::make(
-      const std::string& ed_tagname,
-      const std::string& voe_tagname,
       float ed_threshold,
       float voe_threshold,
       size_t blocklength,
@@ -42,8 +40,6 @@ namespace gr {
     {
       return gnuradio::get_initial_sptr
         (new interference_energy_detector_cc_impl(
-          ed_tagname,
-          voe_tagname,
           ed_threshold,
           voe_threshold,
           blocklength,
@@ -54,8 +50,6 @@ namespace gr {
      * The private constructor
      */
     interference_energy_detector_cc_impl::interference_energy_detector_cc_impl(
-      const std::string& ed_tagname,
-      const std::string& voe_tagname,
       float ed_threshold,
       float voe_threshold,
       size_t blocklength,
@@ -63,14 +57,8 @@ namespace gr {
       : gr::block("interference_energy_detector_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make3(1, 3, sizeof(gr_complex), sizeof(float),sizeof(float))),
-      d_src_id(pmt::intern(alias())),
-      d_ed_tagname(pmt::string_to_symbol(ed_tagname)),
-      d_voe_tagname(pmt::string_to_symbol(voe_tagname))
+      d_src_id(pmt::intern(alias()))
     {
-      if(blocklength==0){
-        std::invalid_argument("Invalid argument: blocklength must be greater than 0");
-        return;
-      }
       set_blocklength(blocklength);
       set_ed_threshold(ed_threshold);
       set_voe_threshold(voe_threshold);
@@ -80,8 +68,9 @@ namespace gr {
       d_energy_reg = (float*) volk_malloc( sizeof(float)*max_size, volk_get_alignment());
 
       set_tag_propagation_policy(TPP_DONT);
-      set_history(d_blocklength);
-      d_state = false;
+      
+      d_state_ed = false;
+      d_state_voe = false;
       v_stddev = (float*) volk_malloc(sizeof(float),volk_get_alignment());
       v_mean = (float*) volk_malloc(sizeof(float),volk_get_alignment());
     }
@@ -127,6 +116,7 @@ namespace gr {
         throw std::invalid_argument("Block length cannot be negative");
       }
       d_blocklength = blocklength;
+      set_history(d_blocklength);
     }
 
     size_t
@@ -154,41 +144,59 @@ namespace gr {
       bool have_ed = (output_items.size()>=3);
       float ed_test;
       float var =0;
-      float* voe_out;
+      float* voe_out, *ed_out;
       memcpy(out, in, sizeof(gr_complex) * noutput_items);
       volk_32fc_magnitude_squared_32f(d_energy_reg, in, noutput_items+d_blocklength);
       if(have_ed){
-        memcpy((float*)output_items[1],d_energy_reg, sizeof(float)*noutput_items);
+        ed_out = (float*)output_items[1];
         voe_out   = (float*)output_items[2];
       }
       for(int i=0;i<noutput_items;++i){
         volk_32f_stddev_and_mean_32f_x2(v_stddev, v_mean, d_energy_reg+i,d_blocklength);
         var = pow(*(v_stddev),2);
+        ed_test = std::accumulate(d_energy_reg+i,d_energy_reg+i+d_blocklength-1,0.0)/(float)d_blocklength;
         if(have_ed){
           voe_out[i] = var;
+          ed_out[i] = ed_test;
         }
-        ed_test = std::accumulate(d_energy_reg+i,d_energy_reg+i+d_blocklength-1,0.0);
-        if( (ed_test >= d_ed_thres) && (var>=d_voe_thres) ){
-          if(!d_state){
-            add_item_tag(0,nitems_written(0)+i,d_ed_tagname,pmt::PMT_T);
-            add_item_tag(0,nitems_written(0)+i,d_voe_tagname,pmt::from_float(var));
+        if( ed_test >= d_ed_thres){
+          if(!d_state_ed){
+            add_item_tag(0,nitems_written(0)+i,pmt::intern("ed_begin"),pmt::PMT_T);
             if(have_ed){
-              add_item_tag(1,nitems_written(1)+i,d_ed_tagname,pmt::PMT_T);
-              add_item_tag(1,nitems_written(1)+i,d_voe_tagname,pmt::from_float(var));
+              add_item_tag(1,nitems_written(1)+i,pmt::intern("ed_begin"),pmt::PMT_T);
+              add_item_tag(2,nitems_written(2)+i,pmt::intern("ed_begin"),pmt::PMT_T);
             }
-            d_state = true;
-          }
-
+            d_state_ed = true;
+          }  
         }
         else{
-          if(d_state){
-            add_item_tag(0,nitems_written(0)+i,d_ed_tagname,pmt::PMT_F);
-            add_item_tag(0,nitems_written(0)+i,d_voe_tagname,pmt::from_float(var));
+          if(d_state_ed){
+            add_item_tag(0,nitems_written(0)+i,pmt::intern("ed_end"),pmt::PMT_T);
             if(have_ed){
-              add_item_tag(1,nitems_written(1)+i,d_ed_tagname,pmt::PMT_F);
-              add_item_tag(1,nitems_written(1)+i,d_voe_tagname,pmt::from_float(var)); 
+              add_item_tag(1,nitems_written(1)+i,pmt::intern("ed_end"),pmt::PMT_T);
+              add_item_tag(2,nitems_written(2)+i,pmt::intern("ed_end"),pmt::PMT_T);
             }
-            d_state = false;
+            d_state_ed = false;
+          }
+        }
+        if( var >= d_voe_thres){
+          if(!d_state_voe){
+            add_item_tag(0,nitems_written(0)+i,pmt::intern("voe_begin"),pmt::PMT_T);
+            if(have_ed){
+              add_item_tag(1,nitems_written(1)+i,pmt::intern("voe_begin"),pmt::PMT_T);
+              add_item_tag(2,nitems_written(2)+i,pmt::intern("voe_begin"),pmt::PMT_T);
+            }
+            d_state_voe =true;
+          }
+        }
+        else{
+          if(d_state_voe){
+            add_item_tag(0,nitems_written(0)+i,pmt::intern("voe_end"),pmt::PMT_T);
+            if(have_ed){
+              add_item_tag(1,nitems_written(1)+i,pmt::intern("voe_end"),pmt::PMT_T);
+              add_item_tag(2,nitems_written(2)+i,pmt::intern("voe_end"),pmt::PMT_T);
+            }
+            d_state_voe = false;
           }
         }
       }

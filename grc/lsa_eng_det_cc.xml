@@ -5,11 +5,8 @@
   <category>[lsa]</category>
   <import>import lsa</import>
   <make>lsa.eng_det_cc($threshold,$bin)</make>
-  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
-       Sub-nodes:
-       * name
-       * key (makes the value accessible as $keyname, e.g. in the make node)
-       * type -->
+  <callback>set_threshold($threshold)</callback>
+  <callback>set_bin($bin)</callback>
   <param>
     <name>Threshold(dB)</name>
     <key>threshold</key>
@@ -22,22 +19,10 @@
     <value>5</value>
     <type>int</type>
   </param>
-
-  <!-- Make one 'sink' node per input. Sub-nodes:
-       * name (an identifier for the GUI)
-       * type
-       * vlen
-       * optional (set to 1 for optional inputs) -->
   <sink>
     <name>in</name>
     <type>complex</type>
   </sink>
-
-  <!-- Make one 'source' node per output. Sub-nodes:
-       * name (an identifier for the GUI)
-       * type
-       * vlen
-       * optional (set to 1 for optional inputs) -->
   <source>
     <name>out</name>
     <type>complex</type>

@@ -37,6 +37,8 @@ namespace gr {
       int d_burst_status;
       int d_out_counter;
 
+      std::vector<tag_t> d_burst_tags;
+
      public:
       burst_parser_cc_impl(int min_len);
       ~burst_parser_cc_impl();
