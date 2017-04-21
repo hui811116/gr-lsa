@@ -29,26 +29,27 @@ namespace gr {
   namespace lsa {
 
     burst_tagger_cc::sptr
-    burst_tagger_cc::make(const std::string& tagname)
+    burst_tagger_cc::make(const std::string& tagname, int mult)
     {
       return gnuradio::get_initial_sptr
-        (new burst_tagger_cc_impl(tagname));
+        (new burst_tagger_cc_impl(tagname,mult));
     }
 
     /*
      * The private constructor
      */
-    burst_tagger_cc_impl::burst_tagger_cc_impl(const std::string& tagname)
+    burst_tagger_cc_impl::burst_tagger_cc_impl(const std::string& tagname,int mult)
       : gr::sync_block("burst_tagger_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(gr_complex)))
     {
       d_tagname = pmt::string_to_symbol(tagname);
       d_count =0;
-      //d_state = false;
+      d_mult = mult;
       std::stringstream ss;
       ss<<name()<<unique_id();
       d_id = pmt::string_to_symbol(ss.str());
+      set_tag_propagation_policy(TPP_DONT);
     }
 
     void
@@ -79,7 +80,50 @@ namespace gr {
 
       std::vector<tag_t> tags;
       get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,d_tagname);
-      memcpy(out,in,sizeof(gr_complex)*noutput_items);
+      
+      int nout=noutput_items;
+      if(!tags.empty()){
+        int offset = tags[0].offset - nitems_read(0);
+        if(offset ==0 ){
+          add_sob(nitems_written(0));
+          d_count = pmt::to_uint64(tags[0].value)*d_mult;
+          nout = d_count;
+        }
+        else{
+          if(d_count!=0){
+            if(d_count>offset){
+              std::cerr<<"New burst begin before last burst ends"<<std::endl;
+              d_count=offset;
+            }
+            nout = d_count;
+          }
+          else{
+            nout = offset;
+          }
+        }
+      }
+      else{
+        if(d_count!=0){
+          nout = d_count;
+        }
+        else{
+          nout = noutput_items;
+        }
+      }
+      nout = (nout<noutput_items)? nout : noutput_items;
+      memcpy(out,in,sizeof(gr_complex)*nout);
+      if(d_count!=0){
+        if(nout > d_count){
+          std::cerr<<"counter:"<<d_count<<" ,nout:"<<nout<<std::endl;
+          throw std::runtime_error("counter value smaller than output length, shouldn't happen'");
+        }
+        d_count -= nout;
+        if(d_count == 0){
+          add_eob(nitems_written(0)+nout-1);
+        }
+      }
+      return nout;
+      /*
 
       for(int i=0;i<noutput_items;++i){
         if(!tags.empty()){
@@ -98,6 +142,7 @@ namespace gr {
         }
       }
       return noutput_items;
+      */
     }
 
   } /* namespace lsa */

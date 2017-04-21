@@ -34,13 +34,13 @@ namespace gr {
       uint64_t d_count;
       pmt::pmt_t d_tagname;
       pmt::pmt_t d_id;
-      //bool d_state;
+      unsigned int d_mult;
 
       void add_sob(const uint64_t& offset);
       void add_eob(const uint64_t& offset);
 
      public:
-      burst_tagger_cc_impl(const std::string& tagname);
+      burst_tagger_cc_impl(const std::string& tagname, int mult);
       ~burst_tagger_cc_impl();
 
       // Where all the action really happens

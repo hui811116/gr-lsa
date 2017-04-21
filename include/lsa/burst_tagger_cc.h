@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::burst_tagger_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(const std::string& d_tagname);
+      static sptr make(const std::string& d_tagname, int mult);
     };
 
   } // namespace lsa
