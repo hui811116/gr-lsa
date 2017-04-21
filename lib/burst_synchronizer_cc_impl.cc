@@ -400,7 +400,7 @@ namespace gr {
             while(phase_correction<-TWO_PI)
               phase_correction+=TWO_PI;
           }
-          //mm_time_recovery(d_interp_out,d_sample_buffer, d_samp_size);
+          //mm_time_recovery(d_corr_reg,d_sample_buffer, d_samp_size);
           // abuse variable use, interp_out to serve as a temporary container.
           // interpolated sample size overwrite sample buffer size
           // note that this also shift every symbol by a phase correcting term
