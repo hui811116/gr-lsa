@@ -42,7 +42,8 @@ list(APPEND lsa_sources
     expand_symbal_to_sample_ff_impl.cc
     symbol_sync_receiver_cf_impl.cc
     burst_synchronizer_cc_impl.cc
-    burst_parser_cc_impl.cc )
+    burst_parser_cc_impl.cc
+    mac.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
@@ -76,6 +77,7 @@ include_directories(${CPPUNIT_INCLUDE_DIRS})
 list(APPEND test_lsa_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/test_lsa.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_lsa.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/qa_mac.cc
 )
 
 add_executable(test-lsa ${test_lsa_sources})

@@ -39,5 +39,6 @@ install(FILES
     expand_symbal_to_sample_ff.h
     symbol_sync_receiver_cf.h
     burst_synchronizer_cc.h
-    burst_parser_cc.h DESTINATION include/lsa
+    burst_parser_cc.h
+    mac.h DESTINATION include/lsa
 )
