@@ -46,7 +46,8 @@ list(APPEND lsa_sources
     mac.cc
     preamble_prefixer.cc
     packet_parser_b_impl.cc
-    symbol_corrector_cc_impl.cc )
+    symbol_corrector_cc_impl.cc
+    control_source_b_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

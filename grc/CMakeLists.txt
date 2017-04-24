@@ -38,5 +38,6 @@ install(FILES
     lsa_mac.xml
     lsa_preamble_prefixer.xml
     lsa_packet_parser_b.xml
-    lsa_symbol_corrector_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_symbol_corrector_cc.xml
+    lsa_control_source_b.xml DESTINATION share/gnuradio/grc/blocks
 )

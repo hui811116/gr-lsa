@@ -113,7 +113,6 @@ namespace gr {
                 }
                 else{
                   //data
-                  pub_data();
                   d_byte_count =0;
                   d_pld_count =0;
                   d_state = WAIT_DATA;

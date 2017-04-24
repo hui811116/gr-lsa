@@ -43,5 +43,6 @@ install(FILES
     mac.h
     preamble_prefixer.h
     packet_parser_b.h
-    symbol_corrector_cc.h DESTINATION include/lsa
+    symbol_corrector_cc.h
+    control_source_b.h DESTINATION include/lsa
 )
