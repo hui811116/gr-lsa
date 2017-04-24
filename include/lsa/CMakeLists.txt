@@ -40,5 +40,8 @@ install(FILES
     symbol_sync_receiver_cf.h
     burst_synchronizer_cc.h
     burst_parser_cc.h
-    mac.h DESTINATION include/lsa
+    mac.h
+    preamble_prefixer.h
+    packet_parser_b.h
+    symbol_corrector_cc.h DESTINATION include/lsa
 )

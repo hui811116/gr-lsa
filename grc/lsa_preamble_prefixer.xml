@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<block>
+  <name>Preamble Prefixer</name>
+  <key>lsa_preamble_prefixer</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.preamble_prefixer($preamble)</make>
+
+
+  <param>
+    <name>Preamble</name>
+    <key>preamble</key>
+    <type>int_vector</type>
+  </param>
+
+  <sink>
+    <name>in</name>
+    <type>message</type>
+  </sink>
+  <source>
+    <name>out</name>
+    <type>message</type>
+  </source>
+</block>

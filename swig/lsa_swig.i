@@ -34,6 +34,9 @@
 #include "lsa/burst_synchronizer_cc.h"
 #include "lsa/burst_parser_cc.h"
 #include "lsa/mac.h"
+#include "lsa/preamble_prefixer.h"
+#include "lsa/packet_parser_b.h"
+#include "lsa/symbol_corrector_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -83,3 +86,9 @@ GR_SWIG_BLOCK_MAGIC2(lsa, burst_synchronizer_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, burst_parser_cc);
 %include "lsa/mac.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, mac);
+%include "lsa/preamble_prefixer.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, preamble_prefixer);
+%include "lsa/packet_parser_b.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, packet_parser_b);
+%include "lsa/symbol_corrector_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, symbol_corrector_cc);

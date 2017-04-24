@@ -45,7 +45,8 @@ namespace gr {
     enum LSAMACCTRL{
       SUCCESS,
       MAC_BUSY,
-      FAILED
+      FAILED,
+      DATA
     };
 
     class mac_impl : public mac{
@@ -67,6 +68,8 @@ namespace gr {
           set_msg_handler(d_to_mac_port, boost::bind(&mac_impl::to_mac, this , _1));
 
           d_hdr_buf = new unsigned char [1024];
+          //pre setting SFD
+          memcpy(d_hdr_buf,&lsa_SFD,sizeof(char)*2);
           d_mac_state = IDLE;
           d_current_clocks = std::clock();
       }
@@ -77,15 +80,12 @@ namespace gr {
 
       void 
       to_mac(pmt::pmt_t msg){
-        //std::cout<<"<MAC> received message to MAC:"<<std::endl;
         long int duration;
         pmt::pmt_t k= pmt::car(msg);
         pmt::pmt_t v= pmt::cdr(msg);
         if(!pmt::is_blob(v)){
           throw std::runtime_error("Input to mac not a blob");
         }
-        //size_t vlen = pmt::blob_length(v)/sizeof(char);
-        //std::cout<<msg<<std::endl;
         switch(d_mac_state){
           case IDLE:
             d_mac_state = BUSY;
@@ -94,11 +94,11 @@ namespace gr {
           case BUSY:
             duration = std::clock() - d_current_clocks;
             if(duration>d_timeout_clocks){
-              from_mac(FAILED);
+              from_mac(FAILED,pmt::PMT_NIL);
             }
             else
             {
-              from_mac(MAC_BUSY);
+              from_mac(MAC_BUSY,pmt::PMT_NIL);
             }
           break;
           default:
@@ -108,7 +108,7 @@ namespace gr {
       }
 
       void 
-      from_mac(int mac_ctrl){
+      from_mac(int mac_ctrl, pmt::pmt_t blob){
         pmt::pmt_t dict=pmt::make_dict();
         switch(mac_ctrl)
         {
@@ -125,6 +125,10 @@ namespace gr {
           case BUSY:
             dict = pmt::dict_add(dict,pmt::intern("LSA_MAC"),pmt::intern("BUSY"));
           break;
+          case DATA:
+            assert(pmt::is_blob(blob));
+            dict = pmt::cons(pmt::intern("LSA_DATA"),blob);
+          break;
           default:
             throw std::runtime_error("<LSA MAC>ERROR: from_mac bad state");
           break;
@@ -140,19 +144,27 @@ namespace gr {
         std::cout<<"time duration:"<<duration<< " ,timeout:"<<d_timeout_clocks<<std::endl;
         if(pmt::eqv(pmt::intern("LSA_ACK"),k)){
           // phy info == ACK
-          from_mac(SUCCESS);
+          from_mac(SUCCESS,pmt::PMT_NIL);
         }
         else if(pmt::eqv(pmt::intern("LSA_NACK"),k)){
           if(duration<d_timeout_clocks){
             //retransmission since not timeout yet
-            //pmt::pmt_t debug = pmt::cons(pmt::intern("LSA_NACK"),pmt::PMT_T);
             message_port_pub(d_to_phy_port,d_prefix_pdu);
-            //message_port_pub(d_to_phy_port,debug);
           }
           else{
             //timeout report failed
-            from_mac(FAILED);
+            from_mac(FAILED,pmt::PMT_NIL);
           }
+        }
+        else if(pmt::eqv(pmt::intern("LSA_DATA"),k)){
+          to_phy(pmt::intern("ACK"),pmt::PMT_NIL);
+          // collected payload pass to upper layer
+          size_t vlen = pmt::blob_length(v)/sizeof(char);
+          // length check can be placed here
+          if(pmt::is_blob(v)){
+            from_mac(DATA,v);
+          }
+          // 
         }
         // other case for future development
         
@@ -160,18 +172,20 @@ namespace gr {
 
       void 
       to_phy(pmt::pmt_t msg, pmt::pmt_t blob){
-        size_t io(0);
+        if(pmt::is_blob(blob)){
+          size_t io(0);
         const unsigned char* uvec = (unsigned char*) pmt::u8vector_elements(blob,io);
         uint16_t payload_len = (uint16_t) io;
-        memcpy(d_hdr_buf,&lsa_SFD,sizeof(char)*2);
         memcpy(d_hdr_buf+2,&payload_len,sizeof(char)*2);
         memcpy(d_hdr_buf+4,&payload_len,sizeof(char)*2);
         memcpy(d_hdr_buf+6,uvec,sizeof(char)*io);
         d_prefix_pdu = pmt::cons(pmt::intern("LSA_MAC"),pmt::init_u8vector(io+6,d_hdr_buf));
-        //dict = pmt::dict_add(dict,pmt::intern("LSA_MAC"),pmt::intern("ACK"));
         message_port_pub(d_to_phy_port,d_prefix_pdu);
-        //pmt::pmt_t debug = pmt::cons(pmt::intern("LSA_NACK"),pmt::PMT_T);
-        //message_port_pub(d_to_phy_port,debug);
+        }
+        else if(pmt::eqv(pmt::intern("ACK"),msg)){
+
+        }
+        
       }
 
       private:

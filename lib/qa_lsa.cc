@@ -27,12 +27,14 @@
 
 #include "qa_lsa.h"
 #include "qa_mac.h"
+#include "qa_preamble_prefixer.h"
 
 CppUnit::TestSuite *
 qa_lsa::suite()
 {
   CppUnit::TestSuite *s = new CppUnit::TestSuite("lsa");
   s->addTest(gr::lsa::qa_mac::suite());
+  s->addTest(gr::lsa::qa_preamble_prefixer::suite());
 
   return s;
 }

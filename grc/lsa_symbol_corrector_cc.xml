@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<block>
+  <name>Symbol Corrector</name>
+  <key>lsa_symbol_corrector_cc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.symbol_corrector_cc()</make>
+  <!-- 
+  <param>
+    <name>...</name>
+    <key>...</key>
+    <type>...</type>
+  </param>
+   -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+</block>

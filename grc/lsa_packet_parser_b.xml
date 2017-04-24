@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<block>
+  <name>LSA packet parser</name>
+  <key>lsa_packet_parser_b</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.packet_parser_b()</make>
+  
+  <sink>
+    <name>in</name>
+    <type>byte</type>
+  </sink>
+
+  <source>
+    <name>out</name>
+    <type>message</type>
+  </source>
+</block>
