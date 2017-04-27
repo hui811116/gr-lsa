@@ -37,20 +37,20 @@ namespace gr {
       uint64_t d_accesscode;
       size_t d_accesscode_len;
       unsigned long long d_data_reg;
+      unsigned long long d_mask;
 
       size_t d_hdr_count;
       size_t d_byte_count;
       size_t d_pld_count;
-
-      bool parse_hdr();
-      void pub_data();
-
       size_t d_hdr_rx;
 
       pmt::pmt_t d_phy_port;
 
+      bool parse_hdr();
+      void pub_data();
+      void set_accesscode(const std::string& accesscode);
      public:
-      packet_parser_b_impl();
+      packet_parser_b_impl(const std::string& accesscode);
       ~packet_parser_b_impl();
 
       // Where all the action really happens

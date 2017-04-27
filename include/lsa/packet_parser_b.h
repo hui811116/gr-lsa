@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::packet_parser_b::make is the public interface for
        * creating new instances.
        */
-      static sptr make();
+      static sptr make(const std::string& accesscode);
     };
 
   } // namespace lsa

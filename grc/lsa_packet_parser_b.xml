@@ -4,8 +4,15 @@
   <key>lsa_packet_parser_b</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.packet_parser_b()</make>
+  <make>lsa.packet_parser_b($accesscode)</make>
   
+  <param>
+    <name>Accesscode</name>
+    <key>accesscode</key>
+    <value>1010011111111111</value>
+    <type>string</type>
+  </param>
+
   <sink>
     <name>in</name>
     <type>byte</type>

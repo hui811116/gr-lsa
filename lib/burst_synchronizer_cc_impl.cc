@@ -323,6 +323,40 @@ namespace gr {
         { 
           consume=nin;
           for(int i=0;i<tags.size();++i){
+            if(pmt::eqv(pmt::intern("ed_begin"),tags[i].key)){
+              if(d_state){
+                d_samp_size = 0;
+                //d_burst_tags.clear();
+              }
+              d_state = true;
+              tmp_bgn = tags[i].offset - nitems_read(0);
+              consume = tmp_bgn;
+            } 
+            else if((d_state) && (pmt::eqv(pmt::intern("ed_end"),tags[i].key))){
+              d_state = false;
+              consume = tags[i].offset - nitems_read(0)+1;
+              if( ((d_samp_size + (consume-tmp_bgn))>= d_min_len)
+              && ((d_samp_size + (consume-tmp_bgn))<=d_cap) ){
+                int con_len = tags[i].offset - nitems_read(0)-tmp_bgn+1;
+                memcpy(d_sample_buffer+d_samp_size,in+tmp_bgn,sizeof(gr_complex)*con_len);
+                d_samp_size += con_len;
+                d_burst_status = OUTPUT_BURST;
+                d_out_counter = 0;
+                consume_each(consume);
+                return 0;
+              }
+              else{
+                d_samp_size = 0;
+              }
+            }
+            else if( (!pmt::eqv(pmt::intern("ed_begin"),tags[i].key)) 
+            && (!pmt::eqv(pmt::intern("ed_end"),tags[i].key))
+            && d_state){
+              tag_t tmp_tag = tags[i];
+              tmp_tag.offset = tags[i].offset - nitems_read(0)+d_samp_size;
+              //d_burst_tags.push_back(tmp_tag);
+            }
+            /*
             if((!d_state) && (pmt::eqv(pmt::intern("ed_begin"),tags[i].key))){
               d_state = true;
               tmp_bgn = tags[i].offset - nitems_read(0);
@@ -345,6 +379,7 @@ namespace gr {
                 d_samp_size = 0;
               }
             }
+            */
           }
           if(d_state){
             //there is somthing left in inputs
@@ -387,14 +422,15 @@ namespace gr {
           // interpolated sample size overwrite sample buffer size
           // note that this also shift every symbol by a phase correcting term
           d_samp_size = d_interp_size;
-          d_sync_idx = cross_correlation(d_sample_buffer,d_interp_out,d_sync_word, d_samp_size, d_word_length);
-          dict = pmt::dict_add(dict, pmt::intern("sync_idx"),pmt::from_long(d_sync_idx));
+          //d_sync_idx = cross_correlation(d_sample_buffer,d_interp_out,d_sync_word, d_samp_size, d_word_length);
+          //dict = pmt::dict_add(dict, pmt::intern("sync_idx"),pmt::from_long(d_sync_idx));
           // fine cfo: Kay method (make sure SNR high enough)?
           // abuse buffer variable: d_fft to serve as container
           // abuse cfo_est
-          cfo_est = fine_cfo_estimation(d_corr_reg, d_sample_buffer+d_sync_idx,d_sync_word,d_kay_window);
-          dict = pmt::dict_add(dict, pmt::intern("fine_cfo"),pmt::from_float(cfo_est));
+          //cfo_est = fine_cfo_estimation(d_corr_reg, d_sample_buffer+d_sync_idx,d_sync_word,d_kay_window);
+          //dict = pmt::dict_add(dict, pmt::intern("fine_cfo"),pmt::from_float(cfo_est));
           //phase correction second time (fine cfo)
+          /*
           phase_correction = 0;
           for(int i=0;i<d_samp_size;++i){
             d_sample_buffer[i]*=gr_expj(-phase_correction);
@@ -403,7 +439,7 @@ namespace gr {
               phase_correction-=TWO_PI;
             while(phase_correction<-TWO_PI)
               phase_correction+=TWO_PI;
-          }
+          }*/
           // prepare for output
           d_dict_for_burst = dict;
           d_out_counter = 0;

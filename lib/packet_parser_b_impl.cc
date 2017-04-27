@@ -35,24 +35,25 @@ namespace gr {
     };
 
     packet_parser_b::sptr
-    packet_parser_b::make()
+    packet_parser_b::make(const std::string& accesscode)
     {
       return gnuradio::get_initial_sptr
-        (new packet_parser_b_impl());
+        (new packet_parser_b_impl(accesscode));
     }
 
     /*
      * The private constructor
      */
-    packet_parser_b_impl::packet_parser_b_impl()
+    packet_parser_b_impl::packet_parser_b_impl(const std::string& accesscode)
       : gr::sync_block("packet_parser_b",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(0, 0, 0)),
               d_cap(8192)
     {
       d_state = SEARCH;
-      d_accesscode = 0xacdda4e2f28c20fc;
-      d_accesscode_len=64;
+      set_accesscode(accesscode);
+      //d_accesscode = 0xacdda4e2f28c20fc;
+      //d_accesscode_len=64;
       d_data_reg = 0x0000000000000000;
 
       d_hdr_count =0;
@@ -84,7 +85,7 @@ namespace gr {
         {
           case SEARCH:
             d_data_reg = (d_data_reg<<1)| (in[i]&0x01);
-            if(d_data_reg == d_accesscode){
+            if(((d_data_reg ^ d_accesscode) & d_mask) == 0){
               d_hdr_count =0;
               d_byte_count =0;
               d_state = WAIT_HDR;
@@ -161,6 +162,19 @@ namespace gr {
       pmt::pmt_t uvec = pmt::make_blob(d_pld_buf,d_byte_count);
       pmt::pmt_t packet = pmt::cons(pmt::intern("LSA_DATA"),uvec);
       message_port_pub(d_phy_port,packet);
+    }
+
+    void
+    packet_parser_b_impl::set_accesscode(const std::string& accesscode)
+    {
+      if(accesscode.empty() || accesscode.length()>64)
+        throw std::runtime_error("Invalid accesscode, length should between 0 and 64");
+      d_accesscode_len = accesscode.length();
+      d_mask = ((~0ULL) >> (64- d_accesscode_len) );
+      d_accesscode=0;
+      for(unsigned i=0;i<d_accesscode_len;++i){
+        d_accesscode = (d_accesscode << 1) | (accesscode[i] & 1);
+      }
     }
 
   } /* namespace lsa */
