@@ -345,7 +345,7 @@
     </param>
     <param>
       <key>type</key>
-      <value>bpsk</value>
+      <value>qpsk</value>
     </param>
     <param>
       <key>dims</key>
@@ -657,7 +657,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>4e6</value>
+      <value>2e6</value>
     </param>
   </block>
   <block>
@@ -750,7 +750,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1376, 736)</value>
+      <value>(1224, 880)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -844,7 +844,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1120, 748)</value>
+      <value>(1248, 804)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -958,7 +958,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1104, 668)</value>
+      <value>(1024, 812)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1178,7 +1178,7 @@
     </param>
     <param>
       <key>min_len</key>
-      <value>50</value>
+      <value>200</value>
     </param>
   </block>
   <block>
@@ -1248,7 +1248,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1128, 832)</value>
+      <value>(1008, 888)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1283,11 +1283,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>True</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1080, 600)</value>
+      <value>(1056, 776)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -3787,12 +3787,6 @@
   </connection>
   <connection>
     <source_block_id>digital_corr_est_cc_0</source_block_id>
-    <sink_block_id>digital_constellation_decoder_cb_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>digital_corr_est_cc_0</source_block_id>
     <sink_block_id>lsa_symbol_corrector_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
@@ -3837,7 +3831,7 @@
     <source_block_id>lsa_packet_parser_b_0</source_block_id>
     <sink_block_id>blocks_message_debug_0</sink_block_id>
     <source_key>out</source_key>
-    <sink_key>print</sink_key>
+    <sink_key>print_pdu</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_symbol_corrector_cc_0</source_block_id>

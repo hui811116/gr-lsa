@@ -35,11 +35,7 @@ namespace gr {
   namespace lsa {
 
 #define TWO_PI (M_PI * 2.0f)
-/*static const float B_arr[16] = {0,1,0,0,
-                               -1.0F/3.0,-0.5,1.0F,-1.0F/6.0,
-                               0.5,-1.0F,0.5,0,
-                               -1.0F/6.0F,0.5,-0.5,1.0F/6.0};
-                               */
+
 
     enum burstStatus{
       FIND_BURST,
@@ -49,10 +45,10 @@ namespace gr {
 
     burst_synchronizer_cc::sptr
     burst_synchronizer_cc::make(int min_len, const std::vector<float>& window,
-    int arity, const std::vector<gr_complex>& sync_word)
+    int arity, const std::vector<gr_complex>& sync_word, int sps)
     {
       return gnuradio::get_initial_sptr
-        (new burst_synchronizer_cc_impl(min_len,window,arity,sync_word));
+        (new burst_synchronizer_cc_impl(min_len,window,arity,sync_word, sps));
     }
 
     /*
@@ -61,7 +57,7 @@ namespace gr {
     static int fft_size = 512;
     burst_synchronizer_cc_impl::burst_synchronizer_cc_impl(
       int min_len, const std::vector<float>& window,
-      int arity, const std::vector<gr_complex>& sync_word)
+      int arity, const std::vector<gr_complex>& sync_word, int sps)
       : gr::block("burst_synchronizer_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
@@ -74,10 +70,11 @@ namespace gr {
       d_window = window;
       d_fft = new gr::fft::fft_complex(fft_size,true,1);
       d_fft_out = (gr_complex*)volk_malloc(sizeof(gr_complex)*2048,volk_get_alignment());
-      //d_interp_out = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
+      d_interp_out = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
+
       d_corr_reg = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
 
-      //d_sps = sps;
+      d_sps = sps;
       d_min_len = min_len;
       d_sample_buffer = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
       d_samp_size = 0;
@@ -100,6 +97,9 @@ namespace gr {
       d_gain_mu = 0.175;
       d_interp_size = 0;
       
+      d_omega = d_sps;
+      d_omega_mid = d_sps;
+      d_omega_relative_limit = 0.005 * d_sps;
 
       calc_kay_window(d_kay_window, d_word_length-1);
     }
@@ -113,7 +113,8 @@ namespace gr {
       delete d_fft;
       volk_free(d_sample_buffer);
       volk_free(d_fft_out);
-      //volk_free(d_interp_out);
+      volk_free(d_interp_out);
+
       volk_free(d_corr_reg);
       volk_free(d_sync_word);
     }
@@ -133,20 +134,7 @@ namespace gr {
       return true;
     }
 
-/*
-    gr_complex
-    burst_synchronizer_cc_impl::interp_3(const gr_complex* in, const float& mu)
-    {
-      gr_complex v[4];
-      for(int i=0;i<4;++i){
-        v[i]=0;
-        for(int j=0;j<4;++j){
-          v[i] += B_arr[i*4+j]*in[j];
-        }
-      }
-      return ((v[3]*mu+v[2])*mu+v[1])*mu+v[0];
-    }
-*/
+
     static inline gr_complex
     slice(gr_complex x)
     {
@@ -158,9 +146,9 @@ namespace gr {
     burst_synchronizer_cc_impl::mm_time_recovery(gr_complex* out, const gr_complex* in, int size)
     {
       d_interp_size = 0;
-      d_omega_mid = 2.0;
-      d_mu = 0.5;
-      d_omega = 2.0;
+      //d_omega_mid = 2.0;
+      //d_mu = 0.5;
+      //d_omega = 2.0;
       d_p_2T = 0;d_p_1T = 0;d_p_0T = 0;
       d_c_2T = 0;d_c_1T = 0;d_c_0T = 0;
       int ii =0;
@@ -172,7 +160,6 @@ namespace gr {
       {
         d_p_2T = d_p_1T;
         d_p_1T = d_p_0T;
-        //d_p_0T = interp_3(&in[ii], d_mu);
         d_p_0T = d_interp->interpolate(&in[ii], d_mu);
         
         d_c_2T = d_c_1T;
@@ -340,6 +327,7 @@ namespace gr {
               d_state = true;
               tmp_bgn = tags[i].offset - nitems_read(0);
               consume = tmp_bgn;
+              d_samp_size =0 ;
             }
             if((d_state) && (pmt::eqv(pmt::intern("ed_end"),tags[i].key))){
               d_state = false;
@@ -368,54 +356,45 @@ namespace gr {
               consume_each(consume);
               return 0;
             }
-            if(buf_len>0)
-              memcpy(d_sample_buffer+d_samp_size,in+tmp_bgn,sizeof(gr_complex)*buf_len);
+            memcpy(d_sample_buffer+d_samp_size,in+tmp_bgn,sizeof(gr_complex)*buf_len);
             d_samp_size+=buf_len;
           }
         break;
         }
         case LOCK_BURST:
         {
-          //abuse variable d_corr_reg act as temporary buffer
-          mm_time_recovery(d_corr_reg,d_sample_buffer, d_samp_size);
-          //memcpy(d_corr_reg,d_sample_buffer,sizeof(gr_complex)*d_samp_size);
+          mm_time_recovery(d_interp_out,d_sample_buffer, d_samp_size);
+          // abuse d_corr_reg
+          memcpy(d_corr_reg, d_interp_out,d_interp_size*sizeof(gr_complex));
           constellation_remove(d_corr_reg,d_interp_size);
-          //constellation_remove(d_corr_reg,d_samp_size);
           //change to phase scalar
-          int offset = 0;
+          int offset = d_interp_size/2-fft_size/2;
+          offset = (offset+fft_size > d_interp_size) ? 0 : offset;
           float cfo_est = coarse_cfo_estimation(d_corr_reg+offset,fft_size);
           // corrected to sample base cfo
           cfo_est = cfo_est * TWO_PI;
-          cfo_est/=2.0f;
           dict = pmt::dict_add(dict, pmt::intern("coarse_cfo"),pmt::from_float(cfo_est));
-
           float phase_correction = 0;
-          //for(int i=0;i<d_interp_size;++i){
-          for(int i=0;i<d_samp_size;++i){
-            //d_corr_reg[i]= d_sample_buffer[i]*gr_expj(-phase_correction);
-            d_sample_buffer[i]*=gr_expj(-phase_correction);
+          for(int i=0;i<d_interp_size;++i){
+            d_interp_out[i] *= gr_expj(-phase_correction);
             phase_correction+=cfo_est;
             while(phase_correction>TWO_PI)
               phase_correction-=TWO_PI;
             while(phase_correction<-TWO_PI)
               phase_correction+=TWO_PI;
           }
-          //mm_time_recovery(d_corr_reg,d_sample_buffer, d_samp_size);
           // abuse variable use, interp_out to serve as a temporary container.
           // interpolated sample size overwrite sample buffer size
           // note that this also shift every symbol by a phase correcting term
-          //d_samp_size = d_interp_size;
-          //d_sync_idx = cross_correlation(d_sample_buffer,d_corr_reg,d_sync_word, d_samp_size, d_word_length);
-          //d_sync_idx = cross_correlation(d_corr_reg,d_sample_buffer,d_sync_word, d_samp_size, d_word_length);
-          //dict = pmt::dict_add(dict, pmt::intern("sync_idx"),pmt::from_long(d_sync_idx));
+          d_samp_size = d_interp_size;
+          d_sync_idx = cross_correlation(d_sample_buffer,d_interp_out,d_sync_word, d_samp_size, d_word_length);
+          dict = pmt::dict_add(dict, pmt::intern("sync_idx"),pmt::from_long(d_sync_idx));
           // fine cfo: Kay method (make sure SNR high enough)?
           // abuse buffer variable: d_fft to serve as container
           // abuse cfo_est
-          //cfo_est = fine_cfo_estimation(d_corr_reg, d_sample_buffer+d_sync_idx,d_sync_word,d_kay_window);
-          //cfo_est = fine_cfo_estimation(d_sample_buffer, d_corr_reg+d_sync_idx,d_sync_word,d_kay_window);
-          //dict = pmt::dict_add(dict, pmt::intern("fine_cfo"),pmt::from_float(cfo_est));
+          cfo_est = fine_cfo_estimation(d_corr_reg, d_sample_buffer+d_sync_idx,d_sync_word,d_kay_window);
+          dict = pmt::dict_add(dict, pmt::intern("fine_cfo"),pmt::from_float(cfo_est));
           //phase correction second time (fine cfo)
-          /*
           phase_correction = 0;
           for(int i=0;i<d_samp_size;++i){
             d_sample_buffer[i]*=gr_expj(-phase_correction);
@@ -425,7 +404,6 @@ namespace gr {
             while(phase_correction<-TWO_PI)
               phase_correction+=TWO_PI;
           }
-          */
           // prepare for output
           d_dict_for_burst = dict;
           d_out_counter = 0;

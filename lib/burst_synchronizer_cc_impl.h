@@ -55,7 +55,8 @@ namespace gr {
       const unsigned int d_cap;
       unsigned int d_samp_size;
       int d_min_len;
-//      int d_sps;
+
+      int d_sps;
       int d_arity;
       bool d_state;
       int d_burst_status;
@@ -82,7 +83,7 @@ namespace gr {
       int cross_correlation(gr_complex* out, const gr_complex* in, const gr_complex* sync_word, int in_size, int word_length);
      public:
       burst_synchronizer_cc_impl(int min_len,const std::vector<float>& window, int arity,
-      const std::vector<gr_complex>& sync_word);
+      const std::vector<gr_complex>& sync_word, int sps);
       ~burst_synchronizer_cc_impl();
 
       // Where all the action really happens
