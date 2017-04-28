@@ -43,11 +43,12 @@ namespace gr {
       size_t d_byte_count;
       size_t d_pld_count;
       size_t d_hdr_rx;
+      size_t d_pld_parse;
 
       pmt::pmt_t d_phy_port;
 
       bool parse_hdr();
-      void pub_data();
+      void pub_data(size_t flag);
       void set_accesscode(const std::string& accesscode);
      public:
       packet_parser_b_impl(const std::string& accesscode);

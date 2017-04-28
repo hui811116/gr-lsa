@@ -38,6 +38,7 @@
 #include "lsa/packet_parser_b.h"
 #include "lsa/symbol_corrector_cc.h"
 #include "lsa/control_source_b.h"
+#include "lsa/app_simple.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -95,3 +96,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, packet_parser_b);
 GR_SWIG_BLOCK_MAGIC2(lsa, symbol_corrector_cc);
 %include "lsa/control_source_b.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, control_source_b);
+%include "lsa/app_simple.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, app_simple);

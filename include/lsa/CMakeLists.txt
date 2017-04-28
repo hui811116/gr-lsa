@@ -44,5 +44,6 @@ install(FILES
     preamble_prefixer.h
     packet_parser_b.h
     symbol_corrector_cc.h
-    control_source_b.h DESTINATION include/lsa
+    control_source_b.h
+    app_simple.h DESTINATION include/lsa
 )

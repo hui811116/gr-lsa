@@ -4,15 +4,15 @@
   <key>lsa_mac</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.mac()</make>
+  <make>lsa.mac($addr)</make>
   
-  <!--
+  
   <param>
-    <name>...</name>
-    <key>...</key>
-    <type>...</type>
+    <name>Address</name>
+    <key>addr</key>
+    <type>int</type>
   </param>
-  -->
+  
 
   
   <sink>

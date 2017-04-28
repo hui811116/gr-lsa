@@ -47,7 +47,8 @@ list(APPEND lsa_sources
     preamble_prefixer.cc
     packet_parser_b_impl.cc
     symbol_corrector_cc_impl.cc
-    control_source_b_impl.cc )
+    control_source_b_impl.cc
+    app_simple.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
@@ -81,6 +82,7 @@ include_directories(${CPPUNIT_INCLUDE_DIRS})
 list(APPEND test_lsa_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/test_lsa.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_lsa.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/qa_app_simple.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_preamble_prefixer.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_mac.cc
 )

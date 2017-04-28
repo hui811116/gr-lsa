@@ -19,31 +19,20 @@
  */
 
 
-#ifndef INCLUDED_LSA_MAC_H
-#define INCLUDED_LSA_MAC_H
-
-#include <lsa/api.h>
-#include <gnuradio/block.h>
+#include <gnuradio/attributes.h>
+#include <cppunit/TestAssert.h>
+#include "qa_app_simple.h"
+#include <lsa/app_simple.h>
 
 namespace gr {
   namespace lsa {
 
-    /*!
-     * \brief <+description+>
-     *
-     */
-    class LSA_API mac: virtual public block
+    void
+    qa_app_simple::t1()
     {
-    public:
-      //mac();
-      //~mac();
-      typedef boost::shared_ptr<mac> sptr;
-      static sptr make(unsigned int addr);
-    private:
-    };
+      // Put test here
+    }
 
-  } // namespace lsa
-} // namespace gr
-
-#endif /* INCLUDED_LSA_MAC_H */
+  } /* namespace lsa */
+} /* namespace gr */
 

@@ -73,16 +73,35 @@ namespace gr {
         return;
       }
       assert(pmt::is_pair(msg));
+      pmt::pmt_t mac_tag = pmt::car(msg);
       pmt::pmt_t blob = pmt::cdr(msg);
+      // debug required
+      assert(pmt::is_blob(blob));
       size_t vlen = pmt::blob_length(blob);
-      size_t ulen = vlen/sizeof(char);
-      uint8_t pld_MSB = (uint8_t*) &ulen;
-      d_buf[d_preamble.size()+3] = pld_MSB[1];
-      d_buf[d_preamble.size()+4] = pld_MSB[0];
-      d_buf[d_preamble.size()+5] = pld_MSB[1];
-      d_buf[d_preamble.size()+6] = pld_MSB[0];
+      assert(vlen >=2);
       memcpy(d_buf+d_preamble.size()+6,pmt::blob_data(blob),vlen);
-      pmt::pmt_t packet = pmt::make_blob(d_buf,vlen+d_preamble.size());
+      if(pmt::eqv(pmt::intern("DATA"),mac_tag)){
+        uint8_t* pld_MSB = (uint8_t*) &vlen;  
+        d_buf[d_preamble.size()+2] = pld_MSB[1];
+        d_buf[d_preamble.size()+3] = pld_MSB[0];
+        d_buf[d_preamble.size()+4] = pld_MSB[1];
+        d_buf[d_preamble.size()+5] = pld_MSB[0];
+      }
+      else if(pmt::eqv(pmt::intern("ACK"),mac_tag)){
+        memset(d_buf+d_preamble.size()+2,0x00,sizeof(char)*4);
+        d_buf[d_preamble.size()+3] = 0x01;
+        d_buf[d_preamble.size()+5] = 0x01;
+      }
+      else if(pmt::eqv(pmt::intern("NACK"),mac_tag)){
+        memset(d_buf+d_preamble.size()+2,0x00,sizeof(char)*4);
+      }
+      else if(pmt::eqv(pmt::intern("SEN"),mac_tag)){
+        memset(d_buf+d_preamble.size()+2,0xff,sizeof(char)*4);
+      }
+      else{
+        throw std::runtime_error("BAD PHY PPDU");
+      }
+      pmt::pmt_t packet = pmt::make_blob(d_buf,vlen+d_preamble.size()+6);
       message_port_pub(d_out_port, pmt::cons(pmt::PMT_NIL,packet));
     }
 
@@ -93,15 +112,6 @@ namespace gr {
       std::vector<unsigned char> d_preamble;
   };
 
-/*
-    preamble_prefixer::preamble_prefixer()
-    {
-    }
-
-    preamble_prefixer::~preamble_prefixer()
-    {
-    }
-*/
 
   preamble_prefixer::sptr
   preamble_prefixer::make(const std::vector<unsigned char>& preamble)

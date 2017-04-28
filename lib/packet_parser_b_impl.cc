@@ -33,6 +33,12 @@ namespace gr {
       WAIT_HDR,
       WAIT_DATA
     };
+    enum LSAFLAG{
+      ACK,
+      NACK,
+      DATA,
+      SEN
+    };
 
     packet_parser_b::sptr
     packet_parser_b::make(const std::string& accesscode)
@@ -56,6 +62,7 @@ namespace gr {
       //d_accesscode_len=64;
       d_data_reg = 0x0000000000000000;
 
+      d_pld_parse = 0;
       d_hdr_count =0;
       d_pld_count =0;
       d_hdr_buf = new unsigned char[256];
@@ -97,27 +104,20 @@ namespace gr {
             if(d_hdr_count%8 == 0){
               d_byte_count++;
             }
-            if(d_hdr_count == 32){
+            if(d_hdr_count == (32) ){
               if(parse_hdr()){
                 // check sum passed
-                if(d_hdr_rx == 0x0000){
-                  //ack
-                  pmt::pmt_t msg = pmt::cons(pmt::intern("LSA_ACK"),pmt::PMT_NIL);
-                  message_port_pub(d_phy_port,msg);
-                  d_state = SEARCH;
-                }
-                else if(d_hdr_rx == 0x0001){
-                  //nack
-                  pmt::pmt_t msg = pmt::cons(pmt::intern("LSA_NACK"),pmt::PMT_NIL);
-                  message_port_pub(d_phy_port,msg);
-                  d_state = SEARCH;
+                if( (d_hdr_rx == 0x0000) || (d_hdr_rx == 0x0001) || (d_hdr_rx == 0xffff) ){
+                  //ack  // for addresses
+                  d_pld_parse = 2;
                 }
                 else{
                   //data
-                  d_byte_count =0;
-                  d_pld_count =0;
-                  d_state = WAIT_DATA;
+                  d_pld_parse = d_hdr_rx;
                 }
+                d_byte_count =0;
+                d_pld_count =0;
+                d_state = WAIT_DATA;
               }//parse hdr
               else{
                 // no information found
@@ -131,8 +131,23 @@ namespace gr {
             if(d_pld_count%8 == 0){
               d_byte_count++;
             }
-            if(d_byte_count == d_hdr_rx){
-              pub_data();
+            if(d_byte_count == d_pld_parse){
+              LSAFLAG flag;
+              switch(d_hdr_rx){
+                case 0x0001:
+                  flag = ACK;
+                break;
+                case 0x0000:
+                  flag = NACK;
+                break;
+                case 0xffff:
+                  flag = SEN;
+                break;
+                default:
+                  flag = DATA;
+                break;
+              }
+              pub_data(flag);
               d_state = SEARCH;
             }
           break;
@@ -157,10 +172,34 @@ namespace gr {
     }
 
     void
-    packet_parser_b_impl::pub_data()
+    packet_parser_b_impl::pub_data(size_t flag)
     {
-      pmt::pmt_t uvec = pmt::make_blob(d_pld_buf,d_byte_count);
-      pmt::pmt_t packet = pmt::cons(pmt::intern("LSA_DATA"),uvec);
+      pmt::pmt_t phytag;
+      size_t blob_len = 0;
+      switch(flag)
+      {
+        case ACK:
+          phytag = pmt::intern("ACK");
+          blob_len = 2;
+        break;
+        case NACK:
+          phytag = pmt::intern("NACK");
+          blob_len = 2;
+        break;
+        case DATA:
+          phytag = pmt::intern("LSA_DATA");
+          blob_len = d_byte_count;
+        break;
+        case SEN:
+          phytag = pmt::intern("SENSE");
+          blob_len = 2;
+        break;
+        default:
+          throw std::runtime_error("Bad phy flag");
+        break;
+      }
+      pmt::pmt_t uvec = pmt::make_blob(d_pld_buf,blob_len);
+      pmt::pmt_t packet = pmt::cons(phytag,uvec);
       message_port_pub(d_phy_port,packet);
     }
 

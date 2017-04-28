@@ -19,31 +19,28 @@
  */
 
 
-#ifndef INCLUDED_LSA_MAC_H
-#define INCLUDED_LSA_MAC_H
+#ifndef _QA_APP_SIMPLE_H_
+#define _QA_APP_SIMPLE_H_
 
-#include <lsa/api.h>
-#include <gnuradio/block.h>
+#include <cppunit/extensions/HelperMacros.h>
+#include <cppunit/TestCase.h>
 
 namespace gr {
   namespace lsa {
 
-    /*!
-     * \brief <+description+>
-     *
-     */
-    class LSA_API mac: virtual public block
+    class qa_app_simple : public CppUnit::TestCase
     {
     public:
-      //mac();
-      //~mac();
-      typedef boost::shared_ptr<mac> sptr;
-      static sptr make(unsigned int addr);
+      CPPUNIT_TEST_SUITE(qa_app_simple);
+      CPPUNIT_TEST(t1);
+      CPPUNIT_TEST_SUITE_END();
+
     private:
+      void t1();
     };
 
-  } // namespace lsa
-} // namespace gr
+  } /* namespace lsa */
+} /* namespace gr */
 
-#endif /* INCLUDED_LSA_MAC_H */
+#endif /* _QA_APP_SIMPLE_H_ */
 
