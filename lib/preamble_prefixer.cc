@@ -30,6 +30,7 @@ namespace gr {
   namespace lsa {
 
     static const unsigned char d_default_preamble[] = {0xac,0xdd,0xa4,0xe2,0xf2,0x82,0x20,0xfc};
+    static const unsigned char lsa_SFD[] = {0xa7,0xff};
 
   class preamble_prefixer_impl : public preamble_prefixer
   {
@@ -60,6 +61,7 @@ namespace gr {
       }
       d_preamble = preamble;
       memcpy(d_buf,preamble.data(),sizeof(char)*preamble.size());
+      memcpy(d_buf+d_preamble.size(),lsa_SFD, sizeof(char)*2);
     }
 
     void
@@ -73,7 +75,13 @@ namespace gr {
       assert(pmt::is_pair(msg));
       pmt::pmt_t blob = pmt::cdr(msg);
       size_t vlen = pmt::blob_length(blob);
-      memcpy(d_buf+d_preamble.size(),pmt::blob_data(blob),vlen);
+      size_t ulen = vlen/sizeof(char);
+      uint8_t pld_MSB = (uint8_t*) &ulen;
+      d_buf[d_preamble.size()+3] = pld_MSB[1];
+      d_buf[d_preamble.size()+4] = pld_MSB[0];
+      d_buf[d_preamble.size()+5] = pld_MSB[1];
+      d_buf[d_preamble.size()+6] = pld_MSB[0];
+      memcpy(d_buf+d_preamble.size()+6,pmt::blob_data(blob),vlen);
       pmt::pmt_t packet = pmt::make_blob(d_buf,vlen+d_preamble.size());
       message_port_pub(d_out_port, pmt::cons(pmt::PMT_NIL,packet));
     }

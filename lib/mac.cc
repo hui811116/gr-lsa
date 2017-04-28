@@ -37,10 +37,10 @@ namespace gr {
     mac::~mac()
     {
     }*/
-    static const unsigned char lsa_SFD[] = {0xa7, 0xff};
+    //static const unsigned char lsa_SFD[] = {0xa7, 0xff};
     
-    static const unsigned char lsa_ACK[] = {0x00, 0x00};
-    static const unsigned char lsa_NACK[] = {0x01,0x01};
+    //static const unsigned char lsa_ACK[] = {0x00, 0x00};
+    //static const unsigned char lsa_NACK[] = {0x01,0x01};
 
     enum LSAMAC{
       IDLE,
@@ -91,8 +91,8 @@ namespace gr {
           d_hdr_buf = new unsigned char [1024];
           d_ctrl_buf = new unsigned char [256];
           //pre setting SFD
-          memcpy(d_hdr_buf,&lsa_SFD,sizeof(char)*2);
-          memcpy(d_ctrl_buf,&lsa_SFD,sizeof(char)*2);
+          //memcpy(d_hdr_buf,&lsa_SFD,sizeof(char)*2);
+          //memcpy(d_ctrl_buf,&lsa_SFD,sizeof(char)*2);
           d_mac_state = IDLE;
           d_current_clocks = std::clock();
       }
@@ -223,25 +223,28 @@ namespace gr {
         std::string ctr_type;
         const unsigned char* ptr;
         // insert address (self and dest)
-        d_ctrl_buf[4] = 0x00;
-        d_ctrl_buf[5] = 0x00;
+        d_ctrl_buf[0] = 0x00;
+        d_ctrl_buf[1] = 0x00;
         switch(type)
         {
           case REQ:
             ctr_type = "REQ";
           case ACK:
-            d_ctrl_buf[2] = 0x00;
-            d_ctrl_buf[3] = 0x00;
+            //d_ctrl_buf[2] = 0x00;
+            //d_ctrl_buf[3] = 0x00;
             ctr_type = "ACK";
           break;
           case NACK:
-            d_ctrl_buf[2] = 0x01;
-            d_ctrl_buf[3] = 0x01;
+            //d_ctrl_buf[2] = 0x01;
+            //d_ctrl_buf[3] = 0x01;
             ctr_type = "NACK";
           break;
           case SEN:
-            d_ctrl_buf[2] = 0xff;
-            d_ctrl_buf[3] = 0xff;
+            //d_ctrl_buf[0] //CEI field
+            //d_ctrl_buf[1] //CEI field
+
+            //d_ctrl_buf[2] = 0xff;
+            //d_ctrl_buf[3] = 0xff;
             ctr_type = "SEN";
           break;
         }
@@ -306,15 +309,15 @@ namespace gr {
         size_t io(0);
         const unsigned char* uvec = (unsigned char*) pmt::u8vector_elements(blob,io);
         
-        uint8_t* pld_MSB = (uint8_t*) &io;
-        d_hdr_buf[2] = pld_MSB[1];
-        d_hdr_buf[3] = pld_MSB[0];
-        d_hdr_buf[4] = pld_MSB[1];
-        d_hdr_buf[5] = pld_MSB[0];
+        //uint8_t* pld_MSB = (uint8_t*) &io;
+        //d_hdr_buf[2] = pld_MSB[1];
+        //d_hdr_buf[3] = pld_MSB[0];
+        //d_hdr_buf[4] = pld_MSB[1];
+        //d_hdr_buf[5] = pld_MSB[0];
         // FIXME
         // insert detination
-        memcpy(d_hdr_buf+6,uvec,sizeof(char)*io);
-        d_prefix_pdu = pmt::cons(dest,pmt::init_u8vector(io+6,d_hdr_buf));
+        memcpy(d_hdr_buf,uvec,sizeof(char)*io);
+        d_prefix_pdu = pmt::cons(dest,pmt::init_u8vector(io,d_hdr_buf));
         //message_port_pub(d_to_phy_port,d_prefix_pdu);
       }
 
