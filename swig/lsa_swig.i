@@ -39,6 +39,7 @@
 #include "lsa/symbol_corrector_cc.h"
 #include "lsa/control_source_b.h"
 #include "lsa/app_simple.h"
+#include "lsa/block_mac.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -98,3 +99,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, symbol_corrector_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, control_source_b);
 %include "lsa/app_simple.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, app_simple);
+%include "lsa/block_mac.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, block_mac);

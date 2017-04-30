@@ -108,8 +108,8 @@ namespace gr {
               if(parse_hdr()){
                 // check sum passed
                 if( (d_hdr_rx == 0x0000) || (d_hdr_rx == 0x0001) || (d_hdr_rx == 0xffff) ){
-                  //ack  // for addresses
-                  d_pld_parse = 2;
+                  //ack  // for addresses + block counter
+                  d_pld_parse = 4;
                 }
                 else{
                   //data
@@ -168,8 +168,8 @@ namespace gr {
         if(pld1 <=1500 )
         d_hdr_rx = pld1;
         else{
-          d_hdr_rx = 1500;
-          std::cout<<"<Warning> detecting packet with payload greater than 1500"<<std::endl;
+          d_hdr_rx = 100;
+          std::cout<<"<Warning> detecting packet with payload greater than 1500, force to 100"<<std::endl;
         }
         
         return true;
@@ -186,11 +186,11 @@ namespace gr {
       {
         case ACK:
           phytag = pmt::intern("ACK");
-          blob_len = 2;
+          blob_len = 4;
         break;
         case NACK:
           phytag = pmt::intern("NACK");
-          blob_len = 2;
+          blob_len = 4;
         break;
         case DATA:
           phytag = pmt::intern("LSA_DATA");
@@ -198,7 +198,7 @@ namespace gr {
         break;
         case SEN:
           phytag = pmt::intern("SENSE");
-          blob_len = 2;
+          blob_len = 4;
         break;
         default:
           throw std::runtime_error("Bad phy flag");

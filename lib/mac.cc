@@ -108,6 +108,9 @@ namespace gr {
               from_mac(MAC_BUSY,pmt::PMT_NIL);
               return;
             }
+            else{
+              from_mac(FAILED,pmt::PMT_NIL);
+            }
           case IDLE:
             // first try to handshake destination
             assert(pmt::dict_has_key(pmt::intern("DEST_ADDR")));
