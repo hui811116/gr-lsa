@@ -93,87 +93,6 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1280, 92)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>ac</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>digital.packet_utils.default_access_code</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1128, 12)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>ac_hex</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(ac[i:i+8],2) for i in range(0,len(ac),8)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1128, 84)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>acc_bits</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(ac[i:i+bps],2) for i in range(0,len(ac),bps)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
       <value>(1688, 316)</value>
     </param>
     <param>
@@ -201,7 +120,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1608, 76)</value>
+      <value>(1408, 76)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -228,7 +147,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1520, 76)</value>
+      <value>(1320, 76)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -255,7 +174,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1592, 12)</value>
+      <value>(1392, 12)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -349,95 +268,6 @@
     </param>
   </block>
   <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(952, 20)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_bytes</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(ac[i:i+8],2) for i in range(0,len(ac),8)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1704, 244)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_s</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[mod.points()[acc_bits[i]] for i in range(0,len(acc_bits)) ]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable_modulate_vector</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>data</key>
-      <value>ac_hex</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>taps</key>
-      <value>[1]</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1320, 0)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_smp</value>
-    </param>
-    <param>
-      <key>mod</key>
-      <value>rxmod</value>
-    </param>
-  </block>
-  <block>
     <key>variable_qtgui_range</key>
     <param>
       <key>comment</key>
@@ -445,7 +275,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>30</value>
+      <value>0</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -489,7 +319,7 @@
     </param>
     <param>
       <key>stop</key>
-      <value>70</value>
+      <value>25</value>
     </param>
     <param>
       <key>rangeType</key>
@@ -524,7 +354,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"name=MyB210"</value>
+      <value>"addr=192.168.10.2"</value>
     </param>
   </block>
   <block>
@@ -633,7 +463,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1688, 16)</value>
+      <value>(1168, 16)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -658,33 +488,6 @@
     <param>
       <key>sym_rate</key>
       <value>1.0</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(936, 84)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>rxmod</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>digital.generic_mod(mod, False, sps, True, 0.35, False, False)</value>
     </param>
   </block>
   <block>
@@ -726,7 +529,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1520, 12)</value>
+      <value>(1320, 12)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -812,7 +615,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>50</value>
+      <value>3</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -856,7 +659,7 @@
     </param>
     <param>
       <key>stop</key>
-      <value>70</value>
+      <value>25</value>
     </param>
     <param>
       <key>rangeType</key>
@@ -891,7 +694,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"name=MyB210"</value>
+      <value>"addr=192.168.10.2"</value>
     </param>
   </block>
   <block>
@@ -1027,10 +830,6 @@
       <value>0</value>
     </param>
     <param>
-      <key>preamble_s</key>
-      <value>pre_s</value>
-    </param>
-    <param>
       <key>sps</key>
       <value>sps</value>
     </param>
@@ -1084,10 +883,6 @@
     <param>
       <key>minoutbuf</key>
       <value>0</value>
-    </param>
-    <param>
-      <key>preamble_s</key>
-      <value>pre_s</value>
     </param>
     <param>
       <key>sps</key>
@@ -1204,7 +999,7 @@
     </param>
     <param>
       <key>dest</key>
-      <value>87</value>
+      <value>100</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1325,7 +1120,7 @@
     <key>lsa_mac</key>
     <param>
       <key>addr</key>
-      <value>100</value>
+      <value>87</value>
     </param>
     <param>
       <key>alias</key>
@@ -2879,7 +2674,7 @@
     </param>
     <param>
       <key>sd_spec0</key>
-      <value>A:A</value>
+      <value>A:0</value>
     </param>
     <param>
       <key>time_source0</key>
@@ -4214,7 +4009,7 @@
     </param>
     <param>
       <key>sd_spec0</key>
-      <value>A:B</value>
+      <value>A:0</value>
     </param>
     <param>
       <key>time_source0</key>

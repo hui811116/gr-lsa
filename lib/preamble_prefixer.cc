@@ -31,6 +31,8 @@ namespace gr {
 
     static const unsigned char d_default_preamble[] = {0xac,0xdd,0xa4,0xe2,0xf2,0x82,0x20,0xfc};
     static const unsigned char lsa_SFD[] = {0xa7,0xff};
+    static const unsigned char dummy_bytes[] = {0xac,0xbd,0xe3,0xc4,0x57,0xf2,0x75,0x48};
+    static const size_t d_dummy_len = 8;
 
   class preamble_prefixer_impl : public preamble_prefixer
   {
@@ -39,7 +41,7 @@ namespace gr {
                         gr::io_signature::make(0,0,0),
                         gr::io_signature::make(0,0,0))
     {
-      d_buf = new unsigned char[1024];
+      d_buf = new unsigned char[2048];
       set_preamble(preamble);
       d_in_port = pmt::mp("in");
       d_out_port = pmt::mp("out");
@@ -59,8 +61,12 @@ namespace gr {
       if(preamble.empty()){
         throw std::runtime_error("Bad preamble");
       }
+      //d_preamble = std::vector<unsigned char>(dummy_bytes,dummy_bytes+sizeof(dummy_bytes)/sizeof(char));
+      //for(int i=0;i<preamble.size();++i)
+        //d_preamble.push_back(preamble[i]);
       d_preamble = preamble;
-      memcpy(d_buf,preamble.data(),sizeof(char)*preamble.size());
+      
+      memcpy(d_buf,d_preamble.data(),sizeof(char)*d_preamble.size());
       memcpy(d_buf+d_preamble.size(),lsa_SFD, sizeof(char)*2);
     }
 
@@ -76,10 +82,17 @@ namespace gr {
       pmt::pmt_t mac_tag = pmt::car(msg);
       pmt::pmt_t blob = pmt::cdr(msg);
       // debug required
+      // observation: there is an minimum size of bytes to prevent underflow
+      // an empirical value is 10 (not account for preamble)
+
       assert(pmt::is_blob(blob));
       size_t vlen = pmt::blob_length(blob);
       assert(vlen >=2);
       memcpy(d_buf+d_preamble.size()+6,pmt::blob_data(blob),vlen);
+      if(vlen<10){
+        memcpy(d_buf+d_preamble.size()+6+vlen,dummy_bytes,sizeof(char)*8);
+        vlen+=8;
+      }
       if(pmt::eqv(pmt::intern("DATA"),mac_tag)){
         uint8_t* pld_MSB = (uint8_t*) &vlen;  
         d_buf[d_preamble.size()+2] = pld_MSB[1];

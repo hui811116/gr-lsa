@@ -165,7 +165,13 @@ namespace gr {
       pld2 |= d_hdr_buf[2];
       pld2 = (pld2<<8) | d_hdr_buf[3];
       if(pld1==pld2){
+        if(pld1 <=1500 )
         d_hdr_rx = pld1;
+        else{
+          d_hdr_rx = 1500;
+          std::cout<<"<Warning> detecting packet with payload greater than 1500"<<std::endl;
+        }
+        
         return true;
       }
       return false;

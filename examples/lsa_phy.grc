@@ -738,7 +738,7 @@
     </param>
     <param>
       <key>mult</key>
-      <value>sps/mod.bits_per_symbol()</value>
+      <value>sps*8/mod.bits_per_symbol()</value>
     </param>
   </block>
   <block>
