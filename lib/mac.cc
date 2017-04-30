@@ -171,7 +171,8 @@ namespace gr {
         pmt::pmt_t k = pmt::car(msg);
         pmt::pmt_t v = pmt::cdr(msg);
         if(pmt::eqv(pmt::intern("LSA_DATA"),k) && (d_mac_state==BUSY_DATA) ){
-          
+          if(duration > d_timeout_clocks)
+            from_mac(FAILED,pmt::PMT_NIL);
           assert(pmt::is_blob(v));
           //std::cout<<"<DEBUG>addr="<<(int)d_addr<<" ,passing blob check"<<std::endl;
           parse_mac_hdr(v);
@@ -240,19 +241,20 @@ namespace gr {
       {
         pmt::pmt_t ctrl = pmt::car(msg);
         pmt::pmt_t blob = pmt::cdr(msg);
+        assert(pmt::is_blob(blob));
+        parse_mac_hdr(blob);
+        // checking address
+        if(d_mac_buf[0] != d_addr)
+          return;
         // suppose address checking passed
         if(d_mac_state==IDLE && pmt::eqv(pmt::intern("ACK"),ctrl)){
           // someone try to connect you
           // first check address and change state
-          assert(pmt::is_blob(blob));
-          parse_mac_hdr(blob);
-          if(d_addr = d_mac_buf[0]){
             //std::cout<<"<DEBUG>addr="<<(int)d_addr << " ,receiving request to send"<<std::endl;
             d_dest = d_mac_buf[1];
             d_mac_state = BUSY_DATA;
             d_current_clocks = std::clock();
             to_ctrl(ACK,d_dest);
-          }
           //assume address checked
         }
         else if(d_mac_state == BUSY_HAND){
