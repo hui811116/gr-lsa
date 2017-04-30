@@ -275,7 +275,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>0</value>
+      <value>0.2</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -315,11 +315,11 @@
     </param>
     <param>
       <key>step</key>
-      <value>1</value>
+      <value>0.01</value>
     </param>
     <param>
       <key>stop</key>
-      <value>25</value>
+      <value>1</value>
     </param>
     <param>
       <key>rangeType</key>
@@ -365,7 +365,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>40</value>
+      <value>0.2</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -405,11 +405,11 @@
     </param>
     <param>
       <key>step</key>
-      <value>1</value>
+      <value>0.01</value>
     </param>
     <param>
       <key>stop</key>
-      <value>70</value>
+      <value>1</value>
     </param>
     <param>
       <key>rangeType</key>
@@ -615,7 +615,70 @@
     </param>
     <param>
       <key>value</key>
-      <value>3</value>
+      <value>-50</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1232, 512)</value>
+    </param>
+    <param>
+      <key>gui_hint</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>thres_ctrl</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>Ctrl ED threshold</value>
+    </param>
+    <param>
+      <key>min_len</key>
+      <value>200</value>
+    </param>
+    <param>
+      <key>orient</key>
+      <value>Qt.Horizontal</value>
+    </param>
+    <param>
+      <key>start</key>
+      <value>-80</value>
+    </param>
+    <param>
+      <key>step</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>stop</key>
+      <value>-10</value>
+    </param>
+    <param>
+      <key>rangeType</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>widget</key>
+      <value>counter_slider</value>
+    </param>
+  </block>
+  <block>
+    <key>variable_qtgui_range</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>0.2</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -655,11 +718,11 @@
     </param>
     <param>
       <key>step</key>
-      <value>1</value>
+      <value>0.01</value>
     </param>
     <param>
       <key>stop</key>
-      <value>25</value>
+      <value>1</value>
     </param>
     <param>
       <key>rangeType</key>
@@ -705,7 +768,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>50</value>
+      <value>0.2</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -745,11 +808,11 @@
     </param>
     <param>
       <key>step</key>
-      <value>1</value>
+      <value>0.01</value>
     </param>
     <param>
       <key>stop</key>
-      <value>70</value>
+      <value>1</value>
     </param>
     <param>
       <key>rangeType</key>
@@ -1070,6 +1133,49 @@
     </param>
   </block>
   <block>
+    <key>lsa_burst_parser_cc</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(424, 420)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_burst_parser_cc_0_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>min_len</key>
+      <value>100</value>
+    </param>
+  </block>
+  <block>
     <key>lsa_eng_det_cc</key>
     <param>
       <key>bin</key>
@@ -1114,6 +1220,53 @@
     <param>
       <key>threshold</key>
       <value>thres</value>
+    </param>
+  </block>
+  <block>
+    <key>lsa_eng_det_cc</key>
+    <param>
+      <key>bin</key>
+      <value>50</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(240, 416)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_eng_det_cc_0_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>threshold</key>
+      <value>thres_ctrl</value>
     </param>
   </block>
   <block>
@@ -3989,7 +4142,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(224, 384)</value>
+      <value>(16, 400)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -5526,8 +5679,20 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>lsa_burst_parser_cc_0_0</source_block_id>
+    <sink_block_id>LSA_ctrl_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>lsa_eng_det_cc_0</source_block_id>
     <sink_block_id>lsa_burst_parser_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_eng_det_cc_0_0</source_block_id>
+    <sink_block_id>lsa_burst_parser_cc_0_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -5551,7 +5716,7 @@
   </connection>
   <connection>
     <source_block_id>uhd_usrp_source_0</source_block_id>
-    <sink_block_id>LSA_ctrl_0</sink_block_id>
+    <sink_block_id>lsa_eng_det_cc_0_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
