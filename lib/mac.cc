@@ -33,7 +33,8 @@ namespace gr {
     enum LSAMAC{
       IDLE,
       BUSY_HAND,
-      BUSY_DATA,
+      BUSY_WAIT_DATA,
+      BUSY_SEND_DATA
     };
     enum LSAOUT{
       SUCCESS,
@@ -54,7 +55,7 @@ namespace gr {
       mac_impl(unsigned int addr):block ("mac",
                         gr::io_signature::make(0,0,0),
                         gr::io_signature::make(0,0,0)),
-                        d_timeout_clocks(CLOCKS_PER_SEC*0.01),
+                        d_timeout_clocks(CLOCKS_PER_SEC*2.0),
                         d_addr(addr)
       {
           d_to_mac_port = pmt::mp("msg_in");
@@ -99,8 +100,15 @@ namespace gr {
         }
         assert(pmt::is_dict(k));
         switch(d_mac_state){
+          case BUSY_HAND:
+          case BUSY_WAIT_DATA:
+          case BUSY_SEND_DATA:
+          duration = std::clock() - d_current_clocks;
+            if(duration<d_timeout_clocks){
+              from_mac(MAC_BUSY,pmt::PMT_NIL);
+              return;
+            }
           case IDLE:
-            //std::cout<<"<debug>addr="<<(int)d_addr<<" ,reach state IDLE"<<std::endl;
             // first try to handshake destination
             assert(pmt::dict_has_key(pmt::intern("DEST_ADDR")));
             d_dest = pmt::to_long(pmt::dict_ref(k,pmt::intern("DEST_ADDR"),pmt::from_long(0x00)));
@@ -110,17 +118,6 @@ namespace gr {
             to_ctrl(REQ,d_dest);
             //std::cout<<"<debug>addr="<<(int)d_addr<<"storing data"<<std::endl;
             store_data(v);
-          break;
-          case BUSY_HAND:
-          case BUSY_DATA:
-            duration = std::clock() - d_current_clocks;
-            if(duration>d_timeout_clocks){
-              from_mac(FAILED,pmt::PMT_NIL);
-            }
-            else
-            {
-              from_mac(MAC_BUSY,pmt::PMT_NIL);
-            }
           break;
           default:
             throw std::runtime_error("<LSA MAC>ERROR: to_mac bad state");
@@ -151,7 +148,7 @@ namespace gr {
           break;
           case DATA:
             assert(pmt::is_blob(blob));
-            assert(d_mac_state == BUSY_DATA);
+            assert(d_mac_state == BUSY_WAIT_DATA);
             content = blob;
             dict = pmt::dict_add(dict,pmt::intern("LSA_MAC"),pmt::intern("DATA"));
             d_mac_state = IDLE;
@@ -170,15 +167,16 @@ namespace gr {
         long int duration = std::clock()-d_current_clocks;
         pmt::pmt_t k = pmt::car(msg);
         pmt::pmt_t v = pmt::cdr(msg);
-        if(pmt::eqv(pmt::intern("LSA_DATA"),k) && (d_mac_state==BUSY_DATA) ){
-          if(duration > d_timeout_clocks)
-            from_mac(FAILED,pmt::PMT_NIL);
+        if(pmt::eqv(pmt::intern("LSA_DATA"),k) && (d_mac_state==BUSY_WAIT_DATA) ){
+          //if(duration > d_timeout_clocks)
+            //from_mac(FAILED,pmt::PMT_NIL);
           assert(pmt::is_blob(v));
           //std::cout<<"<DEBUG>addr="<<(int)d_addr<<" ,passing blob check"<<std::endl;
           parse_mac_hdr(v);
           unsigned char to_addr=d_mac_buf[0], from_addr=d_mac_buf[1];
-            if(to_addr = d_addr){
-              //std::cout<<"<DEBUG>addr="<<(int)d_addr<<" Receive complete, ack back..."<<std::endl;
+            if((to_addr == d_addr) &&(from_addr == d_dest) ){
+              //std::cout<<"<DEBUG>addr="<<(int)d_addr<<" Receive from <<"<<from_addr<<", ack back..."<<std::endl;
+              d_current_clocks = std::clock();
               to_ctrl(ACK,d_dest);
               size_t io(0); 
               const uint8_t* uvec= pmt::u8vector_elements(v,io);
@@ -252,20 +250,21 @@ namespace gr {
           // first check address and change state
             //std::cout<<"<DEBUG>addr="<<(int)d_addr << " ,receiving request to send"<<std::endl;
             d_dest = d_mac_buf[1];
-            d_mac_state = BUSY_DATA;
+            d_mac_state = BUSY_WAIT_DATA;
             d_current_clocks = std::clock();
             to_ctrl(ACK,d_dest);
           //assume address checked
         }
-        else if(d_mac_state == BUSY_HAND){
+        else if( (d_mac_state == BUSY_HAND) && (d_dest == d_mac_buf[1])){
           if(pmt::eqv(pmt::intern("ACK"),ctrl)){
             // hand shaking success, ready to send
             //std::cout<<"<DEBUG>addr="<<(int)d_addr << " ,Handshaking complete send data"<<std::endl;
-            d_mac_state = BUSY_DATA;
+            d_mac_state = BUSY_SEND_DATA;
+            d_current_clocks = std::clock();
             to_phy(d_dest);
           }
         }
-        else if(d_mac_state == BUSY_DATA){
+        else if( (d_mac_state == BUSY_SEND_DATA) && (d_dest == d_mac_buf[1])){
           if(pmt::eqv(pmt::intern("ACK"),ctrl)){
             // data been received, report success and change state
             //std::cout<<"<DEBUG>addr="<<(int)d_addr << " ,Transmit complete, resetting mac"<<std::endl;
