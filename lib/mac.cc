@@ -165,11 +165,13 @@ namespace gr {
       void 
       from_phy(pmt::pmt_t msg){
         long int duration = std::clock()-d_current_clocks;
+        if(duration > d_timeout_clocks)
+            from_mac(FAILED,pmt::PMT_NIL);
+        return ;
         pmt::pmt_t k = pmt::car(msg);
         pmt::pmt_t v = pmt::cdr(msg);
         if(pmt::eqv(pmt::intern("LSA_DATA"),k) && (d_mac_state==BUSY_WAIT_DATA) ){
-          //if(duration > d_timeout_clocks)
-            //from_mac(FAILED,pmt::PMT_NIL);
+          
           assert(pmt::is_blob(v));
           //std::cout<<"<DEBUG>addr="<<(int)d_addr<<" ,passing blob check"<<std::endl;
           parse_mac_hdr(v);
@@ -245,6 +247,7 @@ namespace gr {
         if(d_mac_buf[0] != d_addr)
           return;
         // suppose address checking passed
+        long int duration = std::clock() - d_current_clocks;
         if(d_mac_state==IDLE && pmt::eqv(pmt::intern("ACK"),ctrl)){
           // someone try to connect you
           // first check address and change state
@@ -256,6 +259,10 @@ namespace gr {
           //assume address checked
         }
         else if( (d_mac_state == BUSY_HAND) && (d_dest == d_mac_buf[1])){
+          if(duration > d_timeout_clocks){
+            from_mac(FAILED,pmt::PMT_NIL);
+            return;
+          }
           if(pmt::eqv(pmt::intern("ACK"),ctrl)){
             // hand shaking success, ready to send
             //std::cout<<"<DEBUG>addr="<<(int)d_addr << " ,Handshaking complete send data"<<std::endl;
@@ -272,7 +279,6 @@ namespace gr {
           }
           else if(pmt::eqv(pmt::intern("NACK"),ctrl)){
             // data failed
-            long int duration = std::clock() - d_current_clocks;
             if(duration<d_timeout_clocks){
               // retransmission go!
               to_phy(d_dest);
