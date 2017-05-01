@@ -57,6 +57,7 @@
   <sink>
     <name>mac_in</name>
     <type>message</type>
+    <optional>1</optional>
   </sink>
   <sink>
     <name>phy_in</name>
