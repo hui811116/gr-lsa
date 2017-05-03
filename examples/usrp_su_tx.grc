@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<?grc format='1' created='3.7.12'?>
+<?grc format='1' created='3.7.11'?>
 <flow_graph>
   <timestamp>Wed May  3 13:05:35 2017</timestamp>
   <block>
@@ -10,7 +10,7 @@
     </param>
     <param>
       <key>window_size</key>
-      <value></value>
+      <value>2000,2000</value>
     </param>
     <param>
       <key>category</key>
@@ -93,6 +93,114 @@
     </param>
     <param>
       <key>_coordinate</key>
+      <value>(472, 540)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>ac</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>digital.packet_utils.default_access_code</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1016, 500)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>acc_bits</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[int(accesscode[i:i+bps],2) for i in range(0,len(accesscode),bps)]</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1008, 436)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>accesscode</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>digital.packet_utils.default_access_code</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(880, 604)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>bps</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>mod.bits_per_symbol()</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
       <value>(544, 388)</value>
     </param>
     <param>
@@ -105,7 +213,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"name=NicB210"</value>
+      <value>"name=MyB210"</value>
     </param>
   </block>
   <block>
@@ -214,6 +322,60 @@
     </param>
   </block>
   <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1016, 564)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>pre_code</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[mod.pre_diff_code()[acc_bits[i]] for i in range(0,len(acc_bits))]</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1016, 620)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>pre_s</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[mod.points()[pre_code[i]] for i in range(0,len(pre_code)) ]</value>
+    </param>
+  </block>
+  <block>
     <key>variable_qtgui_range</key>
     <param>
       <key>comment</key>
@@ -274,6 +436,49 @@
     <param>
       <key>widget</key>
       <value>counter_slider</value>
+    </param>
+  </block>
+  <block>
+    <key>variable_rrc_filter_taps</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>alpha</key>
+      <value>0.35</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(992, 152)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>gain</key>
+      <value>32</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>rx_rrc_taps</value>
+    </param>
+    <param>
+      <key>ntaps</key>
+      <value>11*sps*32</value>
+    </param>
+    <param>
+      <key>samp_rate</key>
+      <value>sps*32</value>
+    </param>
+    <param>
+      <key>sym_rate</key>
+      <value>1.0</value>
     </param>
   </block>
   <block>
@@ -496,37 +701,6 @@
     </param>
   </block>
   <block>
-    <key>blocks_message_debug</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(744, 48)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>blocks_message_debug_0</value>
-    </param>
-  </block>
-  <block>
     <key>blocks_stream_to_tagged_stream</key>
     <param>
       <key>alias</key>
@@ -731,7 +905,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(456, 100)</value>
+      <value>(432, 108)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2942,15 +3116,9 @@
   </connection>
   <connection>
     <source_block_id>standard_rx_0</source_block_id>
-    <sink_block_id>blocks_message_debug_0</sink_block_id>
+    <sink_block_id>uhd_usrp_sink_0</sink_block_id>
     <source_key>out</source_key>
-    <sink_key>print</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>standard_rx_0</source_block_id>
-    <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
-    <source_key>out</source_key>
-    <sink_key>sensing_info</sink_key>
+    <sink_key>command</sink_key>
   </connection>
   <connection>
     <source_block_id>uhd_usrp_source_0</source_block_id>

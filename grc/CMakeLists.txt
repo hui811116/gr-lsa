@@ -42,5 +42,6 @@ install(FILES
     lsa_control_source_b.xml
     lsa_app_simple.xml
     lsa_block_mac.xml
-    lsa_su_ctrl.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_su_ctrl.xml
+    lsa_chip_mapper.xml DESTINATION share/gnuradio/grc/blocks
 )

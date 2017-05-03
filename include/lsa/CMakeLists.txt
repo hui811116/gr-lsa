@@ -47,5 +47,6 @@ install(FILES
     control_source_b.h
     app_simple.h
     block_mac.h
-    su_ctrl.h DESTINATION include/lsa
+    su_ctrl.h
+    chip_mapper.h DESTINATION include/lsa
 )

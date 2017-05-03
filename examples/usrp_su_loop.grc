@@ -834,61 +834,6 @@
     </param>
   </block>
   <block>
-    <key>digital_cma_equalizer_cc</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(816, 464)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>mu</key>
-      <value>0.05</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>digital_cma_equalizer_cc_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>modulus</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>num_taps</key>
-      <value>15</value>
-    </param>
-    <param>
-      <key>sps</key>
-      <value>1</value>
-    </param>
-  </block>
-  <block>
     <key>digital_costas_loop_cc</key>
     <param>
       <key>alias</key>
@@ -1085,7 +1030,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(936, 384)</value>
+      <value>(816, 400)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1143,10 +1088,6 @@
       <value>True</value>
     </param>
     <param>
-      <key>ed_tagname</key>
-      <value>"ed_voe"</value>
-    </param>
-    <param>
       <key>_coordinate</key>
       <value>(328, 696)</value>
     </param>
@@ -1165,10 +1106,6 @@
     <param>
       <key>minoutbuf</key>
       <value>0</value>
-    </param>
-    <param>
-      <key>voe_tagname</key>
-      <value>"voe_val"</value>
     </param>
     <param>
       <key>voe_thres</key>
@@ -4991,12 +4928,6 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>digital_cma_equalizer_cc_0</source_block_id>
-    <sink_block_id>lsa_correlate_sync_cc_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
     <source_block_id>digital_costas_loop_cc_0</source_block_id>
     <sink_block_id>qtgui_time_sink_x_0</sink_block_id>
     <source_key>1</source_key>
@@ -5010,7 +4941,7 @@
   </connection>
   <connection>
     <source_block_id>digital_pfb_clock_sync_xxx_0</source_block_id>
-    <sink_block_id>digital_cma_equalizer_cc_0</sink_block_id>
+    <sink_block_id>lsa_correlate_sync_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

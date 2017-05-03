@@ -31,6 +31,7 @@
 #include "qa_app_simple.h"
 #include "qa_block_mac.h"
 #include "qa_su_ctrl.h"
+#include "qa_chip_mapper.h"
 
 CppUnit::TestSuite *
 qa_lsa::suite()
@@ -41,6 +42,7 @@ qa_lsa::suite()
   s->addTest(gr::lsa::qa_app_simple::suite());
   s->addTest(gr::lsa::qa_block_mac::suite());
   s->addTest(gr::lsa::qa_su_ctrl::suite());
+  s->addTest(gr::lsa::qa_chip_mapper::suite());
 
   return s;
 }

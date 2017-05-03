@@ -41,6 +41,7 @@
 #include "lsa/app_simple.h"
 #include "lsa/block_mac.h"
 #include "lsa/su_ctrl.h"
+#include "lsa/chip_mapper.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -104,3 +105,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, app_simple);
 GR_SWIG_BLOCK_MAGIC2(lsa, block_mac);
 %include "lsa/su_ctrl.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, su_ctrl);
+%include "lsa/chip_mapper.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, chip_mapper);

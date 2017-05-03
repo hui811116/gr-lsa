@@ -50,7 +50,8 @@ list(APPEND lsa_sources
     control_source_b_impl.cc
     app_simple.cc
     block_mac.cc
-    su_ctrl.cc )
+    su_ctrl.cc
+    chip_mapper.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
@@ -83,6 +84,7 @@ include_directories(${CPPUNIT_INCLUDE_DIRS})
 list(APPEND test_lsa_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/test_lsa.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_lsa.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/qa_chip_mapper.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_ctrl.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_block_mac.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_app_simple.cc
