@@ -41,5 +41,6 @@ install(FILES
     lsa_symbol_corrector_cc.xml
     lsa_control_source_b.xml
     lsa_app_simple.xml
-    lsa_block_mac.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_block_mac.xml
+    lsa_su_ctrl.xml DESTINATION share/gnuradio/grc/blocks
 )

@@ -46,5 +46,6 @@ install(FILES
     symbol_corrector_cc.h
     control_source_b.h
     app_simple.h
-    block_mac.h DESTINATION include/lsa
+    block_mac.h
+    su_ctrl.h DESTINATION include/lsa
 )

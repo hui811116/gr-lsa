@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<block>
+  <name>SU Control</name>
+  <key>lsa_su_ctrl</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.su_ctrl($code)</make>
+  
+  <param>
+    <name>accesscode</name>
+    <key>code</key>
+    <type>int_vector</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>ctrl_in</name>
+    <type>message</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>ctrl_out</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+</block>
