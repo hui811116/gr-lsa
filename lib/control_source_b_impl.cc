@@ -89,7 +89,7 @@ namespace gr {
       assert(pmt::is_blob(v));
       size_t vlen = pmt::blob_length(v);
       memcpy(d_data_buf,pmt::blob_data(v),vlen);
-      d_data_count = vlen/sizeof(char);
+      d_data_count = vlen;
     }
 
   } /* namespace lsa */
