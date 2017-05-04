@@ -48,5 +48,6 @@ install(FILES
     app_simple.h
     block_mac.h
     su_ctrl.h
-    chip_mapper.h DESTINATION include/lsa
+    chip_mapper.h
+    DESTINATION include/lsa
 )

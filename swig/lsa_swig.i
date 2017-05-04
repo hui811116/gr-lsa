@@ -4,6 +4,7 @@
 #define DIGITAL_API
 #define FILTER_API
 #define FFT_API
+#define BLOCKS_API
 
 %include "gnuradio.i"			// the common stuff
 
@@ -12,7 +13,9 @@
 
 %include "gnuradio/digital/constellation.h"
 %include "gnuradio/filter/fir_filter.h"
+#include "gnuradio/blocks/count_bits.h"
 #include "gnuradio/fft/fft.h"
+
 
 %{
 #include "lsa/eng_det_cc.h"
@@ -107,3 +110,4 @@ GR_SWIG_BLOCK_MAGIC2(lsa, block_mac);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_ctrl);
 %include "lsa/chip_mapper.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, chip_mapper);
+
