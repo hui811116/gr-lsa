@@ -49,5 +49,5 @@ install(FILES
     block_mac.h
     su_ctrl.h
     chip_mapper.h
-    DESTINATION include/lsa
+    packet_sink.h DESTINATION include/lsa
 )

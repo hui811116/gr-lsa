@@ -62,3 +62,4 @@ GR_ADD_TEST(qa_burst_parser_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/
 GR_ADD_TEST(qa_packet_parser_b ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_packet_parser_b.py)
 GR_ADD_TEST(qa_symbol_corrector_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_symbol_corrector_cc.py)
 GR_ADD_TEST(qa_control_source_b ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_control_source_b.py)
+GR_ADD_TEST(qa_packet_sink ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_packet_sink.py)
