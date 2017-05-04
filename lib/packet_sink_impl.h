@@ -45,7 +45,7 @@ namespace gr {
       void enter_search();
       void enter_have_sync();
       void enter_load_payload();
-      unsigned char decode_chip(const unsigned char& reg);
+      unsigned char decode_chip(const unsigned int& reg);
 
      public:
       packet_sink_impl(int threshold);

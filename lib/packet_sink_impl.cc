@@ -87,7 +87,7 @@ enum SYSTEMSTATE{
     }
 
     unsigned char
-    packet_sink_impl::decode_chip(const unsigned char& reg)
+    packet_sink_impl::decode_chip(const unsigned int& reg)
     {
       int min_thres = 33;
       int thres;
@@ -95,12 +95,12 @@ enum SYSTEMSTATE{
       for(int i=0;i<16;++i){
         thres = gr::blocks::count_bits32( (reg & d_mask)^(CHIPSET[i]&d_mask));
         if(thres < min_thres){
-          min_idx  = (char)i;
+          min_idx  = (unsigned char)i;
           min_thres = thres;
         }
       }
       if(min_thres < d_threshold){
-        return min_idx & 0xf;
+        return min_idx & 0x0f;
       }
       return 0xff;
     }
@@ -150,7 +150,6 @@ enum SYSTEMSTATE{
                        gr_vector_void_star &output_items)
     {
       const unsigned char *in = (const unsigned char *) input_items[0];
-      //unsigned char *out = (unsigned char *) output_items[0];
       int nin = ninput_items[0];
       int count = 0;
       while(count < nin){
@@ -211,6 +210,7 @@ enum SYSTEMSTATE{
               if(d_chip_cnt==32){
                 d_chip_cnt=0;
                 unsigned char c = decode_chip(d_data_reg);
+                std::cerr<<"sync decoded symbol:"<<(int)c<<std::endl;
               if(c==0xff){
                 enter_search();
                 break;
