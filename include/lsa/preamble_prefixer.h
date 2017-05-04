@@ -36,9 +36,7 @@ namespace gr {
     {
     public:
     typedef boost::shared_ptr<preamble_prefixer> sptr;
-      static sptr make(const std::vector<unsigned char>& preamble);
-      //preamble_prefixer();
-      //~preamble_prefixer();
+      static sptr make();
     private:
     };
 

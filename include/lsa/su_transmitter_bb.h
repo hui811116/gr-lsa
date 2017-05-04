@@ -1,6 +1,6 @@
 /* -*- c++ -*- */
 /* 
- * Copyright 2016 <+YOU OR YOUR COMPANY+>.
+ * Copyright 2017 <+YOU OR YOUR COMPANY+>.
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,11 @@
  */
 
 
-#ifndef INCLUDED_LSA_SU_TRANSMITTER_BC_H
-#define INCLUDED_LSA_SU_TRANSMITTER_BC_H
+#ifndef INCLUDED_LSA_SU_TRANSMITTER_BB_H
+#define INCLUDED_LSA_SU_TRANSMITTER_BB_H
 
 #include <lsa/api.h>
 #include <gnuradio/tagged_stream_block.h>
-#include <gnuradio/digital/constellation.h>
 
 namespace gr {
   namespace lsa {
@@ -34,32 +33,24 @@ namespace gr {
      * \ingroup lsa
      *
      */
-    class LSA_API su_transmitter_bc : virtual public gr::tagged_stream_block
+    class LSA_API su_transmitter_bb : virtual public gr::tagged_stream_block
     {
      public:
-      typedef boost::shared_ptr<su_transmitter_bc> sptr;
+      typedef boost::shared_ptr<su_transmitter_bb> sptr;
 
       /*!
-       * \brief Return a shared_ptr to a new instance of lsa::su_transmitter_bc.
+       * \brief Return a shared_ptr to a new instance of lsa::su_transmitter_bb.
        *
-       * To avoid accidental use of raw pointers, lsa::su_transmitter_bc's
+       * To avoid accidental use of raw pointers, lsa::su_transmitter_bb's
        * constructor is in a private implementation
-       * class. lsa::su_transmitter_bc::make is the public interface for
+       * class. lsa::su_transmitter_bb::make is the public interface for
        * creating new instances.
        */
-      static sptr make(
-        const std::string& lengthtagname,
-        const std::string& sensing_tag,
-        const std::string& accesscode,
-        const gr::digital::constellation_sptr& hdr_const,
-        const gr::digital::constellation_sptr& pld_const,
-        int qmax,
-        int mode,
-        bool debug);
+      static sptr make(const std::string& tagname, int mode, bool debug);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SU_TRANSMITTER_BC_H */
+#endif /* INCLUDED_LSA_SU_TRANSMITTER_BB_H */
 

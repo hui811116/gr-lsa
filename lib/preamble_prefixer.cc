@@ -29,20 +29,21 @@
 namespace gr {
   namespace lsa {
 
-    static const unsigned char d_default_preamble[] = {0xac,0xdd,0xa4,0xe2,0xf2,0x82,0x20,0xfc};
-    static const unsigned char lsa_SFD[] = {0xa7,0xff};
-    static const unsigned char dummy_bytes[] = {0xac,0xbd,0xe3,0xc4,0x57,0xf2,0x75,0x48};
-    static const size_t d_dummy_len = 8;
+    
+    static const unsigned char lsa_SFD = 0x7A;
+    static const size_t d_reserved_len = 4;
+    static const unsigned char lsa_preamble[] = {0x00,0x00,0x00,0x00};
 
   class preamble_prefixer_impl : public preamble_prefixer
   {
     public:
-    preamble_prefixer_impl(const std::vector<unsigned char>& preamble):block("preamble_prefixer",
+    preamble_prefixer_impl():block("preamble_prefixer",
                         gr::io_signature::make(0,0,0),
                         gr::io_signature::make(0,0,0))
     {
-      d_buf = new unsigned char[2048];
-      set_preamble(preamble);
+      d_buf = new unsigned char[256];
+      memcpy(d_buf,lsa_preamble,sizeof(char)*4);
+      d_buf[4] = lsa_SFD;
       d_in_port = pmt::mp("in");
       d_out_port = pmt::mp("out");
       message_port_register_in(d_in_port);
@@ -56,21 +57,6 @@ namespace gr {
     }
 
     void
-    set_preamble(const std::vector<unsigned char>& preamble)
-    {
-      if(preamble.empty()){
-        throw std::runtime_error("Bad preamble");
-      }
-      //d_preamble = std::vector<unsigned char>(dummy_bytes,dummy_bytes+sizeof(dummy_bytes)/sizeof(char));
-      //for(int i=0;i<preamble.size();++i)
-        //d_preamble.push_back(preamble[i]);
-      d_preamble = preamble;
-      
-      memcpy(d_buf,d_preamble.data(),sizeof(char)*d_preamble.size());
-      memcpy(d_buf+d_preamble.size(),lsa_SFD, sizeof(char)*2);
-    }
-
-    void
     add_pre(pmt::pmt_t msg)
     {
       if(pmt::is_eof_object(msg)){
@@ -81,40 +67,36 @@ namespace gr {
       assert(pmt::is_pair(msg));
       pmt::pmt_t mac_tag = pmt::car(msg);
       pmt::pmt_t blob = pmt::cdr(msg);
-      // debug required
-      // observation: there is an minimum size of bytes to prevent underflow
-      // an empirical value is 10 (not account for preamble)
-
       assert(pmt::is_blob(blob));
       size_t vlen = pmt::blob_length(blob);
-      assert(vlen >=2);
-      memcpy(d_buf+d_preamble.size()+6,pmt::blob_data(blob),vlen);
-      if(vlen<10){
-        memcpy(d_buf+d_preamble.size()+6+vlen,dummy_bytes,sizeof(char)*8);
-        vlen+=8;
-      }
+      //assert(vlen > d_reserved_len);
+      //memcpy(d_buf+d_preamble.size()+6,pmt::blob_data(blob),vlen);
+      
       if(pmt::eqv(pmt::intern("DATA"),mac_tag)){
-        uint8_t* pld_MSB = (uint8_t*) &vlen;  
-        d_buf[d_preamble.size()+2] = pld_MSB[1];
-        d_buf[d_preamble.size()+3] = pld_MSB[0];
-        d_buf[d_preamble.size()+4] = pld_MSB[1];
-        d_buf[d_preamble.size()+5] = pld_MSB[0];
+        assert(vlen > d_reserved_len && vlen < 128);
+        uint8_t len_u8 = (uint8_t)vlen;
+        memcpy(d_buf+4+1,pmt::blob_data(blob),sizeof(char)*vlen);
       }
+      // special flags
       else if(pmt::eqv(pmt::intern("ACK"),mac_tag)){
-        memset(d_buf+d_preamble.size()+2,0x00,sizeof(char)*4);
-        d_buf[d_preamble.size()+3] = 0x01;
-        d_buf[d_preamble.size()+5] = 0x01;
+        d_buf[5] = 0x01;
+        d_buf[6] = 0xff;
+        vlen = 1;
       }
       else if(pmt::eqv(pmt::intern("NACK"),mac_tag)){
-        memset(d_buf+d_preamble.size()+2,0x00,sizeof(char)*4);
+        d_buf[5] = 0x00;
+        vlen=0;
       }
       else if(pmt::eqv(pmt::intern("SEN"),mac_tag)){
-        memset(d_buf+d_preamble.size()+2,0xff,sizeof(char)*4);
+        d_buf[5] = 0x02;
+        d_buf[6] = 0xff;
+        d_buf[7] = 0xff;
+        vlen=2;
       }
       else{
         throw std::runtime_error("BAD PHY PPDU");
       }
-      pmt::pmt_t packet = pmt::make_blob(d_buf,vlen+d_preamble.size()+6);
+      pmt::pmt_t packet = pmt::make_blob(d_buf,vlen+6);
       message_port_pub(d_out_port, pmt::cons(pmt::PMT_NIL,packet));
     }
 
@@ -122,14 +104,13 @@ namespace gr {
       pmt::pmt_t d_in_port;
       pmt::pmt_t d_out_port;
       unsigned char* d_buf;
-      std::vector<unsigned char> d_preamble;
   };
 
 
   preamble_prefixer::sptr
-  preamble_prefixer::make(const std::vector<unsigned char>& preamble)
+  preamble_prefixer::make()
   {
-    return gnuradio::get_initial_sptr(new preamble_prefixer_impl(preamble));
+    return gnuradio::get_initial_sptr(new preamble_prefixer_impl());
   }
 
   } /* namespace lsa */

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # 
-# Copyright 2016 <+YOU OR YOUR COMPANY+>.
+# Copyright 2017 <+YOU OR YOUR COMPANY+>.
 # 
 # This is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ from gnuradio import gr, gr_unittest
 from gnuradio import blocks
 import lsa_swig as lsa
 
-class qa_su_transmitter_bc (gr_unittest.TestCase):
+class qa_su_transmitter_bb (gr_unittest.TestCase):
 
     def setUp (self):
         self.tb = gr.top_block ()
@@ -38,4 +38,4 @@ class qa_su_transmitter_bc (gr_unittest.TestCase):
 
 
 if __name__ == '__main__':
-    gr_unittest.run(qa_su_transmitter_bc, "qa_su_transmitter_bc.xml")
+    gr_unittest.run(qa_su_transmitter_bb, "qa_su_transmitter_bb.xml")

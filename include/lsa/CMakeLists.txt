@@ -25,7 +25,6 @@ install(FILES
     eng_det_cc.h
     header_payload_parser_cb.h
     su_header_prefix.h
-    su_transmitter_bc.h
     interference_energy_detector_cc.h
     modified_polyphase_time_sync_cc.h
     modified_costas_loop_cc.h
@@ -49,5 +48,6 @@ install(FILES
     block_mac.h
     su_ctrl.h
     chip_mapper.h
-    packet_sink.h DESTINATION include/lsa
+    packet_sink.h
+    su_transmitter_bb.h DESTINATION include/lsa
 )
