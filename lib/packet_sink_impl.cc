@@ -219,11 +219,11 @@ enum SYSTEMSTATE{
                 //check header
                   if(d_symbol_cnt==0){
                     // first symbol of header
-                    d_pkt_byte = c;
+                    d_pkt_byte = (c<<4);
                     d_symbol_cnt++;
                   }
                   else{
-                    d_pkt_byte |= (c<<4);
+                    d_pkt_byte |= c;
                     if(d_pkt_byte <= MAX_PLD){
                       enter_load_payload();
                       break;
@@ -251,11 +251,11 @@ enum SYSTEMSTATE{
                 else{
                   if(d_symbol_cnt%2==0){
                     // first symbol of a byte
-                    d_buf[d_symbol_cnt/2] = c;
+                    d_buf[d_symbol_cnt/2] = (c<<4);
                   }
                   else{
                     // second symbol of a byte
-                    d_buf[d_symbol_cnt/2] |= (c<<4);
+                    d_buf[d_symbol_cnt/2] |= c;
                   }
                   d_symbol_cnt++;
                   if(d_symbol_cnt/2 >= d_pkt_byte){
