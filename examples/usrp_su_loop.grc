@@ -724,6 +724,65 @@
     </param>
   </block>
   <block>
+    <key>blocks_repack_bits_bb</key>
+    <param>
+      <key>k</key>
+      <value>8</value>
+    </param>
+    <param>
+      <key>l</key>
+      <value>bps</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>endianness</key>
+      <value>gr.GR_MSB_FIRST</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(632, 188)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_repack_bits_bb_0</value>
+    </param>
+    <param>
+      <key>len_tag_key</key>
+      <value>""</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>align_output</key>
+      <value>False</value>
+    </param>
+  </block>
+  <block>
     <key>blocks_stream_to_tagged_stream</key>
     <param>
       <key>alias</key>
@@ -834,6 +893,65 @@
     </param>
   </block>
   <block>
+    <key>digital_chunks_to_symbols_xx</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>dimension</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1000, 220)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>digital_chunks_to_symbols_xx_0</value>
+    </param>
+    <param>
+      <key>in_type</key>
+      <value>byte</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>num_ports</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>out_type</key>
+      <value>complex</value>
+    </param>
+    <param>
+      <key>symbol_table</key>
+      <value>mod.points()</value>
+    </param>
+  </block>
+  <block>
     <key>digital_costas_loop_cc</key>
     <param>
       <key>alias</key>
@@ -882,6 +1000,49 @@
     <param>
       <key>use_snr</key>
       <value>False</value>
+    </param>
+  </block>
+  <block>
+    <key>digital_map_bb</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(840, 196)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>digital_map_bb_0</value>
+    </param>
+    <param>
+      <key>map</key>
+      <value>mod.pre_diff_code()</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
     </param>
   </block>
   <block>
@@ -975,7 +1136,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(688, 108)</value>
+      <value>(936, 108)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1113,11 +1274,7 @@
     </param>
   </block>
   <block>
-    <key>lsa_su_transmitter_bc</key>
-    <param>
-      <key>accesscode</key>
-      <value>accesscode</value>
-    </param>
+    <key>lsa_su_transmitter_bb</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1140,23 +1297,15 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(448, 88)</value>
+      <value>(440, 228)</value>
     </param>
     <param>
       <key>_rotation</key>
       <value>0</value>
     </param>
     <param>
-      <key>hdr_const</key>
-      <value>mod</value>
-    </param>
-    <param>
       <key>id</key>
-      <value>lsa_su_transmitter_bc_0</value>
-    </param>
-    <param>
-      <key>lengthtagname</key>
-      <value>"packet_len"</value>
+      <value>lsa_su_transmitter_bb_0</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -1171,24 +1320,12 @@
       <value>0</value>
     </param>
     <param>
-      <key>pld_const</key>
-      <value>mod</value>
-    </param>
-    <param>
-      <key>qmax</key>
-      <value>1024</value>
-    </param>
-    <param>
-      <key>sensing_tag</key>
-      <value>"sensing"</value>
+      <key>tag</key>
+      <value>"packet_len"</value>
     </param>
   </block>
   <block>
     <key>lsa_symbol_sync_receiver_cf</key>
-    <param>
-      <key>acccode</key>
-      <value>accesscode</value>
-    </param>
     <param>
       <key>alias</key>
       <value></value>
@@ -1234,8 +1371,8 @@
       <value>0</value>
     </param>
     <param>
-      <key>pld_const</key>
-      <value>mod</value>
+      <key>thres</key>
+      <value>10</value>
     </param>
   </block>
   <block>
@@ -3413,7 +3550,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(920, 44)</value>
+      <value>(1168, 44)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -4922,8 +5059,20 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>blocks_repack_bits_bb_0</source_block_id>
+    <sink_block_id>digital_map_bb_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>blocks_stream_to_tagged_stream_0</source_block_id>
-    <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
+    <sink_block_id>lsa_su_transmitter_bb_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>digital_chunks_to_symbols_xx_0</source_block_id>
+    <sink_block_id>interp_fir_filter_xxx_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -4936,6 +5085,12 @@
   <connection>
     <source_block_id>digital_costas_loop_cc_0</source_block_id>
     <sink_block_id>lsa_symbol_sync_receiver_cf_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>digital_map_bb_0</source_block_id>
+    <sink_block_id>digital_chunks_to_symbols_xx_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -4982,16 +5137,16 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_su_transmitter_bc_0</source_block_id>
-    <sink_block_id>interp_fir_filter_xxx_0</sink_block_id>
+    <source_block_id>lsa_su_transmitter_bb_0</source_block_id>
+    <sink_block_id>blocks_repack_bits_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>
-    <sink_block_id>lsa_su_transmitter_bc_0</sink_block_id>
+    <sink_block_id>lsa_su_transmitter_bb_0</sink_block_id>
     <source_key>msg</source_key>
-    <sink_key>sensing_info</sink_key>
+    <sink_key>msg_in</sink_key>
   </connection>
   <connection>
     <source_block_id>uhd_usrp_source_0</source_block_id>

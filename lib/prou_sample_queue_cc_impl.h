@@ -47,7 +47,8 @@ namespace gr {
       long int d_last_time;
       float d_timeout;
 
-      int d_sps;   
+      int d_sps;
+      int d_bps;
       int d_output_count;
       const int d_min_output_items;
 
@@ -76,6 +77,7 @@ namespace gr {
       
       prou_sample_queue_cc_impl(
         const std::string& sensing_tagname, 
+        int bps,
         int sps,
         bool debug);
       ~prou_sample_queue_cc_impl();

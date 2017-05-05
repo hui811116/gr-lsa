@@ -23,6 +23,7 @@
 
 #include <lsa/symbol_sync_receiver_cf.h>
 #include <pmt/pmt.h>
+#include <utility>
 
 namespace gr {
   namespace lsa {
@@ -32,19 +33,22 @@ namespace gr {
      private:
       int d_state;
       bool d_debug;
+      bool d_buf_verbose;
+      bool d_diffcode;
 
       int d_hdr_bps;
       unsigned char d_qsize;
       unsigned char d_qidx;
       std::vector<int> d_hdr_map;
+      std::vector< std::pair<unsigned int,long int> > d_time_table;
 
       gr::digital::constellation_sptr d_hdr_const;
       long int d_current_time;
-      int d_symbol_count;
+      unsigned int d_time_offset_count;
       pmt::pmt_t d_timetag;
       pmt::pmt_t d_msg_port;
 
-      void msg_out(int noutput_items, bool hdr);
+      void msg_out(int sym_idx);
 
       // buffer for constellation
       unsigned char d_bytes_buf[8192];
@@ -70,6 +74,8 @@ namespace gr {
       symbol_sync_receiver_cf_impl(
         const gr::digital::constellation_sptr& hdr_const,
         int threshold,
+        bool diffcode,
+        bool buf_verbose,
         bool debug);
       ~symbol_sync_receiver_cf_impl();
 

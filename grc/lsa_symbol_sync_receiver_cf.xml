@@ -4,7 +4,7 @@
   <key>lsa_symbol_sync_receiver_cf</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.symbol_sync_receiver_cf($hdr_const,$debug)</make>
+  <make>lsa.symbol_sync_receiver_cf($hdr_const,$thres,$diffcode,$buf_verbose,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -21,6 +21,34 @@
     <key>thres</key>
     <value>10</value>
     <type>int</type>
+  </param>
+  <param>
+    <name>Use symbol coding</name>
+    <key>diffcode</key>
+    <value>True</value>
+    <type>bool</type>
+    <option>
+      <name>On</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Off</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Internal Time</name>
+    <key>buf_verbose</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>On</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Off</name>
+      <key>False</key>
+    </option>
   </param>
   <param>
     <name>Debug mode</name>

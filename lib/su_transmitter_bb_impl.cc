@@ -39,6 +39,8 @@ namespace gr {
     // STATES: 1) CLEAR_TO_SEND, 2) RETRANSMISSION
     // BEHAVIOR:     queue size =0,    queue_size = buf size
 
+    // for simplicity, PHY preamble and SFD are also prefixed on received stream
+
     enum SUTXMODE{
       SUCCESSIVE=0,
       NOQUEUE=1
@@ -49,6 +51,8 @@ namespace gr {
     };
 
     static const int MAX_PLD_LEN = 125;  //(127-2);
+    static const unsigned char LSA_PHY[] ={0x00,0x00,0x00,0x00,0x7A};
+    static const int PHY_LEN = 5;
     
 
     su_transmitter_bb::sptr
@@ -116,18 +120,18 @@ namespace gr {
     su_transmitter_bb_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
       assert(ninput_items <= MAX_PLD_LEN);
-      int noutput_items = ninput_items[0]+2;
+      int noutput_items = ninput_items[0]+2+PHY_LEN;
       switch(d_mode){
         case NOQUEUE:
         break;
         case SUCCESSIVE:
           if(d_state == CLEAR_TO_SEND){
-            noutput_items = ninput_items[0]+2;
+            noutput_items = ninput_items[0]+2+PHY_LEN;
           }
           else if(d_state == RETRANSMISSION){
             assert(!d_retx_idx_buf.empty());
             int idx_mapping = d_retx_idx_buf[d_retx_idx];
-            noutput_items = d_pkt_len_buf[idx_mapping]+2;
+            noutput_items = d_pkt_len_buf[idx_mapping]+2+PHY_LEN;
           }
         break;
         default:
@@ -255,8 +259,8 @@ namespace gr {
     void
     su_transmitter_bb_impl::reset_queue()
     {
-      d_pkt_len_buf.resize(d_queue_cap,0);
-      d_time_buf.resize(d_queue_cap,0);
+      memset(d_pkt_len_buf.data(),0,sizeof(size_t)*d_queue_cap);
+      memset(d_time_buf.data(),0,sizeof(long int)*d_queue_cap);
       d_latest_idx =0;
       d_current_idx =0;
       d_current_time = std::clock();
@@ -272,43 +276,48 @@ namespace gr {
       unsigned char *out = (unsigned char *) output_items[0];
       d_current_time = std::clock();
       int nout=ninput_items[0]+2;
-
       switch(d_mode){
         case NOQUEUE:
-          out[0] = (unsigned char)d_current_idx++;
-          out[1] = 0x00;
+          out[PHY_LEN+0] = (unsigned char)d_current_idx;
+          out[PHY_LEN+1] = 0x00;
           d_current_idx%=d_queue_cap;
-          memcpy(out+2,in,sizeof(char)*ninput_items[0]);
-          nout = ninput_items[0]+2;
+          memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
+          memcpy(out+PHY_LEN+2,in,sizeof(char)*ninput_items[0]);
+          d_current_idx = (d_current_idx+1) % d_queue_cap;
+          nout = ninput_items[0]+PHY_LEN+2;
         break;
         case SUCCESSIVE:
           switch(d_state){
             case CLEAR_TO_SEND:
-              out[0] = (unsigned char)d_current_idx++;
-              out[1] = 0x00;
-                if(d_time_buf[d_current_idx]!=0){
+            {
+              if(d_time_buf[d_current_idx]!=0){
                   // feedback too slow, will be overwritten
                   if(d_debug){
                     std::cerr<<"<WARNING> Feedback too slow, overwrite buffer to continue"<<std::endl;
                   }
                   reset_queue();
-                }
-              memcpy(out+2,in,sizeof(char)*ninput_items[0]);
-              memcpy(d_queue_buf[d_current_idx],out+2,sizeof(char)*ninput_items[0]);
+              }
+              out[PHY_LEN+0] = (unsigned char)d_current_idx;
+              out[PHY_LEN+1] = 0x00;  
+              memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
+              memcpy(out+PHY_LEN+2,in,sizeof(char)*ninput_items[0]);
+              memcpy(d_queue_buf[d_current_idx],in,sizeof(char)*ninput_items[0]);
               d_pkt_len_buf[d_current_idx] = ninput_items[0];
               d_time_buf[d_current_idx] = d_current_time;
-              d_current_idx%=d_queue_cap;
-              nout = ninput_items[0]+2;
+              d_current_idx = (d_current_idx+1)%d_queue_cap;
+              nout = ninput_items[0]+PHY_LEN+2;
+            }
             break;
             case RETRANSMISSION:
             {
               assert(!d_retx_idx_buf.empty());
-              out[0] = (unsigned char)d_retx_idx;
-              out[1] = (unsigned char)d_retx_idx_buf.size();
+              out[0+PHY_LEN] = (unsigned char)d_retx_idx;
+              out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
               int idx_mapping = d_retx_idx_buf[d_retx_idx++];
-              d_retx_idx&=d_retx_idx_buf.size();
-              memcpy(out+2, d_queue_buf[idx_mapping],sizeof(char)*d_pkt_len_buf[idx_mapping]);
-              nout = d_pkt_len_buf[idx_mapping]+2;
+              d_retx_idx%=d_retx_idx_buf.size();
+              memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
+              memcpy(out+PHY_LEN+2, d_queue_buf[idx_mapping],sizeof(char)*d_pkt_len_buf[idx_mapping]);
+              nout = d_pkt_len_buf[idx_mapping]+2+PHY_LEN;
             break;
             }
             default:

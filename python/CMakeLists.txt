@@ -63,3 +63,4 @@ GR_ADD_TEST(qa_symbol_corrector_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_D
 GR_ADD_TEST(qa_control_source_b ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_control_source_b.py)
 GR_ADD_TEST(qa_packet_sink ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_packet_sink.py)
 GR_ADD_TEST(qa_su_transmitter_bb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_transmitter_bb.py)
+GR_ADD_TEST(qa_chip_mapper_bb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_chip_mapper_bb.py)

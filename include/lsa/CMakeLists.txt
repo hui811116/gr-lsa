@@ -49,5 +49,6 @@ install(FILES
     su_ctrl.h
     chip_mapper.h
     packet_sink.h
-    su_transmitter_bb.h DESTINATION include/lsa
+    su_transmitter_bb.h
+    chip_mapper_bb.h DESTINATION include/lsa
 )

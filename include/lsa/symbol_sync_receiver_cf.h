@@ -50,6 +50,8 @@ namespace gr {
       static sptr make(
         const gr::digital::constellation_sptr& hdr_const,
         int threshold,
+        bool diffcode,
+        bool buf_verbose,
         bool debug);
     };
 

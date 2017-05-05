@@ -52,7 +52,8 @@ list(APPEND lsa_sources
     su_ctrl.cc
     chip_mapper.cc
     packet_sink_impl.cc
-    su_transmitter_bb_impl.cc )
+    su_transmitter_bb_impl.cc
+    chip_mapper_bb_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

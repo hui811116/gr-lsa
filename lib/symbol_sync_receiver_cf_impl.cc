@@ -61,12 +61,16 @@ enum SYSTEMSTATE{
     symbol_sync_receiver_cf::make(
       const gr::digital::constellation_sptr& hdr_const,
       int threshold,
+      bool diffcode,
+      bool buf_verbose,
       bool debug)
     {
       return gnuradio::get_initial_sptr
         (new symbol_sync_receiver_cf_impl(
           hdr_const,
           threshold,
+          diffcode,
+          buf_verbose,
           debug));
     }
 
@@ -76,6 +80,8 @@ enum SYSTEMSTATE{
     symbol_sync_receiver_cf_impl::symbol_sync_receiver_cf_impl(
       const gr::digital::constellation_sptr& hdr_const,
       int threshold,
+      bool diffcode,
+      bool buf_verbose,
       bool debug)
       : gr::block("symbol_sync_receiver_cf",
               gr::io_signature::make3(1, 3, sizeof(gr_complex),sizeof(float),sizeof(float)),
@@ -86,11 +92,13 @@ enum SYSTEMSTATE{
       d_hdr_map = hdr_const->pre_diff_code();
       d_hdr_bps = hdr_const->bits_per_symbol();
 
-      d_symbol_count=0;
+      d_time_offset_count=0;
       d_timetag = pmt::string_to_symbol("ctime");
       d_msg_port = pmt::mp("msg");
 
       d_debug = debug;
+      d_buf_verbose = buf_verbose;
+      d_diffcode = diffcode;
       d_state = SEARCH_ZERO;
 
       set_tag_propagation_policy(TPP_DONT);
@@ -163,16 +171,30 @@ enum SYSTEMSTATE{
 
 
     void
-    symbol_sync_receiver_cf_impl::msg_out(int noutput_items, bool hdr)
+    symbol_sync_receiver_cf_impl::msg_out(int sym_idx)
     {
       pmt::pmt_t msg = pmt::make_dict();
-      msg = pmt::dict_add(msg, pmt::intern("ctime"),pmt::from_long(d_current_time));
-      msg = pmt::dict_add(msg, pmt::intern("buffer_offset"),pmt::from_long(d_symbol_count));
-      if(!hdr){
-        // for sync info
-        msg = pmt::dict_add(msg, pmt::intern("output_items"),pmt::from_long(noutput_items));
+      if(d_buf_verbose){
+        long int time;
+        unsigned int offset;
+        int tmp_idx;
+        assert(!d_time_table.empty());
+        if(d_time_table.size()<2){
+          //only first time tag
+          time = d_time_table[0].second;
+          offset = d_time_table[0].first + sym_idx;
+        }
+        else{
+          for(int i=0;i<d_time_table.size()-1;++i){
+            if(d_time_table[i].first<=sym_idx && d_time_table[i+1].first>sym_idx ){
+              offset = sym_idx - d_time_table[i].first;
+              time = d_time_table[i].second;
+            }
+          }
+        } 
+        msg = pmt::dict_add(msg, pmt::intern("ctime"),pmt::from_long(time));
+        msg = pmt::dict_add(msg, pmt::intern("buffer_offset"),pmt::from_long(offset));
       }
-      else{
         // for header info
         msg = pmt::dict_add(msg, pmt::intern("LSA_hdr"),pmt::PMT_T);
         msg = pmt::dict_add(msg, pmt::intern("queue_index"),pmt::from_long(d_qidx));
@@ -180,7 +202,7 @@ enum SYSTEMSTATE{
         msg = pmt::dict_add(msg, pmt::intern("payload"),pmt::from_long(d_pkt_byte));
         //for debug
         msg = pmt::dict_add(msg, pmt::intern("counter"),pmt::from_long(d_qidx));
-      }
+      
       message_port_pub(d_msg_port, msg);
     }
 
@@ -224,32 +246,50 @@ enum SYSTEMSTATE{
       }
 
       // Do <+signal processing+>
+      d_time_table.clear();
       std::vector<tag_t> time_tag;
       get_tags_in_range(time_tag, 0, nitems_read(0),nitems_read(0)+noutput_items, d_timetag);
-      //should add sensing tags
+      int tmp_offset=0;
+      d_time_table.push_back( std::make_pair(0,d_current_time));
+      for(int i=0;i<time_tag.size();++i){
+        tmp_offset = time_tag[i].offset-nitems_read(0);
+        d_current_time = pmt::to_long(time_tag[i].value);
+        if(tmp_offset==0){
+          d_time_table[0] = std::make_pair(0,d_current_time);
+        }
+        else{
+          d_time_table.push_back( std::make_pair(tmp_offset,d_current_time));
+        }
+        pmt::pmt_t dict=pmt::make_dict();
+        dict = pmt::dict_add(dict,pmt::intern("ctime"),pmt::from_long(d_current_time));
+        dict = pmt::dict_add(dict,pmt::intern("buffer_offset"),pmt::from_long(0));
+        message_port_pub(d_msg_port,dict);
+      }
+      
 
-      for(int i=0;i<noutput_items;++i){
-        unsigned char temp = d_hdr_const->decision_maker(&in[i]);
+      //should add sensing tags
+      if(d_diffcode)
+      {
+        for(int i=0;i<noutput_items;++i){
+        unsigned char temp =d_hdr_map[ d_hdr_const->decision_maker(&in[i])];
         for(int j =0;j<d_hdr_bps;++j){
           // MSB endianess
           d_bytes_buf[i*d_hdr_bps+j] = (temp>> (d_hdr_bps-1-j)) & 0x01;
         }
-        if(!time_tag.empty()){
-          int offset = time_tag[0].offset-nitems_read(0);
-          if(i==offset){
-            d_current_time = pmt::to_long(time_tag[0].value);
-            d_symbol_count=0;
-            //for sync purpose
-            add_item_tag(0,nitems_written(0)+i,time_tag[0].key,time_tag[0].value);
-            msg_out(noutput_items,false);
-            time_tag.erase(time_tag.begin());
-          }
+      }
+      }
+      else{
+        for(int i=0;i<noutput_items;++i){
+        unsigned char temp =d_hdr_const->decision_maker(&in[i]);
+        for(int j =0;j<d_hdr_bps;++j){
+          // MSB endianess
+          d_bytes_buf[i*d_hdr_bps+j] = (temp>> (d_hdr_bps-1-j)) & 0x01;
         }
       }
+      }
+      
       int nin = noutput_items * d_hdr_bps;
-
       int count=0;
-
       while(count < nin)
       {
         switch(d_state)
@@ -372,7 +412,7 @@ enum SYSTEMSTATE{
                   if(d_symbol_cnt/2 >= d_pkt_byte){
                     // output header
                     // second try
-                    msg_out(noutput_items,true);
+                    msg_out(count/2);
                     if(out_sync){
                       int index=count/d_hdr_bps;
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("LSA_hdr"),pmt::PMT_T);
@@ -394,7 +434,7 @@ enum SYSTEMSTATE{
           break;
         }
       }
-        
+      d_time_offset_count=noutput_items-tmp_offset;  
       consume(0,noutput_items);
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;
