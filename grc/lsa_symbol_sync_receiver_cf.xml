@@ -4,26 +4,23 @@
   <key>lsa_symbol_sync_receiver_cf</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.symbol_sync_receiver_cf($acccode,$hdr_const,$pld_const, $debug)</make>
+  <make>lsa.symbol_sync_receiver_cf($hdr_const,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
-  <param>
-    <name>Access code</name>
-    <key>acccode</key>
-    <type>string</type>
-  </param>
+  
   <param>
     <name>Header Constellation</name>
     <key>hdr_const</key>
     <type>raw</type>
   </param>
   <param>
-    <name>Payload Constellation</name>
-    <key>pld_const</key>
-    <type>raw</type>
+    <name>Threshold</name>
+    <key>thres</key>
+    <value>10</value>
+    <type>int</type>
   </param>
   <param>
     <name>Debug mode</name>

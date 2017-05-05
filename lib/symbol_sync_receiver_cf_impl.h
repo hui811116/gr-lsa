@@ -33,50 +33,45 @@ namespace gr {
       int d_state;
       bool d_debug;
 
-      uint64_t d_accesscode;
-      size_t d_accesscode_len;
-      unsigned long long d_data_reg;
-      unsigned long long d_mask;
-
-      std::vector<unsigned int> d_input;
-
       int d_hdr_bps;
-      int d_pld_bps;
-
-      unsigned int d_qsize;
-      unsigned int d_qidx;
-
-      unsigned int d_counter;
-      unsigned int d_pld_len;
-
+      unsigned char d_qsize;
+      unsigned char d_qidx;
       std::vector<int> d_hdr_map;
-      std::vector<int> d_pld_map;
 
-      gr::digital::constellation_sptr d_pld_const;
       gr::digital::constellation_sptr d_hdr_const;
-
       long int d_current_time;
       int d_symbol_count;
       pmt::pmt_t d_timetag;
       pmt::pmt_t d_msg_port;
 
-      uint16_t _get_bit16(int begin_idx);
-      uint8_t _get_bit8(int begin_idx);
-      bool insert_symbol(const gr_complex& symbol);
-      bool parse_header();
       void msg_out(int noutput_items, bool hdr);
+
+      // buffer for constellation
+      unsigned char d_bytes_buf[8192];
+      // coded version
+      int d_threshold;
+      unsigned int d_data_reg;
+      unsigned int d_mask;
+      unsigned int d_byte_cnt;
+      
+      int d_pld_cnt;
+      int d_pre_cnt;
+      int d_chip_cnt;
+      unsigned char d_pkt_byte;
+      unsigned char d_symbol_cnt;
+
+      unsigned char decode_chip(const unsigned int& reg);
+      void enter_search();
+      void enter_have_sync();
+      void enter_load_payload();
+      
 
      public:
       symbol_sync_receiver_cf_impl(
-        const std::string& accesscode,
         const gr::digital::constellation_sptr& hdr_const,
-        const gr::digital::constellation_sptr& pld_const,
+        int threshold,
         bool debug);
       ~symbol_sync_receiver_cf_impl();
-
-      bool set_accesscode(const std::string& accesscode);
-      
-      size_t header_nbits() const;
 
       // Where all the action really happens
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);

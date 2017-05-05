@@ -48,9 +48,8 @@ namespace gr {
        * creating new instances.
        */
       static sptr make(
-        const std::string& accesscode,
         const gr::digital::constellation_sptr& hdr_const,
-        const gr::digital::constellation_sptr& pld_const,
+        int threshold,
         bool debug);
     };
 
