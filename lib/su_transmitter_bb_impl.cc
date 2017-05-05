@@ -40,6 +40,10 @@ namespace gr {
     // BEHAVIOR:     queue size =0,    queue_size = buf size
 
     // for simplicity, PHY preamble and SFD are also prefixed on received stream
+    // PHY FIELD
+    // ------------------------------------
+    // preamble| signal frame dilimeter| pkt length|
+    //  4 bytes|        1 byte         |   1 byte
 
     enum SUTXMODE{
       SUCCESSIVE=0,
@@ -51,8 +55,9 @@ namespace gr {
     };
 
     static const int MAX_PLD_LEN = 125;  //(127-2);
-    static const unsigned char LSA_PHY[] ={0x00,0x00,0x00,0x00,0x7A};
-    static const int PHY_LEN = 5;
+    static const unsigned char LSA_PHY[] ={0x00,0x00,0x00,0x00,0x7A, 0x00};
+    // the last feild is for packet length
+    static const int PHY_LEN = 6;
     
 
     su_transmitter_bb::sptr
@@ -275,7 +280,7 @@ namespace gr {
       const unsigned char *in = (const unsigned char *) input_items[0];
       unsigned char *out = (unsigned char *) output_items[0];
       d_current_time = std::clock();
-      int nout=ninput_items[0]+2;
+      int nout=ninput_items[0]+PHY_LEN+2;
       switch(d_mode){
         case NOQUEUE:
           out[PHY_LEN+0] = (unsigned char)d_current_idx;
@@ -283,6 +288,7 @@ namespace gr {
           d_current_idx%=d_queue_cap;
           memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
           memcpy(out+PHY_LEN+2,in,sizeof(char)*ninput_items[0]);
+          out[5] = (unsigned char) ninput_items[0];
           d_current_idx = (d_current_idx+1) % d_queue_cap;
           nout = ninput_items[0]+PHY_LEN+2;
         break;
@@ -298,10 +304,11 @@ namespace gr {
                   reset_queue();
               }
               out[PHY_LEN+0] = (unsigned char)d_current_idx;
-              out[PHY_LEN+1] = 0x00;  
+              out[PHY_LEN+1] = 0x00;
               memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
               memcpy(out+PHY_LEN+2,in,sizeof(char)*ninput_items[0]);
               memcpy(d_queue_buf[d_current_idx],in,sizeof(char)*ninput_items[0]);
+              out[5] = (unsigned)ninput_items[0];  
               d_pkt_len_buf[d_current_idx] = ninput_items[0];
               d_time_buf[d_current_idx] = d_current_time;
               d_current_idx = (d_current_idx+1)%d_queue_cap;
@@ -315,9 +322,11 @@ namespace gr {
               out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
               int idx_mapping = d_retx_idx_buf[d_retx_idx++];
               d_retx_idx%=d_retx_idx_buf.size();
+              int tmp_pld_len =d_pkt_len_buf[idx_mapping]; 
               memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
-              memcpy(out+PHY_LEN+2, d_queue_buf[idx_mapping],sizeof(char)*d_pkt_len_buf[idx_mapping]);
-              nout = d_pkt_len_buf[idx_mapping]+2+PHY_LEN;
+              memcpy(out+PHY_LEN+2, d_queue_buf[idx_mapping],sizeof(char)*tmp_pld_len);
+              out[5] = (unsigned char) tmp_pld_len;
+              nout = tmp_pld_len+2+PHY_LEN;
             break;
             }
             default:

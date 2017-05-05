@@ -57,10 +57,11 @@ static const unsigned int CHIPSET[16] = {3653456430,
      */
     chip_mapper_bb_impl::chip_mapper_bb_impl()
       : gr::block("chip_mapper_bb",
-              gr::io_signature::make(1, 1, sizeof(char)),
-              gr::io_signature::make(1, 1, sizeof(char)))
+              gr::io_signature::make(1, 1, sizeof(unsigned char)),
+              gr::io_signature::make(1, 1, sizeof(unsigned char)))
     {
       set_relative_rate(8); // coded
+      //set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -86,14 +87,15 @@ static const unsigned int CHIPSET[16] = {3653456430,
       const unsigned char *in = (const unsigned char *) input_items[0];
       unsigned char *out = (unsigned char *) output_items[0];
 
-      int nin = (ninput_items[0]*relative_rate()<=noutput_items)? nin : noutput_items/relative_rate();
-      int nout= nin * relative_rate();
+      int nin = (ninput_items[0]*relative_rate()<=noutput_items)? ninput_items[0] : noutput_items/relative_rate();
+      int nout= nin *relative_rate();
       //assert(nin<=noutput_items/8);
       //if(nin!=0)
       //std::cout<<"nin:"<<nin<<" ,nout:"<<noutput_items<<std::endl;
       for(int i=0;i<nin;++i){
         int s1= (in[i]>>4) & 0x0f;
         int s2= (in[i]) & 0x0f;
+        
         const uint8_t* s1_u8 =(const uint8_t*) &CHIPSET[s1];
         const uint8_t* s2_u8 =(const uint8_t*) &CHIPSET[s2];
         out[8*i] = s1_u8[3];
