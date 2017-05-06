@@ -365,7 +365,8 @@ namespace gr {
       }
       out_items_handler(out,sample,in,noutput_items, consume_count);
       consume_each(consume_count);
-
+      if(d_debug)
+      std::cerr<<"noutput:"<<noutput_items<<" ,ninput:"<<ninput_items[0]<<" ,consume:"<<consume_count<<std::endl;
       return WORK_CALLED_PRODUCE;
     }
 
