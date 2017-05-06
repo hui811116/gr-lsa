@@ -99,7 +99,9 @@ enum SYSTEMSTATE{
       d_debug = debug;
       d_buf_verbose = buf_verbose;
       d_diffcode = diffcode;
-      d_state = SEARCH_ZERO;
+      //d_state = SEARCH_ZERO;
+      d_mask = 0x7ffffffe;
+      enter_search();
 
       set_tag_propagation_policy(TPP_DONT);
       message_port_register_out(d_msg_port);

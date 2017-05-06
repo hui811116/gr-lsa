@@ -210,7 +210,7 @@ enum SYSTEMSTATE{
               if(d_chip_cnt==32){
                 d_chip_cnt=0;
                 unsigned char c = decode_chip(d_data_reg);
-                std::cerr<<"sync decoded symbol:"<<(int)c<<std::endl;
+                //std::cerr<<"sync decoded symbol:"<<(int)c<<std::endl;
               if(c==0xff){
                 enter_search();
                 break;
