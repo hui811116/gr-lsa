@@ -43,7 +43,7 @@ namespace gr {
       : gr::sync_block("symbol_corrector_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
-              d_update_len(128)
+              d_update_len(256)
     {
       d_phase = 0.0;
       d_amp =1.0;

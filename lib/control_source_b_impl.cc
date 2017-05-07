@@ -88,7 +88,10 @@ namespace gr {
       pmt::pmt_t v = pmt::cdr(msg);
       assert(pmt::is_blob(v));
       size_t vlen = pmt::blob_length(v);
-      memcpy(d_data_buf,pmt::blob_data(v),vlen);
+      memcpy(d_data_buf,pmt::blob_data(v),vlen*sizeof(char));
+      // This will happen!!!!
+      //if(d_data_count!=0)
+        //std::cerr<<"<Control source debug>Overwrite data buffer for data count not equal to zero"<<std::endl;
       d_data_count = vlen;
     }
 

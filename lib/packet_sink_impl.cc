@@ -190,7 +190,7 @@ enum SYSTEMSTATE{
                       if(gr::blocks::count_bits32( (d_data_reg&d_mask) ^ (CHIPSET[10]&d_mask))<=d_threshold){
                         //0xa
                         d_pkt_byte = d_pkt_byte | 0xa;
-                        std::cerr<<"found 0x7a"<<std::endl;
+                        //std::cerr<<"found 0x7a"<<std::endl;
                         enter_have_sync();
                         break;
                       }
