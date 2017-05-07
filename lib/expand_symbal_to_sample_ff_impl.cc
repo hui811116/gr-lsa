@@ -90,14 +90,18 @@ namespace gr {
       float *out_time = (float *) output_items[1];
       float p_freq, t_freq;
       float p_phase, t_phase;
-      // Do <+signal processing+>
-      int consume=noutput_items/(int)relative_rate();
-      if(ninput_items[0]<(consume+history())){
+      
+      int nin = (noutput_items/relative_rate() < ninput_items[0])? noutput_items/relative_rate() : ninput_items[0];
+      nin = (nin< ninput_items[1]) ? nin: ninput_items[1];
+      int nout = nin  * relative_rate();
+
+      int consume=nin;
+      if(consume==0){
         consume_each(0);
         return 0;
       }
 
-      for(int i=0;i<noutput_items;++i){
+      for(int i=0;i<nout;++i){
         if(i%d_sps == 0){
           p_phase = phase[i/d_sps];
           t_phase = time[i/d_sps];
@@ -139,7 +143,7 @@ namespace gr {
       //std::cout<<"<debug>sync interp:"<<"consume:"<<consume<<std::endl;
       //std::cout<<"noutput:"<<noutput_items<<" ,inputn:"<<ninput_items[0]<<std::endl;
       // Tell runtime system how many output items we produced.
-      return consume*d_sps;
+      return nout;
     }
 
   } /* namespace lsa */

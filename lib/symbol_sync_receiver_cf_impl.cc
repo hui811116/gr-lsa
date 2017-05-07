@@ -211,8 +211,16 @@ enum SYSTEMSTATE{
         msg = pmt::dict_add(msg, pmt::intern("queue_index"),pmt::from_long(d_qidx));
         msg = pmt::dict_add(msg, pmt::intern("queue_size"),pmt::from_long(d_qsize));
         msg = pmt::dict_add(msg, pmt::intern("payload"),pmt::from_long(d_pkt_byte));
-        //for debug
+        // for debug
+        // differentiation for retransmission and fresh data
+        if(d_qsize!=0){
+          msg = pmt::dict_add(msg, pmt::intern("Type"),pmt::intern("Retransmission"));
+        }
+        else{
+          msg = pmt::dict_add(msg, pmt::intern("Type"),pmt::intern("Fresh_data"));
+        }
         msg = pmt::dict_add(msg, pmt::intern("counter"),pmt::from_long(d_qidx));
+        //
       
       message_port_pub(d_msg_port, msg);
     }
@@ -253,8 +261,9 @@ enum SYSTEMSTATE{
           out_time = (float *) output_items[1];
           memcpy(out_phase,phase, sizeof(float)*nfix);
           memcpy(out_time,time,sizeof(float)*nfix);  
-          produce(0,nfix);
-          produce(1,nfix);
+          // move to last line so that tagging act correctly.
+          //produce(0,nfix);
+          //produce(1,nfix);
         }
         consume(1,nfix);
         consume(2,nfix);
@@ -263,11 +272,13 @@ enum SYSTEMSTATE{
       // Do <+signal processing+>
       d_time_table.clear();
       std::vector<tag_t> time_tag;
+      std::vector<int> tag_offsets;
       get_tags_in_range(time_tag, 0, nitems_read(0),nitems_read(0)+nfix, d_timetag);
       int tmp_offset=0;
       d_time_table.push_back( std::make_pair(0,d_current_time));
       for(int i=0;i<time_tag.size();++i){
         tmp_offset = time_tag[i].offset-nitems_read(0);
+        tag_offsets.push_back(tmp_offset);
         d_current_time = pmt::to_long(time_tag[i].value);
         d_time_offset_count = 0;
         //std::cout<<"current time:"<<d_current_time<<std::endl;
@@ -377,7 +388,22 @@ enum SYSTEMSTATE{
                   }
                   else{
                     d_pkt_byte |= c;
-                    if(d_pkt_byte <= MAX_PLD){
+                    // for special length settings
+                    if(d_pkt_byte == 0){
+                      // length 0 means NACK
+                      // NOTE: in data channel, this case should not happen!
+                      msg_out( (count-1)/d_hdr_bps );
+                      enter_search();
+                      break;
+                    }
+                    else if(d_pkt_byte ==1){
+                      // length 1 means ACK
+                      // NOTE: in data channel, this case should not happen!
+                      d_qsize = 0x00; // set this since this field will never be filled in length=1
+                      enter_load_payload();
+                      break;
+                    }
+                    else if(d_pkt_byte <= MAX_PLD){
                       enter_load_payload();
                       break;
                     }
@@ -425,9 +451,9 @@ enum SYSTEMSTATE{
                   if(d_symbol_cnt/2 >= d_pkt_byte){
                     // output header
                     // second try
-                    msg_out(count/d_hdr_bps);
+                    msg_out( (count-1) /d_hdr_bps);
                     if(out_sync){
-                      int index=count/d_hdr_bps;
+                      int index= (count-1)/d_hdr_bps;
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("LSA_hdr"),pmt::PMT_T);
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_index"),pmt::from_long(d_qidx));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_size"),pmt::from_long(d_qsize));
@@ -453,8 +479,17 @@ enum SYSTEMSTATE{
         dict = pmt::dict_add(dict,pmt::intern("ctime"),time_tag[i].value);
         dict = pmt::dict_add(dict,pmt::intern("buffer_offset"),pmt::from_long(0));
         message_port_pub(d_msg_port,dict);
+        // IMPORTANT: add timing tag in sync mode
+        if(d_buf_verbose && have_sync && out_sync){
+          add_item_tag(0,nitems_written(0)+tag_offsets[i],pmt::intern("ctime"),time_tag[i].value);
+        }
       }
       d_time_offset_count+=(nfix-tmp_offset);  
+      if(have_sync && out_sync){
+        produce(0,nfix);
+        produce(1,nfix);
+      }
+      
       consume(0,nfix);
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;

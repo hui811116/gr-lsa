@@ -182,6 +182,11 @@ namespace gr {
         // retransmission no matter what
         if( (d_state == CLEAR_TO_SEND) && (sen_result) ){
           prepare_retx();
+          if(d_retx_idx_buf.empty()){
+            if(d_debug)
+              std::cerr<<"<SU TX DEBUG> Receiving Sensing info but no need for retransmission"<<std::endl;
+            return;
+          }
           d_state = RETRANSMISSION;
           return;
         }
@@ -198,8 +203,8 @@ namespace gr {
         switch(d_state)
         {
           case CLEAR_TO_SEND:
-          if(d_time_buf[qidx]==0){
-            // outdated ack
+          if(d_time_buf[qidx]==0 || (qsize!=0) ){
+            // outdated ack or retransmission
             return;
           }
           d_time_buf[qidx]=0;
@@ -208,19 +213,25 @@ namespace gr {
           // can add statistics counter here
           break;
           case RETRANSMISSION:
-            if(sen_result){
+            if(sen_result || qsize==0){
+              // sensing true or not retransmission
+              return;
+            }
+            if(qidx >= d_retx_idx_buf.size()){
+              if(d_debug)
+                std::cerr<<"<SU TX DEBUG>"<<"In retansmission state receiving idx exceed buffer size!"<<std::endl;
               return;
             }
             if(d_time_buf[d_retx_idx_buf[qidx]]!=0){
+              //std::cerr<<"<SU TX DEBUG>"<<"receiving success retransmission:"<<qidx<<std::endl;
               d_time_buf[d_retx_idx_buf[qidx]]=0;
               d_retx_cnt++;
               d_update_time = std::clock();
             }
             assert(!d_retx_idx_buf.empty());
             if(d_retx_cnt == d_retx_idx_buf.size()){
-              if(d_debug){
+              if(d_debug)
                 std::cerr<<"<STATE>Retransmission complete, reset queue and change state"<<std::endl;
-              }
               reset_queue();
               d_state = CLEAR_TO_SEND;
             }
@@ -243,18 +254,32 @@ namespace gr {
     {
       // limit: the limited delay is 256
       // this is due to the mac field design
-      assert(d_latest_idx!=d_current_idx);
-      int delay = d_current_idx-d_latest_idx;
-      if(d_latest_idx>d_current_idx){
-        delay = d_current_idx + d_queue_cap- d_latest_idx;
+      //assert(d_latest_idx!=d_current_idx);
+      //std::cerr<<"<SU TX DEBUG>"<<"current idx:"<<d_current_idx<<" ,latest idx:"<<d_latest_idx<<std::endl;
+      long int min_time = std::clock();
+      int min_idx = 0;
+      for(int i=0;i<d_queue_cap;++i){
+        if(d_time_buf[i]!=0 && d_time_buf[i]<min_time){
+          min_time = d_time_buf[i];
+          min_idx = i;
+        }
       }
+      int delay = d_current_idx-min_idx;
+      if(delay == 0){
+        throw std::runtime_error("<SU TX DEBUG> overlap for current index and min time idx, abort");
+      }
+      if(min_idx>d_current_idx){
+        delay = d_current_idx + d_queue_cap- min_idx;
+      }
+      d_retx_idx_buf.clear();
       d_retx_idx_buf.resize(delay,0);
-      int idx_iter = d_latest_idx;
+      int idx_iter = min_idx;
       for(int i=0;i<delay;++i){
         d_retx_idx_buf[i] = idx_iter++;
         if(idx_iter>=d_queue_cap){
           idx_iter%= d_queue_cap;
         }
+        //std::cerr<<"time info:" <<" ,idx:"<<i<<"<< ,time:"<<d_time_buf[d_retx_idx_buf[i]]<<std::endl;
       }
       d_retx_cnt=0;
       d_retx_idx=0;
@@ -296,19 +321,34 @@ namespace gr {
           switch(d_state){
             case CLEAR_TO_SEND:
             {
+              //std::cerr<<"SUTX DEBUG:"<<"current idx for pkt:"<<d_current_idx<<std::endl;
               if(d_time_buf[d_current_idx]!=0){
                   // feedback too slow, will be overwritten
+                  // TODO
+                  // find a way to halt until feedback keep up
+                  // or find a way to enqueue more packets until first feedback return
                   if(d_debug){
                     std::cerr<<"<WARNING> Feedback too slow, overwrite buffer to continue"<<std::endl;
                   }
-                  reset_queue();
+                  // Or we can force retransmission here. 
+                  // first version: reset and continue
+                  //reset_queue();
+                  // second version: auto retransmission
+                  d_current_idx--;
+                  if(d_current_idx<0){
+                    d_current_idx+= d_queue_cap;
+                  }
+                  prepare_retx();
+                  d_state = RETRANSMISSION;
+                  return 0;
+
               }
               out[PHY_LEN+0] = (unsigned char)d_current_idx;
               out[PHY_LEN+1] = 0x00;
               memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
               memcpy(out+PHY_LEN+2,in,sizeof(char)*ninput_items[0]);
               memcpy(d_queue_buf[d_current_idx],in,sizeof(char)*ninput_items[0]);
-              out[5] = (unsigned)ninput_items[0];  
+              out[5] = (unsigned char)ninput_items[0];  
               d_pkt_len_buf[d_current_idx] = ninput_items[0];
               d_time_buf[d_current_idx] = d_current_time;
               d_current_idx = (d_current_idx+1)%d_queue_cap;
@@ -321,6 +361,7 @@ namespace gr {
               out[0+PHY_LEN] = (unsigned char)d_retx_idx;
               out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
               int idx_mapping = d_retx_idx_buf[d_retx_idx++];
+              //std::cerr<<"retransmission index:"<<idx_mapping<<" ,corresponding index:"<<d_retx_idx-1<<std::endl;
               d_retx_idx%=d_retx_idx_buf.size();
               int tmp_pld_len =d_pkt_len_buf[idx_mapping]; 
               memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);

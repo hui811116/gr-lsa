@@ -190,6 +190,7 @@ enum SYSTEMSTATE{
                       if(gr::blocks::count_bits32( (d_data_reg&d_mask) ^ (CHIPSET[10]&d_mask))<=d_threshold){
                         //0xa
                         d_pkt_byte = d_pkt_byte | 0xa;
+                        std::cerr<<"found 0x7a"<<std::endl;
                         enter_have_sync();
                         break;
                       }
@@ -224,7 +225,13 @@ enum SYSTEMSTATE{
                   }
                   else{
                     d_pkt_byte |= c;
-                    if(d_pkt_byte <= MAX_PLD){
+                    if(d_pkt_byte == 0){
+                      //NACK
+                      message_port_pub(d_pld_out,pmt::cons(pmt::intern("NACK"),pmt::make_blob(d_buf,0)));
+                      enter_search();
+                      break;
+                    }
+                    else if(d_pkt_byte <= MAX_PLD){
                       enter_load_payload();
                       break;
                     }
@@ -260,6 +267,9 @@ enum SYSTEMSTATE{
                   d_symbol_cnt++;
                   if(d_symbol_cnt/2 >= d_pkt_byte){
                     // payload length collected
+                    // special cases output from here,
+                    // ACK: length =1;
+                    // SEN: length =2;
                     pmt::pmt_t blob = pmt::make_blob(d_buf,d_pkt_byte);
                     message_port_pub(d_pld_out,pmt::cons(pmt::PMT_NIL,blob));
                     enter_search();

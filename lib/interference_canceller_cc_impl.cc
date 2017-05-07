@@ -133,7 +133,7 @@ namespace gr {
       if(qindex>=qsize){
         return;
       }
-      int payload_size=0;
+      int payload_size=-1;
       int pkt_begin_idx = offset;
       if(pmt::dict_has_key(hdr_info, pmt::intern("payload"))){
         payload_size = pmt::to_long(pmt::dict_ref(hdr_info, pmt::intern("payload"), pmt::PMT_NIL));
@@ -146,7 +146,7 @@ namespace gr {
         d_retx_info.resize(qsize);
       }
       
-      if(payload_size ==0){
+      if(payload_size <0){
         throw std::runtime_error("no payload length found");
       }
       if(d_retx_buffer[qindex]==NULL){
@@ -224,29 +224,29 @@ namespace gr {
     {
       if(d_debug)
       {
-        std::cout<<"***************************************"<<std::endl;
-        std::cout<<"retx_buffer_size:"<<d_retx_buffer.size()<<" ,d_retx_count:"<<d_retx_count<<std::endl;
-        std::cout<<"sample size:"<<d_sample_size<<" ,sync_size:"<<d_sync_size<<std::endl;
-        std::cout<<"Do interference cancellation:"<<std::endl;
+        std::cerr<<"***************************************"<<std::endl;
+        std::cerr<<"retx_buffer_size:"<<d_retx_buffer.size()<<" ,d_retx_count:"<<d_retx_count<<std::endl;
+        std::cerr<<"sample size:"<<d_sample_size<<" ,sync_size:"<<d_sync_size<<std::endl;
+        std::cerr<<"Do interference cancellation:"<<std::endl;
         for(int i=0;i<(d_last_info_idx+1) ;++i){
           int ct, qi,qs;
           ct = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("counter"),pmt::PMT_NIL));
           qi = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_index"),pmt::PMT_NIL));
           qs = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_size"),pmt::PMT_NIL));
-          std::cout<<"["<<i<<"]"<<" ,index:"<<d_info_index[i]<<" counter:"<<ct<<" ,queue_index:"<<qi<<" ,queue_size:"<<qs<<std::endl;
+          std::cerr<<"["<<i<<"]"<<" ,index:"<<d_info_index[i]<<" counter:"<<ct<<" ,queue_index:"<<qi<<" ,queue_size:"<<qs<<std::endl;
         }
         std::map<long int, int>::iterator samp_it,sync_it;
-        std::cout<<"----------------------------------------"<<std::endl;
-        std::cout<<"Sample map:"<<std::endl;
+        std::cerr<<"----------------------------------------"<<std::endl;
+        std::cerr<<"Sample map:"<<std::endl;
         for(samp_it=d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
-          std::cout<<"time:"<<samp_it->first<<" ,index:"<<samp_it->second<<std::endl;
+          std::cerr<<"time:"<<samp_it->first<<" ,index:"<<samp_it->second<<std::endl;
         }
-        std::cout<<"---------------------------------------"<<std::endl;
-        std::cout<<"Sync map;"<<std::endl;
+        std::cerr<<"---------------------------------------"<<std::endl;
+        std::cerr<<"Sync map;"<<std::endl;
         for(sync_it=d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
-          std::cout<<"time:"<<sync_it->first<<" ,index"<<sync_it->second<<std::endl;
+          std::cerr<<"time:"<<sync_it->first<<" ,index"<<sync_it->second<<std::endl;
         }
-        std::cout<<"***************************************"<<std::endl;
+        std::cerr<<"***************************************"<<std::endl;
       }
 
       int end_idx = d_end_index.front();
@@ -328,6 +328,9 @@ namespace gr {
       }
       //fixing header part
       d_output_size = d_out_index.back();
+      if(d_debug){
+        std::cerr<<"<ProU IC DEBUG>Ic module: calling update index"<<std::endl;
+      }
       update_system_index(end_idx);
     }
 
@@ -535,6 +538,16 @@ namespace gr {
       sync_it = d_sync_map.find(time_ref);
       int sync_block_idx = sync_it->second;
       if(sync_it==d_sync_map.end()){
+        if(d_debug){
+          std::cerr<<"<ProU IC>Update system index: sample map info"<<std::endl;
+          for(samp_it=d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
+            std::cerr<<samp_it->first<<" ,"<<samp_it->second<<std::endl;
+          }
+          std::cerr<<"<ProU IC>Update system index: sync_map info"<<std::endl;
+          for(sync_it=d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
+            std::cerr<<sync_it->first<<" ,"<<sync_it->second<<std::endl;
+          }
+        }
         throw std::runtime_error("searching time index in sync buffer failed");
       }
       d_sync_map.erase(d_sync_map.begin(),sync_it);
@@ -604,21 +617,27 @@ namespace gr {
 
       for(int i=0;i<tags.size();++i){
         std::vector<tag_t> tmp_tags;
-        get_tags_in_range(tmp_tags, 0,tags[i].offset,tags[i].offset+d_sps);
+        get_tags_in_range(tmp_tags, 0,tags[i].offset,tags[i].offset+1);
         offset = tags[i].offset - nitems_read(0);
         if(!tmp_tags.empty()){
           pmt::pmt_t dict = pmt::make_dict();
           for(int j =0;j<tmp_tags.size();++j){
             dict = pmt::dict_add(dict, tmp_tags[j].key, tmp_tags[j].value);
           }
+          assert(pmt::dict_has_key(dict,pmt::intern("payload")));
           d_buffer_info.push_back(dict);
+
+          int tmp_pld = pmt::to_long(pmt::dict_ref(dict,pmt::intern("payload"),pmt::from_long(0)));
           //hdr sample len is for preamble length
-          begin_hdr_idx = d_sample_size + offset - d_hdr_sample_len; 
+          //begin_hdr_idx = d_sample_size + offset - d_hdr_sample_len; 
+          begin_hdr_idx = d_sample_size + offset - d_hdr_sample_len - tmp_pld;
           if(begin_hdr_idx <0){
             GR_LOG_WARN(d_logger,"header begins at negative index");
             begin_hdr_idx = 0;
           }
-          d_info_index.push_back(begin_hdr_idx);
+          else{
+            d_info_index.push_back(begin_hdr_idx);
+          }
         }
       }
     }
@@ -628,14 +647,14 @@ namespace gr {
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
       int items_reqd=0;
-      int sync_reqd =0;
+      //int sync_reqd =0;
       int space = d_cap -d_sample_size;
       int sync_space = d_cap - d_sync_size;
       items_reqd = (noutput_items>space) ? space : noutput_items;
-      sync_reqd = (noutput_items>sync_space)?sync_space:noutput_items;
-      ninput_items_required[0] = items_reqd;
-      for(int i=1;i<ninput_items_required.size();++i){
-             ninput_items_required[i] = sync_reqd;
+      items_reqd = (items_reqd>sync_space)?sync_space:items_reqd;
+      //ninput_items_required[0] = items_reqd;
+      for(int i=0;i<ninput_items_required.size();++i){
+             ninput_items_required[i] = items_reqd;
           }    
     }
 
@@ -653,14 +672,21 @@ namespace gr {
       float* eng =(have_eng) ?  (float*) output_items[1] : NULL;
       int count = 0; //for outputs
       int nin = (ninput_items[0]>noutput_items) ? noutput_items : ninput_items[0];
-      int nsync= (ninput_items[1]>noutput_items) ? noutput_items : ninput_items[1];
+      nin = (ninput_items[1]>nin) ? nin : ninput_items[1];
+      nin = (ninput_items[2]>nin) ? nin : ninput_items[2];
       // maintain queue size
-      if( ( (d_cap-d_sample_size) < noutput_items) || ( (d_cap - d_sync_size) < noutput_items) ){
+      if( ( (d_cap-d_sample_size) < nin) || ( (d_cap - d_sync_size) < nin) ){
+        if(d_debug){
+          std::cerr<<"<ProU IC DEBUG>general work: calling update system index"<<std::endl;
+          std::cerr<<"hdr info:"<<" size:"<<d_buffer_info.size()<<std::endl;
+          std::cerr<<"sync info:"<<" size:"<<d_sync_map.size()<<std::endl;
+          std::cerr<<"samp info:"<<" size:"<<d_samp_map.size()<<std::endl;
+        }
         update_system_index(d_cap/2); //FIXME
       }
       std::vector<tag_t> sample_time, sync_time;
       get_tags_in_range(sample_time,0,nitems_read(0),nitems_read(0)+nin,pmt::intern("ctime"));
-      get_tags_in_range(sync_time,1,nitems_read(1),nitems_read(1)+nsync,pmt::intern("ctime"));
+      get_tags_in_range(sync_time,1,nitems_read(1),nitems_read(1)+nin,pmt::intern("ctime"));
 
       for(int i=0;i<sample_time.size();++i){
         long int tmp_time = pmt::to_long(sample_time[i].value);
@@ -673,15 +699,20 @@ namespace gr {
         d_sync_map.insert(std::pair<long int,int>(tmp_time, offset));
       }
       memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)*nin);
-      memcpy(d_phase_buffer+d_sync_size, in_sync_p , sizeof(float)*nsync);
+      memcpy(d_phase_buffer+d_sync_size, in_sync_p , sizeof(float)*nin);
       
       std::vector<tag_t> tags;
       get_tags_in_window(tags, 0,0 ,nin, pmt::intern("header_found"));
+      //if(d_debug && !tags.empty()){
+        //std::cerr<<"<ProU IC DEBUG>general work: get header found tags, vector size:"<<tags.size()<<std::endl;
+      //}
       // insert tags as dictionaries. 
+      // NOTE: the header tag is at the end of signal to prevent undetected interference.
+      // Therefore, we should try to tag back to where true header indexes are!
       tags_handler(tags, nin);
       // update sample size
       d_sample_size+=nin;
-      d_sync_size+=nsync;
+      d_sync_size+=nin;
       // detecting interference cancellation availability 
       // is faster by checking tag-by-tag.  
       if(cancellation_detector()){
@@ -697,8 +728,8 @@ namespace gr {
           produce(1,0);
       }
       consume(0,nin);
-      consume(1,nsync);
-      consume(2,nsync);
+      consume(1,nin);
+      consume(2,nin);
       
       return WORK_CALLED_PRODUCE;
     }

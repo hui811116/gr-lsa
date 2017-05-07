@@ -79,8 +79,10 @@ namespace gr {
       }
       // special flags
       else if(pmt::eqv(pmt::intern("ACK"),mac_tag)){
+        assert(vlen ==1);
         d_buf[5] = 0x01;
-        d_buf[6] = 0xff;
+        //d_buf[6] = 0xff;
+        memcpy(d_buf+6,pmt::blob_data(blob),sizeof(char)*1);
         vlen = 1;
       }
       else if(pmt::eqv(pmt::intern("NACK"),mac_tag)){
