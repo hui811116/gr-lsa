@@ -32,6 +32,11 @@ namespace gr {
       float d_phase;
       float d_amp;
 
+      bool d_trigger;
+
+      const int d_update_len;
+      int d_len_count;
+      float d_max_corr;
      public:
       symbol_corrector_cc_impl();
       ~symbol_corrector_cc_impl();
