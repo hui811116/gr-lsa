@@ -399,7 +399,8 @@ enum SYSTEMSTATE{
                     else if(d_pkt_byte ==1){
                       // length 1 means ACK
                       // NOTE: in data channel, this case should not happen!
-                      d_qsize = 0x00; // set this since this field will never be filled in length=1
+                      // NOTE: in control channel, there still have queue information to be recieved!
+                      d_pkt_byte =2;
                       enter_load_payload();
                       break;
                     }

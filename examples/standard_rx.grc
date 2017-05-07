@@ -93,60 +93,6 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(104, 420)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>acc_bits</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(accesscode[i:i+bps],2) for i in range(0,len(accesscode),bps)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(96, 356)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>accesscode</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>digital.packet_utils.default_access_code</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
       <value>(296, 380)</value>
     </param>
     <param>
@@ -160,6 +106,33 @@
     <param>
       <key>value</key>
       <value>mod.bits_per_symbol()</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(16, 388)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>copy_zero</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>zero_symbol*8</value>
     </param>
   </block>
   <block>
@@ -201,7 +174,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(104, 484)</value>
+      <value>(16, 500)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -209,11 +182,11 @@
     </param>
     <param>
       <key>id</key>
-      <value>pre_code</value>
+      <value>pre_points</value>
     </param>
     <param>
       <key>value</key>
-      <value>[mod.pre_diff_code()[acc_bits[i]] for i in range(0,len(acc_bits))]</value>
+      <value>[mod.points()[pre_sym[i]] for i in range(0,len(pre_sym))]</value>
     </param>
   </block>
   <block>
@@ -228,7 +201,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(104, 540)</value>
+      <value>(16, 444)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -236,11 +209,11 @@
     </param>
     <param>
       <key>id</key>
-      <value>pre_s</value>
+      <value>pre_sym</value>
     </param>
     <param>
       <key>value</key>
-      <value>[mod.points()[pre_code[i]] for i in range(0,len(pre_code)) ]</value>
+      <value>[int(copy_zero[i:i+bps],2) for i in range(0,len(copy_zero),bps)]</value>
     </param>
   </block>
   <block>
@@ -287,6 +260,119 @@
     </param>
   </block>
   <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(16, 332)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>zero_symbol</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>"11011001110000110101001000101110"</value>
+    </param>
+  </block>
+  <block>
+    <key>pad_sink</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(944, 452)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>const</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>complex</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>Constellation out</value>
+    </param>
+    <param>
+      <key>num_streams</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>optional</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
+    <key>pad_sink</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(744, 516)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>corr</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>complex</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>Correlation out</value>
+    </param>
+    <param>
+      <key>num_streams</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>optional</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
     <key>digital_corr_est_cc</key>
     <param>
       <key>alias</key>
@@ -330,7 +416,7 @@
     </param>
     <param>
       <key>symbols</key>
-      <value>pre_s</value>
+      <value>pre_points</value>
     </param>
     <param>
       <key>mark_delay</key>
@@ -338,7 +424,7 @@
     </param>
     <param>
       <key>threshold</key>
-      <value>0.95</value>
+      <value>0.98</value>
     </param>
   </block>
   <block>
@@ -560,10 +646,6 @@
   <block>
     <key>lsa_symbol_sync_receiver_cf</key>
     <param>
-      <key>acccode</key>
-      <value>accesscode</value>
-    </param>
-    <param>
       <key>alias</key>
       <value></value>
     </param>
@@ -600,6 +682,10 @@
       <value>lsa_symbol_sync_receiver_cf_0</value>
     </param>
     <param>
+      <key>buf_verbose</key>
+      <value>False</value>
+    </param>
+    <param>
       <key>maxoutbuf</key>
       <value>0</value>
     </param>
@@ -608,8 +694,12 @@
       <value>0</value>
     </param>
     <param>
-      <key>pld_const</key>
-      <value>mod</value>
+      <key>thres</key>
+      <value>10</value>
+    </param>
+    <param>
+      <key>diffcode</key>
+      <value>True</value>
     </param>
   </block>
   <block>
@@ -786,6 +876,12 @@
   </block>
   <connection>
     <source_block_id>digital_corr_est_cc_0</source_block_id>
+    <sink_block_id>corr</sink_block_id>
+    <source_key>1</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>digital_corr_est_cc_0</source_block_id>
     <sink_block_id>lsa_symbol_corrector_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
@@ -805,6 +901,12 @@
   <connection>
     <source_block_id>digital_pfb_clock_sync_xxx_0</source_block_id>
     <sink_block_id>digital_lms_dd_equalizer_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_symbol_corrector_cc_0</source_block_id>
+    <sink_block_id>const</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

@@ -4,14 +4,15 @@
   <key>lsa_su_ctrl</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_ctrl($code)</make>
+  <make>lsa.su_ctrl()</make>
   
+  <!--
   <param>
     <name>accesscode</name>
     <key>code</key>
     <type>int_vector</type>
   </param>
-
+  -->
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type

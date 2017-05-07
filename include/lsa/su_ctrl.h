@@ -38,7 +38,7 @@ namespace gr {
       //su_ctrl();
       //~su_ctrl();
       typedef boost::shared_ptr<su_ctrl> sptr;
-      static sptr make(const std::vector<unsigned char>& accesscode);
+      static sptr make();
     private:
     };
 
