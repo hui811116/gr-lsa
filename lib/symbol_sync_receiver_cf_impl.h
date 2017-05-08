@@ -69,6 +69,9 @@ namespace gr {
       void enter_have_sync();
       void enter_load_payload();
       
+      //for debug
+      int d_bits_cnt;
+      std::vector<int> d_offset_table;
 
      public:
       symbol_sync_receiver_cf_impl(

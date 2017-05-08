@@ -70,7 +70,7 @@ namespace gr {
       : gr::block("interference_canceller_cc",
               gr::io_signature::makev(3, 3, iosig),
               gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
-      d_cap(1024*2048),
+      d_cap(2048*2048),
       d_clean_preamble(clean_preamble),
       d_sps(sps)
     {
@@ -99,9 +99,7 @@ namespace gr {
       d_debug = debug;
       set_tag_propagation_policy(TPP_DONT);
       set_output_multiple(d_sps);
-
       d_last_info_idx = 0;
-
       //for sync
       d_phase_buffer = new float[d_cap];
     }
@@ -624,6 +622,9 @@ namespace gr {
           for(int j =0;j<tmp_tags.size();++j){
             dict = pmt::dict_add(dict, tmp_tags[j].key, tmp_tags[j].value);
           }
+          if(d_debug){
+            std::cerr<<"extracted info:"<<dict<<std::endl;
+          }
           assert(pmt::dict_has_key(dict,pmt::intern("payload")));
           d_buffer_info.push_back(dict);
 
@@ -653,6 +654,7 @@ namespace gr {
       items_reqd = (noutput_items>space) ? space : noutput_items;
       items_reqd = (items_reqd>sync_space)?sync_space:items_reqd;
       //ninput_items_required[0] = items_reqd;
+      //std::cerr<<"nout:"<<noutput_items<<" ,input_reqd:"<<items_reqd<<std::endl;
       for(int i=0;i<ninput_items_required.size();++i){
              ninput_items_required[i] = items_reqd;
           }    
@@ -674,6 +676,7 @@ namespace gr {
       int nin = (ninput_items[0]>noutput_items) ? noutput_items : ninput_items[0];
       nin = (ninput_items[1]>nin) ? nin : ninput_items[1];
       nin = (ninput_items[2]>nin) ? nin : ninput_items[2];
+      
       // maintain queue size
       if( ( (d_cap-d_sample_size) < nin) || ( (d_cap - d_sync_size) < nin) ){
         if(d_debug){
@@ -731,6 +734,9 @@ namespace gr {
       consume(1,nin);
       consume(2,nin);
       
+      //if(d_debug)
+      //std::cerr<<"input:"<<nin<< ", output:"<<noutput_items<<std::endl;
+
       return WORK_CALLED_PRODUCE;
     }
 

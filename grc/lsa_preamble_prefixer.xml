@@ -4,14 +4,8 @@
   <key>lsa_preamble_prefixer</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.preamble_prefixer($preamble)</make>
+  <make>lsa.preamble_prefixer()</make>
 
-
-  <param>
-    <name>Preamble</name>
-    <key>preamble</key>
-    <type>int_vector</type>
-  </param>
 
   <sink>
     <name>in</name>

@@ -34,13 +34,14 @@ namespace gr {
       pmt::pmt_t d_sensing_tagname;
 
       gr_complex* d_sample_buffer;
-      std::vector<pmt::pmt_t> d_pkt_info;
+      //std::vector<pmt::pmt_t> d_pkt_info;
       std::vector<pmt::pmt_t> d_buffer_info;
       std::vector<pmt::pmt_t> d_sync_info;
 
       int d_sample_idx;
       const unsigned int d_sample_cap;
       int d_sample_size;
+      //int d_port_2_idx;
       
       long int d_update_time;
       long int d_current_time;
@@ -54,22 +55,26 @@ namespace gr {
 
       bool d_debug;
       //helper function
+
+      bool check_port1(int nout, std::vector<pmt::pmt_t>& tags);
+      void half_queue_cap();
+      /*
       void out_items_handler(
         gr_complex* out, 
         gr_complex* sample_out, 
         const gr_complex* in, 
         int noutput_items, 
         int ninput_items
-        );
+        );*/
 
-      void append_samples(
+      /*void append_samples(
         const gr_complex* in, 
         int ninput_items,
         int noutput_items, 
         int& consume_count, 
-        long int time);
+        long int time);*/
 
-      void update_sample_buffer();
+      //void update_sample_buffer();
 
      public:
       // message handler

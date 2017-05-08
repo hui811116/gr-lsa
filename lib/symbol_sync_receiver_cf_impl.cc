@@ -110,7 +110,7 @@ enum SYSTEMSTATE{
       d_threshold = (threshold<0)? 0: threshold;
 
       set_max_noutput_items(8192/d_hdr_bps);
-      d_current_time = std::clock();
+      d_current_time =0;
     }
 
     /*
@@ -178,21 +178,23 @@ enum SYSTEMSTATE{
     {
       pmt::pmt_t msg = pmt::make_dict();
       if(d_buf_verbose){
-        long int time=0;
+        /*long int time=0;
         int offset=0;
         int tmp_idx=0;
         assert(!d_time_table.empty());
         //if(d_time_table.empty()){
           //throw std::runtime_error("no timing info in table!");
         //}
+        int find_table_idx=0;
         for(int i=0;i<d_time_table.size();++i){
           if(d_time_table[i].first>sym_idx){
             break;
           }
           tmp_idx = d_time_table[i].first;
           time = d_time_table[i].second;
+          find_table_idx =i;
         }
-        offset = d_time_offset_count+(sym_idx-tmp_idx);    
+        offset = d_offset_table[find_table_idx]+(sym_idx-tmp_idx);    */
           // for debug checking
           //if(time == 0){
             //std::cout<<"symbol index:"<<sym_idx<<std::endl;
@@ -203,8 +205,8 @@ enum SYSTEMSTATE{
             //throw std::runtime_error("timing found zero, (2)");
           //}
 
-        msg = pmt::dict_add(msg, pmt::intern("ctime"),pmt::from_long(time));
-        msg = pmt::dict_add(msg, pmt::intern("buffer_offset"),pmt::from_long(offset));
+        msg = pmt::dict_add(msg, pmt::intern("ctime"),pmt::from_long(d_current_time));
+        msg = pmt::dict_add(msg, pmt::intern("buffer_offset"),pmt::from_long(d_time_offset_count));
       }
         // for header info
         msg = pmt::dict_add(msg, pmt::intern("LSA_hdr"),pmt::PMT_T);
@@ -241,7 +243,6 @@ enum SYSTEMSTATE{
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      //std::cerr<<"in:"<<ninput_items[0] << " ,out:"<<noutput_items<<std::endl;
       const float* phase = NULL;
       const float* time = NULL;
       float *out_phase = NULL;
@@ -265,30 +266,32 @@ enum SYSTEMSTATE{
           //produce(0,nfix);
           //produce(1,nfix);
         }
-        consume(1,nfix);
-        consume(2,nfix);
+        //consume should also be moved to end
       }
 
-      // Do <+signal processing+>
-      d_time_table.clear();
+      
+      //d_time_table.clear();
+      //d_offset_table.clear();
       std::vector<tag_t> time_tag;
-      std::vector<int> tag_offsets;
+      //std::vector<int> tag_offsets;
       get_tags_in_range(time_tag, 0, nitems_read(0),nitems_read(0)+nfix, d_timetag);
-      int tmp_offset=0;
-      d_time_table.push_back( std::make_pair(0,d_current_time));
-      for(int i=0;i<time_tag.size();++i){
+      //int tmp_offset=0;
+      //d_time_table.push_back( std::make_pair(0,d_current_time));
+      //d_offset_table.push_back(d_time_offset_count);
+      /*for(int i=0;i<time_tag.size();++i){
         tmp_offset = time_tag[i].offset-nitems_read(0);
         tag_offsets.push_back(tmp_offset);
         d_current_time = pmt::to_long(time_tag[i].value);
         d_time_offset_count = 0;
-        //std::cout<<"current time:"<<d_current_time<<std::endl;
         if(tmp_offset==0){
           d_time_table[0] = std::make_pair(0,d_current_time);
+          d_offset_table[0]=0;
         }
         else{
           d_time_table.push_back( std::make_pair(tmp_offset,d_current_time));
+          d_offset_table.push_back(0);
         }
-      }
+      }*/
       
 
       //should add sensing tags
@@ -321,6 +324,22 @@ enum SYSTEMSTATE{
           case SEARCH_ZERO:
             while(count < nin)
             {
+              if(!time_tag.empty()){
+                int offset = time_tag[0].offset - nitems_read(0);
+                if(offset == count/d_hdr_bps){
+                  d_current_time = pmt::to_long(time_tag[0].value);
+                  d_time_offset_count =0;
+                  if(out_sync){
+                    add_item_tag(0,nitems_written(0)+offset,time_tag[0].key,time_tag[0].value);
+                  }
+                  pmt::pmt_t dict = pmt::make_dict();
+                  dict = pmt::dict_add(dict,pmt::intern("ctime"),time_tag[0].value);
+                  dict = pmt::dict_add(dict,pmt::intern("buffer_offset"),pmt::from_long(0));
+                  message_port_pub(d_msg_port,dict);
+                  time_tag.erase(time_tag.begin());
+                }
+              }
+              d_time_offset_count =((count+1)%d_hdr_bps == 0)? d_time_offset_count+1 : d_time_offset_count;
               d_data_reg = (d_data_reg<<1) | (0x01 & d_bytes_buf[count++]);
               if(d_pre_cnt >0){
                 d_chip_cnt++;
@@ -370,6 +389,22 @@ enum SYSTEMSTATE{
           break;
           case HAVE_SYNC:
           while(count <nin){
+            if(!time_tag.empty()){
+                int offset = time_tag[0].offset - nitems_read(0);
+                if(offset == count/d_hdr_bps){
+                  d_current_time = pmt::to_long(time_tag[0].value);
+                  d_time_offset_count =0;
+                  if(out_sync){
+                    add_item_tag(0,nitems_written(0)+offset,time_tag[0].key,time_tag[0].value);
+                  }
+                  pmt::pmt_t dict = pmt::make_dict();
+                  dict = pmt::dict_add(dict,pmt::intern("ctime"),time_tag[0].value);
+                  dict = pmt::dict_add(dict,pmt::intern("buffer_offset"),pmt::from_long(0));
+                  message_port_pub(d_msg_port,dict);
+                  time_tag.erase(time_tag.begin());
+                }
+              }
+              d_time_offset_count =((count+1)%d_hdr_bps == 0)? d_time_offset_count+1 : d_time_offset_count;
               d_data_reg = (d_data_reg<<1) | (0x01&d_bytes_buf[count++]);
               d_chip_cnt++;
               if(d_chip_cnt==32){
@@ -406,6 +441,8 @@ enum SYSTEMSTATE{
                     }
                     else if(d_pkt_byte <= MAX_PLD){
                       enter_load_payload();
+                      // for debug
+                      d_bits_cnt = 0;
                       break;
                     }
                     else{
@@ -419,8 +456,25 @@ enum SYSTEMSTATE{
           break;
           case LOAD_PAYLOAD:
           while(count < nin){
+            if(!time_tag.empty()){
+                int offset = time_tag[0].offset - nitems_read(0);
+                if(offset == count/d_hdr_bps){
+                  d_current_time = pmt::to_long(time_tag[0].value);
+                  d_time_offset_count =0;
+                  if(out_sync){
+                    add_item_tag(0,nitems_written(0)+offset,time_tag[0].key,time_tag[0].value);
+                  }
+                  pmt::pmt_t dict = pmt::make_dict();
+                  dict = pmt::dict_add(dict,pmt::intern("ctime"),time_tag[0].value);
+                  dict = pmt::dict_add(dict,pmt::intern("buffer_offset"),pmt::from_long(0));
+                  message_port_pub(d_msg_port,dict);
+                  time_tag.erase(time_tag.begin());
+                }
+              }
+              d_time_offset_count =((count+1)%d_hdr_bps == 0)? d_time_offset_count+1 : d_time_offset_count;
               d_data_reg = (d_data_reg<<1) | (d_bytes_buf[count++]&0x01);
               d_chip_cnt++;
+              d_bits_cnt++;
               if(d_chip_cnt==32){
                 d_chip_cnt=0;
                 unsigned char c = decode_chip(d_data_reg);
@@ -450,6 +504,11 @@ enum SYSTEMSTATE{
                   
                   d_symbol_cnt++;
                   if(d_symbol_cnt/2 >= d_pkt_byte){
+                    // for debug
+
+                    //if(d_debug){
+                      //std::cerr<<"count bits:"<<d_bits_cnt<<std::endl;
+                    //}
                     // output header
                     // second try
                     msg_out( (count-1) /d_hdr_bps);
@@ -475,7 +534,7 @@ enum SYSTEMSTATE{
         }
       }
 
-      for(int i=0;i<time_tag.size();++i){
+      /*for(int i=0;i<time_tag.size();++i){
         pmt::pmt_t dict=pmt::make_dict();
         dict = pmt::dict_add(dict,pmt::intern("ctime"),time_tag[i].value);
         dict = pmt::dict_add(dict,pmt::intern("buffer_offset"),pmt::from_long(0));
@@ -484,11 +543,21 @@ enum SYSTEMSTATE{
         if(d_buf_verbose && have_sync && out_sync){
           add_item_tag(0,nitems_written(0)+tag_offsets[i],pmt::intern("ctime"),time_tag[i].value);
         }
-      }
-      d_time_offset_count+=(nfix-tmp_offset);  
-      if(have_sync && out_sync){
-        produce(0,nfix);
-        produce(1,nfix);
+        //if(d_debug){
+          //std::cerr<<"time offset:"<<tag_offsets[i]<<" ,ctime:"<<time_tag[i].value<<std::endl;
+        //}
+      }*/
+      //d_time_offset_count+=(nfix-tmp_offset);  
+      //if(d_debug){
+        //std::cout<<"time offset count:"<<d_time_offset_count<<std::endl;
+      //}
+      if(have_sync){
+        if(out_sync){
+          produce(0,nfix);
+          produce(1,nfix);
+        }
+        consume(1,nfix);
+        consume(2,nfix);
       }
       
       consume(0,nfix);

@@ -219,7 +219,8 @@ namespace gr {
             }
             if(qidx >= d_retx_idx_buf.size()){
               if(d_debug)
-                std::cerr<<"<SU TX DEBUG>"<<"In retansmission state receiving idx exceed buffer size!"<<std::endl;
+                std::cerr<<"<SU TX DEBUG>"<<"In retansmission state receiving idx exceed buffer size!"
+                <<"buf size:"<<d_retx_idx_buf.size()<<" ,rx:"<<qidx<<std::endl;
               return;
             }
             if(d_time_buf[d_retx_idx_buf[qidx]]!=0){

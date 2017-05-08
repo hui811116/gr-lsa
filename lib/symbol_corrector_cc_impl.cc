@@ -71,7 +71,8 @@ namespace gr {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
 
-      std::vector<tag_t> phase_tags, corr_tags;
+      std::vector<tag_t> phase_tags, corr_tags ,time_tags;
+      get_tags_in_range(time_tags, 0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("ctime"));
       get_tags_in_range(phase_tags, 0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("phase_est"));
       //get_tags_in_range(amp_tags,0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("amp_est"));
       get_tags_in_range(corr_tags, 0,nitems_read(0),nitems_read(0)+noutput_items,pmt::intern("corr_est"));
@@ -103,6 +104,9 @@ namespace gr {
         d_trigger = (d_len_count==0)?false : true;
         
         out[i] = in[i] * gr_expj(-d_phase);
+      }
+      for(int i=0;i<time_tags.size();++i){
+        add_item_tag(0,nitems_written(0),time_tags[i].key,time_tags[i].value);
       }
 
       return noutput_items;
