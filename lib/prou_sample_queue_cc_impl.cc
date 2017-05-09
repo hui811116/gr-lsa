@@ -105,8 +105,12 @@ namespace gr {
       if(time < d_update_time){
             //outdated info, skip
             return;
-          }
-      
+      }
+      hdr = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("LSA_hdr"),pmt::PMT_F));
+      if(hdr){
+        // not sync time info
+        return;
+      }
       long int tmp_time;
       int tmp_idx;
       
@@ -196,6 +200,7 @@ namespace gr {
           if(tmp_time<0 || offset <0){
             throw std::runtime_error("no time tags info");
           }
+          //std::cerr<<"tag offset:"<<nitems_written(1)+offset-d_sample_idx<<std::endl;
           add_item_tag(1,nitems_written(1)+offset-d_sample_idx,pmt::intern("ctime"),pmt::from_long(tmp_time));
         }
         d_sample_idx += nout;
@@ -221,10 +226,13 @@ namespace gr {
       while(!d_sync_info.empty()){
         tmp_idx = pmt::to_long(pmt::dict_ref(d_sync_info[0],pmt::intern("buffer_index"),pmt::from_long(-1)));
         tmp_time= pmt::to_long(pmt::dict_ref(d_sync_info[0],pmt::intern("ctime"),pmt::from_long(-1)));
+        //std::cerr<<"checking time tag:"<<tmp_time<<std::endl;
         if(tmp_idx<0 || tmp_time <0){
           throw std::runtime_error("failed at sync info");
         }
+        //std::cerr<<"condition:"<<" idx:"<<tmp_idx << " ,nout:"<<nout<<" ,samp_idx:"<<d_sample_idx<<std::endl;
         if( (tmp_idx< (nout+d_sample_idx)) && (tmp_idx>= d_sample_idx) ){
+          //std::cerr<<"erased!"<<std::endl;
           tags.push_back(d_sync_info[0]);
           d_sync_info.erase(d_sync_info.begin());
         }

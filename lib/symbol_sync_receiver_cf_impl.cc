@@ -51,6 +51,7 @@ namespace gr {
                                   2517072780,
                                   3378542520};
 static const int MAX_PLD = 127;
+static const int CODE_RATE_INV= 8;
 enum SYSTEMSTATE{
   SEARCH_ZERO,
   HAVE_SYNC,
@@ -458,7 +459,7 @@ enum SYSTEMSTATE{
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_index"),pmt::from_long(d_qidx));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_size"),pmt::from_long(d_qsize));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("pld_bytes"),pmt::from_long(d_pkt_byte));
-                      add_item_tag(0,nitems_written(0)+index,pmt::intern("payload"),pmt::from_long(d_pkt_byte*8/d_hdr_bps));
+                      add_item_tag(0,nitems_written(0)+index,pmt::intern("payload"),pmt::from_long(d_pkt_byte*8*CODE_RATE_INV/d_hdr_bps));
                     }
                     // reason: header may be intact
                     enter_search();
