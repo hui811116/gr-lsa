@@ -40,7 +40,6 @@ namespace gr {
       unsigned char d_qsize;
       unsigned char d_qidx;
       std::vector<int> d_hdr_map;
-      std::vector< std::pair<unsigned int,long int> > d_time_table;
 
       gr::digital::constellation_sptr d_hdr_const;
       long int d_current_time;
@@ -68,10 +67,6 @@ namespace gr {
       void enter_search();
       void enter_have_sync();
       void enter_load_payload();
-      
-      //for debug
-      int d_bits_cnt;
-      std::vector<int> d_offset_table;
 
      public:
       symbol_sync_receiver_cf_impl(

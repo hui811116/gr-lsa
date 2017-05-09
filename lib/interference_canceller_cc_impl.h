@@ -41,14 +41,11 @@ namespace gr {
       int d_bps;
       int d_hdr_bits;
       int d_hdr_sample_len;
-      
       int d_last_info_idx;
-
       const size_t d_cap;
 
       gr_complex* d_sample_buffer;
       gr_complex* d_output_buffer;
-
       gr_complex* d_sync_buffer;
 
       //for sync purpose
@@ -63,6 +60,7 @@ namespace gr {
       std::vector<int> d_out_info_idx;
 
       int d_sample_size;
+      long int d_current_time;
 
       //for retransmission
       std::vector<gr_complex*> d_retx_buffer;
@@ -81,7 +79,7 @@ namespace gr {
       std::map<long int, int> d_sync_map;
       std::map<long int, int> d_samp_map;
 
-      void tags_handler(std::vector<tag_t>& tags, int nin);
+      void tags_handler(std::vector<tag_t>& tags,int offset, int nin, long int current_time);
       void update_system_index(int queue_index);
       void update_system_hdr();
 

@@ -30,6 +30,7 @@
 #include <gnuradio/math.h>
 #include <gnuradio/expj.h>
 #include <map>
+#include <ctime>
 
 
 namespace gr {
@@ -102,6 +103,7 @@ namespace gr {
       d_last_info_idx = 0;
       //for sync
       d_phase_buffer = new float[d_cap];
+      d_current_time =0 ;
     }
 
     /*
@@ -125,16 +127,17 @@ namespace gr {
     void
     interference_canceller_cc_impl::retx_check(pmt::pmt_t hdr_info, int qindex,int qsize,int offset)
     {
-      if(qindex == 0 && qsize==0){
+      if(qsize==0){
         return;
       }
       if(qindex>=qsize){
         return;
       }
-      int payload_size=-1;
+      int payload_size;
       int pkt_begin_idx = offset;
-      if(pmt::dict_has_key(hdr_info, pmt::intern("payload"))){
-        payload_size = pmt::to_long(pmt::dict_ref(hdr_info, pmt::intern("payload"), pmt::PMT_NIL));
+      payload_size = pmt::to_long(pmt::dict_ref(hdr_info, pmt::intern("payload"), pmt::from_long(-1)));
+      if(payload_size <0){
+        throw std::runtime_error("no payload length found");
       }
       if(d_retx_buffer.empty()){
         d_retx_buffer.resize(qsize,NULL);
@@ -142,10 +145,6 @@ namespace gr {
         d_retx_pkt_index.resize(qsize);
         d_retx_count =0;
         d_retx_info.resize(qsize);
-      }
-      
-      if(payload_size <0){
-        throw std::runtime_error("no payload length found");
       }
       if(d_retx_buffer[qindex]==NULL){
         // can reserve a sps for possible time offset
@@ -165,6 +164,33 @@ namespace gr {
     {
       std::map<long int, int>::iterator samp_it, sync_it;
       std::map<long int, int>::iterator samp_beg, sync_beg;
+      for(sync_it =d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
+        if(sync_it->second >= end_idx){
+          sync_it--;
+          break;
+        }
+        samp_it = d_samp_map.find(sync_it->first);
+        if(samp_it==d_samp_map.end()){
+          std::cerr<<"<error>not found:"<<sync_it->first<<std::endl;
+          throw std::runtime_error("Iterator of sync map did not find matched index");
+        }
+      }
+      sync_beg = d_sync_map.begin();
+      samp_beg = d_samp_map.find(sync_beg->first);
+      if(samp_beg == d_samp_map.end()){
+        throw std::runtime_error("Samp map does not have required sync index");
+      }
+      int sync_begin_idx = sync_beg->second;
+      int samp_begin_idx = samp_beg->second;
+      int sync_len = end_idx - sync_begin_idx;
+      if((samp_beg->second+sync_len) > d_sample_size){
+        throw std::runtime_error("Sample in buffer are not enough");
+      }
+      for(int i=0;i<sync_len;++i){
+        gr_complex est = gr_expj(-1* d_phase_buffer[sync_begin_idx + i]);
+        d_sync_buffer[sync_begin_idx+i]=d_sample_buffer[samp_begin_idx+i] * est;
+      }
+      /*
       for(samp_it= d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
         if(samp_it->second>=end_idx){
           samp_it--;
@@ -189,7 +215,7 @@ namespace gr {
         gr_complex est = gr_expj(-1* d_phase_buffer[sync_beg->second +i]);
         d_sync_buffer[samp_beg->second+i]=d_sample_buffer[samp_beg->second+i] * est;
       }
-      
+      */
     }
 
     void
@@ -211,7 +237,11 @@ namespace gr {
       buffer_info.assign(d_buffer_info.begin(),d_buffer_info.begin()+d_last_info_idx+1);
       info_index.assign(d_info_index.begin(),d_info_index.begin()+d_last_info_idx+1);
       for(int i=0;i<buffer_info.size();++i){
-        int test_pkt_len = pmt::to_long(pmt::dict_ref(buffer_info[i],pmt::intern("payload"),pmt::PMT_NIL));
+        int test_pkt_len = pmt::to_long(pmt::dict_ref(buffer_info[i],pmt::intern("payload"),pmt::from_long(-1)));
+        if(test_pkt_len<0){
+          throw std::runtime_error("<ERROR>In sync hdr index: payload information not found");
+        }
+          
         coerced_packet_len.push_back(test_pkt_len+d_hdr_sample_len);
       }
       
@@ -227,11 +257,10 @@ namespace gr {
         std::cerr<<"sample size:"<<d_sample_size<<" ,sync_size:"<<d_sync_size<<std::endl;
         std::cerr<<"Do interference cancellation:"<<std::endl;
         for(int i=0;i<(d_last_info_idx+1) ;++i){
-          int ct, qi,qs;
-          ct = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("counter"),pmt::PMT_NIL));
-          qi = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_index"),pmt::PMT_NIL));
-          qs = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_size"),pmt::PMT_NIL));
-          std::cerr<<"["<<i<<"]"<<" ,index:"<<d_info_index[i]<<" counter:"<<ct<<" ,queue_index:"<<qi<<" ,queue_size:"<<qs<<std::endl;
+          int qi,qs;
+          qi = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_index"),pmt::from_long(-1)));
+          qs = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_size"),pmt::from_long(-1)));
+          std::cerr<<"["<<i<<"]"<<" ,index:"<<d_info_index[i]<<" ,queue_index:"<<qi<<" ,queue_size:"<<qs<<std::endl;
         }
         std::map<long int, int>::iterator samp_it,sync_it;
         std::cerr<<"----------------------------------------"<<std::endl;
@@ -272,9 +301,11 @@ namespace gr {
           sizeof(gr_complex)*(d_retx_pkt_size[i]) );
       }
 
-      cei_pkt_counter = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
-      pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::PMT_NIL));
-      
+      cei_pkt_counter = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::from_long(-1)));
+      pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::from_long(-1)));
+      if(pld_len<0 || cei_pkt_counter<0)
+        std::cerr<<"<ERROR>do_interference_cancellation: required info not found"<<std::endl;
+
       cei_sample_counter = d_retx_pkt_size[cei_pkt_counter];
       retx = d_retx_buffer[cei_pkt_counter];
 
@@ -353,11 +384,13 @@ namespace gr {
         if(d_out_info_idx[0]>(d_output_idx+nout)){
           break;
         }
-          int counter = pmt::to_long(pmt::dict_ref(d_out_info[0],pmt::intern("counter"),pmt::PMT_NIL));
           int offset = d_out_info_idx[0] - d_output_idx;
-          int qsize = pmt::to_long(pmt::dict_ref(d_out_info[0],pmt::intern("queue_size"),pmt::PMT_NIL));
-          int qidx =  pmt::to_long(pmt::dict_ref(d_out_info[0],pmt::intern("queue_index"),pmt::PMT_NIL));
-          add_item_tag(0,nitems_written(0)+offset,pmt::intern("counter"),pmt::from_long(counter));
+          int qsize = pmt::to_long(pmt::dict_ref(d_out_info[0],pmt::intern("queue_size"),pmt::from_long(-1)));
+          int qidx =  pmt::to_long(pmt::dict_ref(d_out_info[0],pmt::intern("queue_index"),pmt::from_long(-1)));
+          add_item_tag(0,nitems_written(0)+offset,pmt::intern("counter"),pmt::from_long(qidx));
+          if( (qsize<0||qidx<0) && d_debug ){
+            std::cerr<<"<Warning> queue information not found! (when output)"<<std::endl;
+          }
           if(qsize!=0){
             add_item_tag(0,nitems_written(0)+offset,pmt::intern("CEI_idx"),pmt::from_long(qidx));
             add_item_tag(0,nitems_written(0)+offset,pmt::intern("CEI_size"),pmt::from_long(qsize));
@@ -406,31 +439,42 @@ namespace gr {
       int pld_len, sample_idx;
       int valid_size, sync_size;
       long int time_check;
-      std::map<long int, int>::iterator it, samp_it;
+      std::map<long int, int>::iterator sync_it, samp_it;
       if(d_buffer_info.empty()){
         return false;
       }
       else{
         //update index
         while(d_last_info_idx<d_buffer_info.size()){
-          time_check = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("ctime"),pmt::PMT_NIL));
-          it = d_sync_map.find(time_check);
-          if(it == d_sync_map.end()){
+          time_check = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("ctime"),pmt::from_long(-1)));
+          if(time_check<0){
+            throw std::runtime_error("<ERROR> failed at cancellation detector, time information not found");
+          }
+          sync_it = d_sync_map.find(time_check);
+          samp_it = d_samp_map.find(time_check);
+          if(sync_it == d_sync_map.end() || (samp_it==d_samp_map.end())){
             //sync info not yet received
             return false;
           }
-          samp_it = d_samp_map.find(time_check);
-          if(samp_it == d_samp_map.end()){
+
+          if(samp_it == d_sync_map.end()){
             std::cout<<"error: time not found:"<<time_check<<"<--key"<<std::endl;
-            throw std::runtime_error("Time not matched in sample map and buffer info");
+            throw std::runtime_error("Time not matched in sync map and buffer info");
           }
 
-          pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::PMT_NIL));
-          valid_size = d_info_index[d_last_info_idx] + pld_len + d_hdr_sample_len;
+          pld_len = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("payload"),pmt::from_long(-1)));
+          if(pld_len < 0){
+            throw std::runtime_error("<ERROR>payload information not found in cancellatino detector");
+          }
+          valid_size = d_info_index[d_last_info_idx] - sync_it->second + samp_it->second + pld_len + d_hdr_sample_len;
           //calculate the valid sync info size
-          sync_size = d_info_index[d_last_info_idx] - samp_it->second + it->second + d_hdr_sample_len + pld_len;
-          qidx = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::PMT_NIL));
-          qsize = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_size"),pmt::PMT_NIL));
+          sync_size = d_info_index[d_last_info_idx] + d_hdr_sample_len + pld_len;
+          qidx = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_index"),pmt::from_long(-1)));
+          qsize = pmt::to_long(pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("queue_size"),pmt::from_long(-1)));
+          if(qidx<0 || qsize<0){
+            throw std::runtime_error("<ERROR>Queue information not found in cancellation detector");
+          }
+          // reserved length
           if( ((valid_size+1024) > d_sample_size) || ((sync_size+1024) > d_sync_size) ){
             //samples not enough
             return false;
@@ -463,12 +507,15 @@ namespace gr {
       std::map<long int, int>::iterator samp_it, sync_it;
       long int update_time = pmt::to_long(
         pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("ctime"),
-          pmt::PMT_NIL));
+          pmt::from_long(-1)));
+      if(update_time<0){
+        throw std::runtime_error("<Error>in update_system_hdr, time information not found");
+      }
       int update_idx;
       sync_it = d_sync_map.find(update_time);
-      if(sync_it==d_sync_map.end()){
-        throw std::runtime_error("find no time info");
-      }
+      //if(sync_it==d_sync_map.end()){
+        //throw std::runtime_error("find no time info");
+      //}
       update_idx = sync_it->second;
       d_sync_map.erase(d_sync_map.begin(),sync_it);
       for(sync_it =d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
@@ -537,10 +584,7 @@ namespace gr {
       int sync_block_idx = sync_it->second;
       if(sync_it==d_sync_map.end()){
         if(d_debug){
-          std::cerr<<"<ProU IC>Update system index: sample map info"<<std::endl;
-          for(samp_it=d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
-            std::cerr<<samp_it->first<<" ,"<<samp_it->second<<std::endl;
-          }
+          std::cerr<<"<ProU IC>Searching ctime tags:"<<time_ref<<std::endl;
           std::cerr<<"<ProU IC>Update system index: sync_map info"<<std::endl;
           for(sync_it=d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
             std::cerr<<sync_it->first<<" ,"<<sync_it->second<<std::endl;
@@ -552,7 +596,6 @@ namespace gr {
       for(sync_it=d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
         d_sync_map[sync_it->first] = sync_it->second - sync_block_idx;
       }
-      //DEBUG required      
       // move samples
       int new_size = d_sample_size-block_index;
       memcpy(d_sample_buffer, d_sample_buffer+block_index, sizeof(gr_complex)*new_size);
@@ -564,7 +607,6 @@ namespace gr {
       std::vector<int> new_info_index;
       std::vector<int> new_end_idx;
       int rm_count=0;
-      
       // update info index
       for(int i=0;i<d_info_index.size();++i){
         int tmp_idx = d_info_index[i] - queue_index;
@@ -601,18 +643,42 @@ namespace gr {
         }
       }
       d_retx_buffer.clear();
-
     }
     void
-    interference_canceller_cc_impl::tags_handler(std::vector<tag_t>& tags, int nin)
+    interference_canceller_cc_impl::tags_handler(std::vector<tag_t>& tags,int offset, int nin, long int current_time)
     {
-      int qsize, qidx;
-      int offset;
-      int begin_hdr_idx;
+      int begin_idx;
+      pmt::pmt_t dict = pmt::make_dict();
+      dict = pmt::dict_add(dict,pmt::intern("ctime"),pmt::from_long(current_time));
+      for(int i=0;i<tags.size();++i){
+        dict = pmt::dict_add(dict,tags[i].key,tags[i].value);
+      }
+      assert(pmt::dict_has_key(dict,pmt::intern("payload")));
+      if(!pmt::dict_has_key(dict,pmt::intern("queue_index"))){
+        throw std::runtime_error("<ERROR>In tags handler, no queue index found");
+      }
+      if(!pmt::dict_has_key(dict,pmt::intern("queue_size"))){
+        throw std::runtime_error("<ERROR>In tags handler, no queue size found");
+      }
+      int tmp_pld = pmt::to_long(pmt::dict_ref(dict,pmt::intern("payload"),pmt::from_long(-1)));
+      tmp_pld*=d_sps; // change to sample format
+      dict = pmt::dict_delete(dict,pmt::intern("payload"));
+      dict = pmt::dict_add(dict,pmt::intern("payload"),pmt::from_long(tmp_pld));
+      d_buffer_info.push_back(dict);
+      // insert to correct offset
+      
 
-      // this should be for new tags
-      // using tag absolute offset is a terrible idea. 
-
+      if(tmp_pld<0){
+        throw std::runtime_error("payload not found in dictionary");
+      }
+      // tag back to begin of preamble
+      begin_idx = offset-d_hdr_sample_len - tmp_pld;
+      if(begin_idx <0){
+        std::cerr<<"<ProU IC DEBUG>Warning: tag back to negative index, auto correct to 0"<<std::endl;
+        begin_idx = 0;
+      }
+      d_info_index.push_back(begin_idx);
+      /*
       for(int i=0;i<tags.size();++i){
         std::vector<tag_t> tmp_tags;
         get_tags_in_range(tmp_tags, 0,tags[i].offset,tags[i].offset+1);
@@ -640,21 +706,17 @@ namespace gr {
             d_info_index.push_back(begin_hdr_idx);
           }
         }
-      }
+      }*/
     }
 
     void
     interference_canceller_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
-      /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
       int items_reqd=0;
-      //int sync_reqd =0;
       int space = d_cap -d_sample_size;
       int sync_space = d_cap - d_sync_size;
       items_reqd = (noutput_items>space) ? space : noutput_items;
       items_reqd = (items_reqd>sync_space)?sync_space:items_reqd;
-      //ninput_items_required[0] = items_reqd;
-      //std::cerr<<"nout:"<<noutput_items<<" ,input_reqd:"<<items_reqd<<std::endl;
       for(int i=0;i<ninput_items_required.size();++i){
              ninput_items_required[i] = items_reqd;
           }    
@@ -705,14 +767,24 @@ namespace gr {
       memcpy(d_phase_buffer+d_sync_size, in_sync_p , sizeof(float)*nin);
       
       std::vector<tag_t> tags;
-      get_tags_in_window(tags, 0,0 ,nin, pmt::intern("header_found"));
-      //if(d_debug && !tags.empty()){
-        //std::cerr<<"<ProU IC DEBUG>general work: get header found tags, vector size:"<<tags.size()<<std::endl;
-      //}
+      get_tags_in_window(tags, 1,0 ,nin, pmt::intern("LSA_hdr"));
       // insert tags as dictionaries. 
       // NOTE: the header tag is at the end of signal to prevent undetected interference.
       // Therefore, we should try to tag back to where true header indexes are!
-      tags_handler(tags, nin);
+      for(int i=0;i<tags.size();++i){
+        int offset = tags[i].offset - nitems_read(1);
+        if(!sync_time.empty()){
+          int time_offset = sync_time[0].offset - nitems_read(1);
+          if(time_offset >=offset){
+            d_current_time = pmt::to_long(sync_time[0].value);
+            sync_time.erase(sync_time.begin());
+          }
+        }
+        std::vector<tag_t> other_tags;
+        get_tags_in_window(other_tags,1,offset,offset+1);
+        tags_handler(other_tags,d_sync_size+offset, nin, d_current_time);
+      }
+      
       // update sample size
       d_sample_size+=nin;
       d_sync_size+=nin;
