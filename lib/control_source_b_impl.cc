@@ -81,7 +81,7 @@ namespace gr {
             d_blob_list.pop_front();
           }
         }
-        for(int i=0;i<noutput_items;++i){
+        for(int i=d_data_count;i<noutput_items;++i){
           out[i] =(unsigned char) d_rng->ran_int();
         }
       return noutput_items;
