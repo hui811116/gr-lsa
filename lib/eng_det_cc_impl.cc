@@ -89,13 +89,15 @@ namespace gr {
         out_eng = (float*)output_items[1];
         have_eng = true;
       }
-      memcpy(out,in,sizeof(gr_complex)*noutput_items);
-      volk_32fc_magnitude_squared_32f(d_eng,in,noutput_items + history());
+      int consume = (ninput_items[0]-history()>0)? ninput_items[0]-history() : 0;
+      consume = (consume < noutput_items)? consume : noutput_items;
+      memcpy(out,in,sizeof(gr_complex)*consume);
+      volk_32fc_magnitude_squared_32f(d_eng,in,consume + history());
 
       // fixed bin, may be a parameter in future implementation
 
       float float_test;
-      for(int i=0;i<noutput_items;++i)
+      for(int i=0;i<consume;++i)
       {
           float_test=std::accumulate(d_eng+i,d_eng+i+d_bin-1,0.0)/(float)d_bin;
           if(have_eng){
@@ -126,12 +128,12 @@ namespace gr {
       }
       
       // Do <+signal processing+>
-      produce(0,noutput_items);
+      produce(0,consume);
       if(have_eng)
-        produce(1,noutput_items);
+        produce(1,consume);
       // Tell runtime system how many input items we consumed on
       // each input stream.
-      consume_each (noutput_items);
+      consume_each (consume);
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;
     }
