@@ -67,32 +67,38 @@ namespace gr {
         gr_vector_void_star &output_items)
     {
       unsigned char *out = (unsigned char *) output_items[0];
-      if(d_data_count){
-        assert(d_data_count<=noutput_items);
-        memcpy(out,d_data_buf,sizeof(char)*d_data_count);
-        noutput_items = d_data_count;
-        d_data_count = 0;
-      }
-      else{
+        d_data_count =0;
+        while( (d_data_count < noutput_items) && (!d_blob_list.empty()) ){
+          size_t io=pmt::blob_length(d_blob_list.front());
+          if( d_data_count+io > noutput_items ){
+            break;
+          }
+          else{
+            memcpy(out+d_data_count,pmt::blob_data(d_blob_list.front()),sizeof(char)*io);
+            d_data_count+=io;
+            d_blob_list.pop_front();
+          }
+        }
         for(int i=0;i<noutput_items;++i){
           out[i] =(unsigned char) d_rng->ran_int();
         }
-      }
       return noutput_items;
     }
 
     void
     control_source_b_impl::set_data(pmt::pmt_t msg)
     {
+      assert(pmt::is_pair(msg));
       pmt::pmt_t k = pmt::car(msg);
       pmt::pmt_t v = pmt::cdr(msg);
       assert(pmt::is_blob(v));
       size_t vlen = pmt::blob_length(v);
-      memcpy(d_data_buf,pmt::blob_data(v),vlen*sizeof(char));
-      // This will happen!!!!
-      //if(d_data_count!=0)
-        //std::cerr<<"<Control source debug>Overwrite data buffer for data count not equal to zero"<<std::endl;
-      d_data_count = vlen;
+      if(d_blob_list.size()<d_cap){
+        d_blob_list.push_back(v);
+      }
+      else{
+        std::cerr<<"<Warning>Control source: set data reach maximum capacity of blob buffer"<<std::endl;
+      }
     }
 
   } /* namespace lsa */

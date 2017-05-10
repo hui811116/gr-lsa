@@ -23,6 +23,7 @@
 
 #include <lsa/control_source_b.h>
 #include <gnuradio/random.h>
+#include <list>
 
 namespace gr {
   namespace lsa {
@@ -35,6 +36,8 @@ namespace gr {
       const size_t d_cap;
       pmt::pmt_t d_data_port;
       int d_data_count;
+
+      std::list<pmt::pmt_t> d_blob_list;
 
      public:
       control_source_b_impl(int seed);
