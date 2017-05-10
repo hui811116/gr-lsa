@@ -369,7 +369,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1088, 172)</value>
+      <value>(1264, 60)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -377,11 +377,11 @@
     </param>
     <param>
       <key>id</key>
-      <value>pre_points</value>
+      <value>pre_code</value>
     </param>
     <param>
       <key>value</key>
-      <value>[mod.points()[pre_sym[i]] for i in range(0,len(pre_sym))]</value>
+      <value>[mod.pre_diff_code()[pre_sym[i]] for i in range(0,len(pre_sym))]</value>
     </param>
   </block>
   <block>
@@ -397,6 +397,33 @@
     <param>
       <key>_coordinate</key>
       <value>(1088, 116)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>pre_points</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[mod.points()[pre_code[i]] for i in range(0,len(pre_code))]</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1264, 4)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -799,7 +826,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(800, 340)</value>
+      <value>(696, 340)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1015,7 +1042,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1024, 348)</value>
+      <value>(944, 348)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1094,53 +1121,6 @@
     </param>
   </block>
   <block>
-    <key>lsa_burst_tagger_cc</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>tagname</key>
-      <value>"packet_len"</value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1104, 444)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>lsa_burst_tagger_cc_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>mult</key>
-      <value>8*sps/bps</value>
-    </param>
-  </block>
-  <block>
     <key>lsa_chip_mapper</key>
     <param>
       <key>alias</key>
@@ -1169,45 +1149,6 @@
     <param>
       <key>id</key>
       <value>lsa_chip_mapper_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-  </block>
-  <block>
-    <key>lsa_chip_mapper_bb</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(616, 352)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>lsa_chip_mapper_bb_0</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -4120,12 +4061,6 @@
   </connection>
   <connection>
     <source_block_id>interp_fir_filter_xxx_0</source_block_id>
-    <sink_block_id>lsa_burst_tagger_cc_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_burst_tagger_cc_0</source_block_id>
     <sink_block_id>uhd_usrp_sink_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
@@ -4137,14 +4072,8 @@
     <sink_key>pld</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_chip_mapper_bb_0</source_block_id>
-    <sink_block_id>blocks_repack_bits_bb_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
     <source_block_id>lsa_control_source_b_0</source_block_id>
-    <sink_block_id>lsa_chip_mapper_bb_0</sink_block_id>
+    <sink_block_id>blocks_repack_bits_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

@@ -69,12 +69,14 @@ namespace gr {
       unsigned char *out = (unsigned char *) output_items[0];
         d_data_count =0;
         while( (d_data_count < noutput_items) && (!d_blob_list.empty()) ){
-          size_t io=pmt::blob_length(d_blob_list.front());
+          //size_t io=pmt::blob_length(d_blob_list.front());
+          size_t io(0);
+          const uint8_t* uvec = pmt::u8vector_elements(d_blob_list.front(),io);
           if( d_data_count+io > noutput_items ){
             break;
           }
           else{
-            memcpy(out+d_data_count,pmt::blob_data(d_blob_list.front()),sizeof(char)*io);
+            memcpy(out+d_data_count,uvec,sizeof(char)*io);
             d_data_count+=io;
             d_blob_list.pop_front();
           }
