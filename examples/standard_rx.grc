@@ -474,7 +474,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(696, 256)</value>
+      <value>(672, 248)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -647,7 +647,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -909,31 +909,19 @@
   </connection>
   <connection>
     <source_block_id>digital_corr_est_cc_0</source_block_id>
-    <sink_block_id>digital_costas_loop_cc_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>digital_corr_est_cc_0</source_block_id>
     <sink_block_id>lsa_symbol_corrector_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>digital_costas_loop_cc_0</source_block_id>
-    <sink_block_id>const</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>digital_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_symbol_sync_receiver_cf_0</sink_block_id>
+    <sink_block_id>digital_corr_est_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>digital_lms_dd_equalizer_cc_0</source_block_id>
-    <sink_block_id>digital_corr_est_cc_0</sink_block_id>
+    <sink_block_id>digital_costas_loop_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -946,6 +934,12 @@
   <connection>
     <source_block_id>lsa_symbol_corrector_cc_0</source_block_id>
     <sink_block_id>const</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_symbol_corrector_cc_0</source_block_id>
+    <sink_block_id>lsa_symbol_sync_receiver_cf_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

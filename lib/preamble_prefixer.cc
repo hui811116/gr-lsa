@@ -32,7 +32,9 @@ namespace gr {
     
     static const unsigned char lsa_SFD = 0x7A;
     static const size_t d_reserved_len = 4;
-    static const unsigned char lsa_preamble[] = {0x00,0x00,0x00,0x00};
+    static const size_t LSA_PREAMBLE_LEN = 5;
+    static const unsigned char lsa_preamble[] = {0x00,0x00,0x00,0x00,0x7A};
+    static const int MAXIMUM_LEN = 127;
 
   class preamble_prefixer_impl : public preamble_prefixer
   {
@@ -42,8 +44,7 @@ namespace gr {
                         gr::io_signature::make(0,0,0))
     {
       d_buf = new unsigned char[256];
-      memcpy(d_buf,lsa_preamble,sizeof(char)*4);
-      d_buf[4] = lsa_SFD;
+      memcpy(d_buf,lsa_preamble,sizeof(char)*LSA_PREAMBLE_LEN);
       d_in_port = pmt::mp("in");
       d_out_port = pmt::mp("out");
       message_port_register_in(d_in_port);
@@ -69,37 +70,12 @@ namespace gr {
       pmt::pmt_t blob = pmt::cdr(msg);
       assert(pmt::is_blob(blob));
       size_t vlen = pmt::blob_length(blob);
-      //assert(vlen > d_reserved_len);
-      //memcpy(d_buf+d_preamble.size()+6,pmt::blob_data(blob),vlen);
-      
-      if(pmt::eqv(pmt::intern("DATA"),mac_tag)){
-        assert(vlen > d_reserved_len && vlen < 128);
-        uint8_t len_u8 = (uint8_t)vlen;
-        memcpy(d_buf+4+1,pmt::blob_data(blob),sizeof(char)*vlen);
-      }
-      // special flags
-      else if(pmt::eqv(pmt::intern("ACK"),mac_tag)){
-        assert(vlen ==1);
-        d_buf[5] = 0x01;
-        //d_buf[6] = 0xff;
-        memcpy(d_buf+6,pmt::blob_data(blob),sizeof(char)*1);
-        vlen = 1;
-      }
-      else if(pmt::eqv(pmt::intern("NACK"),mac_tag)){
-        d_buf[5] = 0x00;
-        vlen=0;
-      }
-      else if(pmt::eqv(pmt::intern("SEN"),mac_tag)){
-        d_buf[5] = 0x02;
-        d_buf[6] = 0xff;
-        d_buf[7] = 0xff;
-        vlen=2;
-      }
-      else{
-        throw std::runtime_error("BAD PHY PPDU");
-      }
-      pmt::pmt_t packet = pmt::make_blob(d_buf,vlen+6);
+
+      assert(vlen> d_reserved_len && vlen <= MAXIMUM_LEN);
+      memcpy(d_buf+LSA_PREAMBLE_LEN,pmt::blob_data(blob),vlen);
+      pmt::pmt_t packet = pmt::make_blob(d_buf,vlen+LSA_PREAMBLE_LEN);
       message_port_pub(d_out_port, pmt::cons(pmt::PMT_NIL,packet));
+      
     }
 
     private:
