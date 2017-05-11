@@ -64,3 +64,5 @@ GR_ADD_TEST(qa_control_source_b ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}
 GR_ADD_TEST(qa_packet_sink ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_packet_sink.py)
 GR_ADD_TEST(qa_su_transmitter_bb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_transmitter_bb.py)
 GR_ADD_TEST(qa_chip_mapper_bb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_chip_mapper_bb.py)
+GR_ADD_TEST(qa_moving_average_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_moving_average_cc.py)
+GR_ADD_TEST(qa_moving_average_ff ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_moving_average_ff.py)

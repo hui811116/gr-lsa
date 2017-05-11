@@ -50,5 +50,7 @@ install(FILES
     chip_mapper.h
     packet_sink.h
     su_transmitter_bb.h
-    chip_mapper_bb.h DESTINATION include/lsa
+    chip_mapper_bb.h
+    moving_average_cc.h
+    moving_average_ff.h DESTINATION include/lsa
 )
