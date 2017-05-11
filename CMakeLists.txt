@@ -46,6 +46,10 @@ set(VERSION_INFO_API_COMPAT    0)
 set(VERSION_INFO_MINOR_VERSION 0)
 set(VERSION_INFO_MAINT_VERSION git)
 
+# Supress cmake warnings
+cmake_policy(SET CMP0045 OLD)
+cmake_policy(SET CMP0026 OLD)
+
 ########################################################################
 # Compiler specific setup
 ########################################################################
