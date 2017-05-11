@@ -19,7 +19,7 @@
 
 ########################################################################
 # Install public header files
-########################################################################
+############################>>>>>>> 1a9de55f93d1d457ce4df2dc57dcc029b5511f18############################################
 install(FILES
     api.h
     eng_det_cc.h
@@ -52,5 +52,6 @@ install(FILES
     su_transmitter_bb.h
     chip_mapper_bb.h
     moving_average_cc.h
-    moving_average_ff.h DESTINATION include/lsa
+    moving_average_ff.h
+    coarse_sync_cc.h DESTINATION include/lsa
 )

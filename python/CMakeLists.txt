@@ -66,3 +66,4 @@ GR_ADD_TEST(qa_su_transmitter_bb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR
 GR_ADD_TEST(qa_chip_mapper_bb ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_chip_mapper_bb.py)
 GR_ADD_TEST(qa_moving_average_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_moving_average_cc.py)
 GR_ADD_TEST(qa_moving_average_ff ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_moving_average_ff.py)
+GR_ADD_TEST(qa_coarse_sync_cc ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_coarse_sync_cc.py)

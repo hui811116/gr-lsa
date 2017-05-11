@@ -47,5 +47,6 @@ install(FILES
     lsa_su_transmitter_bb.xml
     lsa_chip_mapper_bb.xml
     lsa_moving_average_cc.xml
-    lsa_moving_average_ff.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_moving_average_ff.xml
+    lsa_coarse_sync_cc.xml DESTINATION share/gnuradio/grc/blocks
 )
