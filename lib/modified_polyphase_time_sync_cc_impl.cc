@@ -259,7 +259,7 @@ void
 
       // produce output as long as we can and there are enough input samples
       while(i < noutput_items) {
-        if(tags.size() > 0) {
+        if(!tags.empty()) {
           size_t offset = tags[0].offset-nitems_read(0);
           if((offset >= (size_t)count) && (offset < (size_t)(count + d_sps))) {
             float center = (float)pmt::to_double(tags[0].value);
@@ -268,7 +268,7 @@ void
             tags.erase(tags.begin());
           }
         }
-        if(tags.size() > 0) {
+        if(!intf_tags.empty()) {
           size_t offset = intf_tags[0].offset-nitems_read(0);
           if((offset >= (size_t)count) && (offset < (size_t)(count + d_sps))) {
             if(pmt::to_bool(intf_tags[0].value) && !d_intf_state){
@@ -282,7 +282,7 @@ void
               //should add condition for interference detection
               //reapply phase and freq before interference
               d_intf_state = false;
-              //d_k = d_prev_k + d_prev_f * d_prev_time_count;
+              d_rate_f = d_prev_f;
             }
             intf_tags.erase(intf_tags.begin());
           }

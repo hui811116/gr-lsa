@@ -49,7 +49,8 @@ namespace gr {
               gr::io_signature::make2(1, 2, sizeof(gr_complex),sizeof(float))),
       d_src_id(pmt::intern(alias())),
       d_state_reg(false),
-      d_cap(24*1024)
+      d_cap(24*1024),
+      d_ed_tagname(pmt::intern("ed_tag"))
     {
       set_threshold(threshold);
       set_bin(bin);
@@ -106,8 +107,10 @@ namespace gr {
           if(float_test >= d_threshold)
           {
             if(!d_state_reg){
+              add_item_tag(0,nitems_written(0)+i, d_ed_tagname, pmt::PMT_T, d_src_id);
               add_item_tag(0,nitems_written(0)+i, pmt::intern("ed_begin"), pmt::PMT_T, d_src_id);
               if(have_eng){
+                add_item_tag(1,nitems_written(1)+i, d_ed_tagname, pmt::PMT_T, d_src_id);
                 add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_begin"), pmt::PMT_T, d_src_id);
                 }
               d_state_reg=true;
@@ -117,9 +120,9 @@ namespace gr {
           else
           {
             if(d_state_reg){
-              add_item_tag(0,nitems_written(0)+i, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
+              add_item_tag(0,nitems_written(0)+i, d_ed_tagname, pmt::PMT_F, d_src_id);
               if(have_eng){
-                add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_end"), pmt::PMT_F, d_src_id);
+                add_item_tag(1,nitems_written(1)+i, d_ed_tagname, pmt::PMT_F, d_src_id);
               }
               d_state_reg=false;
               //out[out_count++] = in[i];

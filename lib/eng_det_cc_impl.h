@@ -37,6 +37,7 @@ namespace gr {
       bool d_state_reg;
       size_t d_cap;
       float * d_eng;
+      const pmt::pmt_t d_ed_tagname;
 
      public:
       eng_det_cc_impl(float threshold,int bin);

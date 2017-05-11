@@ -57,7 +57,7 @@ namespace gr {
               d_mingap(MINGAP*sps),
               d_maxlen(MAXLEN*sps),
               d_cfo_key(pmt::string_to_symbol("cfo_est")),
-              d_edend_tagname(pmt::intern("ed_end"))
+              d_edend_tagname(pmt::intern("ed_tag"))
     {
       d_state = SEARCH;
       if(threshold > 1 || threshold<0){
@@ -120,7 +120,8 @@ namespace gr {
                 d_copy_cnt =0;
                 add_item_tag(0,nwrite,d_cfo_key,pmt::from_float(d_coarse_cfo));
                 while(!ed_tags.empty()){
-                  if(ed_tags[0].offset-nread >= count){
+                  bool ed_false = pmt::to_bool(ed_tags[0].value);
+                  if( (ed_tags[0].offset-nread >= count) && !ed_false){
                     break;
                   }
                   ed_tags.erase(ed_tags.begin());
@@ -165,10 +166,13 @@ namespace gr {
             }
             if(!ed_tags.empty()){
               int offset = ed_tags[0].offset - nread;
+              bool ed_false = pmt::to_bool(ed_tags[0].value);
               if(offset == nout){
-                d_state = SEARCH;
-                d_copy_cnt =0;
-                d_auto_cnt =0;
+                if(!ed_false){
+                  d_state = SEARCH;
+                  d_copy_cnt =0;
+                  d_auto_cnt =0;
+                }
                 ed_tags.erase(ed_tags.begin());
               }
             }
