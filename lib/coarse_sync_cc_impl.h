@@ -32,14 +32,17 @@ namespace gr {
       int d_state;
       int d_auto_cnt;
       int d_copy_cnt;
+      int d_sps;
       float d_threshold;
       const int d_valid_len;
+      const int d_mingap;
+      const int d_maxlen;
       const pmt::pmt_t d_cfo_key;
       float d_coarse_cfo;
       const pmt::pmt_t d_edend_tagname;
 
      public:
-      coarse_sync_cc_impl(float threshold);
+      coarse_sync_cc_impl(float threshold, int sps);
       ~coarse_sync_cc_impl();
 
       // Where all the action really happens

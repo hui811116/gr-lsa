@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::coarse_sync_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(float threshold);
+      static sptr make(float threshold,int sps);
     };
 
   } // namespace lsa

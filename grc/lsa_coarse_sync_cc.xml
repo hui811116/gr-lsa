@@ -4,7 +4,7 @@
   <key>lsa_coarse_sync_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.coarse_sync_cc($thres)</make>
+  <make>lsa.coarse_sync_cc($thres,$sps)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -14,6 +14,11 @@
     <name>threshold</name>
     <key>thres</key>
     <type>float</type>
+  </param>
+  <param>
+    <name>Samples per symbol</name>
+    <key>sps</key>
+    <type>int</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
