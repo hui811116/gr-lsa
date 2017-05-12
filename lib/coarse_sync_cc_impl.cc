@@ -101,10 +101,10 @@ namespace gr {
       int count =0;
       int nout= 0;
 
-      std::vector<tag_t> tags, ed_tags;
+      std::vector<tag_t> ed_tags;
       const uint64_t nread = nitems_read(0);
       const uint64_t nwrite = nitems_written(0);
-      get_tags_in_range(tags,0,nread,nread+nin);
+      //get_tags_in_range(tags,0,nread,nread+nin);
       get_tags_in_range(ed_tags,0,nread,nread+nin,d_edend_tagname);
 
 
@@ -121,7 +121,7 @@ namespace gr {
                 add_item_tag(0,nwrite,d_cfo_key,pmt::from_float(d_coarse_cfo));
                 while(!ed_tags.empty()){
                   bool ed_false = pmt::to_bool(ed_tags[0].value);
-                  if( (ed_tags[0].offset-nread >= count) && !ed_false){
+                  if( ed_tags[0].offset-nread >= count){
                     break;
                   }
                   ed_tags.erase(ed_tags.begin());
@@ -134,7 +134,8 @@ namespace gr {
             } 
           }
           consume_each(count);
-          return 0;
+          //memcpy(out,in_samp,sizeof(gr_complex)*count);
+          return count;
         break;
         case COPY:
           while(nout<noutput_items&& nout<nin && d_copy_cnt<d_maxlen){
@@ -163,6 +164,8 @@ namespace gr {
               d_state = SEARCH;
               d_copy_cnt =0;
               d_auto_cnt =0;
+              nout++;
+              break;
             }
             if(!ed_tags.empty()){
               int offset = ed_tags[0].offset - nread;
@@ -172,6 +175,8 @@ namespace gr {
                   d_state = SEARCH;
                   d_copy_cnt =0;
                   d_auto_cnt =0;
+                  nout++;
+                  break;
                 }
                 ed_tags.erase(ed_tags.begin());
               }

@@ -4,12 +4,8 @@
   <key>lsa_modified_costas_loop_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.modified_costas_loop_cc($w, $order, $use_snr,$tagname)</make>
-  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
-       Sub-nodes:
-       * name
-       * key (makes the value accessible as $keyname, e.g. in the make node)
-       * type -->
+  <make>lsa.modified_costas_loop_cc($w, $order, $use_snr,$tagname,$burst)</make>
+  
   <param>
     <name>Loop Bandwidth</name>
     <key>w</key>
@@ -43,12 +39,21 @@
     <value>"sensing"</value>
     <type>string</type>
   </param>
+  <param>
+    <name>Burst mode</name>
+    <key>burst</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>On</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Off</name>
+      <key>False</key>
+    </option>
+  </param>
 
-  <!-- Make one 'sink' node per input. Sub-nodes:
-       * name (an identifier for the GUI)
-       * type
-       * vlen
-       * optional (set to 1 for optional inputs) -->
   <sink>
     <name>in</name>
     <type>complex</type>
@@ -64,11 +69,6 @@
     <optional>1</optional>
   </sink>
 
-  <!-- Make one 'source' node per output. Sub-nodes:
-       * name (an identifier for the GUI)
-       * type
-       * vlen
-       * optional (set to 1 for optional inputs) -->
   <source>
     <name>out</name>
     <type>complex</type>

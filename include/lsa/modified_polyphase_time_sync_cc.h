@@ -53,7 +53,8 @@ namespace gr {
            float init_phase=0,
            float max_rate_deviation=1.5,
            int osps=1,
-           const std::string& intf_tagname="sensing");
+           const std::string& intf_tagname="sensing",
+           bool burst_mode = false);
     };
 
   } // namespace lsa

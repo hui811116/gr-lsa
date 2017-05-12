@@ -49,7 +49,9 @@ namespace gr {
        * class. lsa::modified_costas_loop_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(float loop_bw, int order, bool use_snr=false, const std::string& intf_tagname="sensing");
+      static sptr make(float loop_bw, int order, bool use_snr=false, 
+                       const std::string& intf_tagname="sensing",
+                       bool burst_mode=false);
     };
 
   } // namespace lsa

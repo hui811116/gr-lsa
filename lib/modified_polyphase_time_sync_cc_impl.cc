@@ -40,7 +40,8 @@ namespace gr {
            float init_phase,
            float max_rate_deviation,
            int osps,
-           const std::string& intf_tagname)
+           const std::string& intf_tagname,
+           bool burst_mode)
     {
       return gnuradio::get_initial_sptr
         (new modified_polyphase_time_sync_cc_impl(sps, loop_bw, taps,
@@ -48,7 +49,8 @@ namespace gr {
              init_phase,
              max_rate_deviation,
              osps,
-             intf_tagname));
+             intf_tagname,
+             burst_mode));
     }
 
     /*
@@ -60,7 +62,8 @@ namespace gr {
            float init_phase,
            float max_rate_deviation,
            int osps,
-           const std::string& intf_tagname)
+           const std::string& intf_tagname,
+           bool burst_mode)
       : gr::block("modified_polyphase_time_sync_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
@@ -76,20 +79,17 @@ namespace gr {
       d_prev_f = 0;
       d_prev_time_count = 0;
       d_intf_state = false;
-
+      d_burst_mode = burst_mode;
+      d_found_burst = false;
       // Let scheduler adjust our relative_rate.
       //enable_update_rate(true);
       set_tag_propagation_policy(TPP_DONT);
-
       d_nfilters = filter_size;
       d_sps = floor(sps);
-
       // Set the damping factor for a critically damped system
       d_damping = 2*d_nfilters;
-
       // Set the bandwidth, which will then call update_gains()
       d_loop_bw=loop_bw;
-
       // Store the last filter between calls to work
       // The accumulator keeps track of overflow to increment the stride correctly.
       // set it here to the fractional difference based on the initial phaes
@@ -140,8 +140,6 @@ namespace gr {
     void
     modified_polyphase_time_sync_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
-      /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      
       // samples to be consumed
       ninput_items_required[0] = (noutput_items + history()) * (d_sps/d_osps);
       // for samples
@@ -171,7 +169,7 @@ void
 
       // Partition the filter
       for(i = 0; i < d_nfilters; i++) {
-  // Each channel uses all d_taps_per_filter with 0's if not enough taps to fill out
+  // Each channel usesd_intf_tagname all d_taps_per_filter with 0's if not enough taps to fill out
   ourtaps[i] = std::vector<float>(d_taps_per_filter, 0);
   for(j = 0; j < d_taps_per_filter; j++) {
     ourtaps[i][j] = tmp_taps[i + j*d_nfilters];
@@ -219,8 +217,6 @@ void
       }
     }
 
-
-
     int
     modified_polyphase_time_sync_cc_impl::general_work (int noutput_items,
                        gr_vector_int &ninput_items,
@@ -253,6 +249,8 @@ void
       get_tags_in_window(intf_tags, 0,0,
                         d_sps*noutput_items,
                         d_intf_tagname);
+      std::vector<tag_t> ed_tags;
+      get_tags_in_window(ed_tags, 0,0,d_sps*noutput_items,pmt::intern("ed_tag"));
 
       int i = 0, count = 0;
       float error_r, error_i;
@@ -285,6 +283,14 @@ void
               d_rate_f = d_prev_f;
             }
             intf_tags.erase(intf_tags.begin());
+          }
+        }
+        if(!ed_tags.empty()){
+          size_t offset = ed_tags[0].offset - nitems_read(0);
+          if((offset>= (size_t)count) && (offset<(size_t)(count+d_sps))){
+            d_found_burst = pmt::to_bool(ed_tags[0].value);
+              // signal found
+            ed_tags.erase(ed_tags.begin());
           }
         }
 
@@ -324,29 +330,29 @@ void
           }
           d_old_in = d_new_in;
           d_last_out = nitems_written(0) + i + d_out_idx;
-
-          d_out_idx++;
-
-    if(output_items.size() == 3) {
-      outk[i] = d_k;
+if(output_items.size() == 2) {
+      outk[i+d_out_idx] = d_k;
     }
-
+          d_out_idx++;
     // We've run out of output items we can create; return now.
     if(i+d_out_idx >= noutput_items) {
       consume_each(count);
       return i;
     }
   }
-
   // reset here; if we didn't complete a full osps samples last time,
   // the early return would take care of it.
   d_out_idx = 0;
-
   // Update the phase and rate estimates for this symbol
   gr_complex diff = d_diff_filters[d_filtnum]->filter(&in[count]);
   error_r = out[i].real() * diff.real();
   error_i = out[i].imag() * diff.imag();
   d_error = (error_i + error_r) / 2.0;       // average error from I&Q channel
+
+  // for burst mode, only update when in burst!
+  if(d_burst_mode && !d_found_burst){
+    d_error = 0; //forced to zero to stop updating
+  }
 
         // Run the control loop to update the current phase (k) and
         // tracking rate estimates based on the error value
