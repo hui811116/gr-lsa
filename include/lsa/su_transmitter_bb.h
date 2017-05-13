@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::su_transmitter_bb::make is the public interface for
        * creating new instances.
        */
-      static sptr make(const std::string& tagname, int mode, bool debug);
+      static sptr make(const std::string& tagname, int mode, int len, bool debug);
     };
 
   } // namespace lsa

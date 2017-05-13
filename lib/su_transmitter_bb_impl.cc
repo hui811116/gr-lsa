@@ -47,7 +47,8 @@ namespace gr {
 
     enum SUTXMODE{
       SUCCESSIVE=0,
-      NOQUEUE=1
+      NOQUEUE=1,
+      CONSTRAINT=2
     };
     enum SUTXSTATE{
       CLEAR_TO_SEND,
@@ -61,16 +62,16 @@ namespace gr {
     
 
     su_transmitter_bb::sptr
-    su_transmitter_bb::make(const std::string& tagname, int mode, bool debug)
+    su_transmitter_bb::make(const std::string& tagname, int mode, int len, bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new su_transmitter_bb_impl(tagname,mode,debug));
+        (new su_transmitter_bb_impl(tagname,mode,len,debug));
     }
 
     /*
      * The private constructor
      */
-    su_transmitter_bb_impl::su_transmitter_bb_impl(const std::string& tagname, int mode, bool debug)
+    su_transmitter_bb_impl::su_transmitter_bb_impl(const std::string& tagname, int mode, int len,bool debug)
       : gr::tagged_stream_block("su_transmitter_bb",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(1, 1, sizeof(char)), tagname),
@@ -88,6 +89,10 @@ namespace gr {
         break;
         case 1:
           d_mode = NOQUEUE;
+        break;
+        case 2:
+          d_mode = CONSTRAINT;
+          d_clen = len;
         break;
         default:
           d_mode = NOQUEUE;
@@ -139,6 +144,16 @@ namespace gr {
             noutput_items = d_pkt_len_buf[idx_mapping]+2+PHY_LEN;
           }
         break;
+        case CONSTRAINT:
+          if(d_state == CLEAR_TO_SEND){
+            noutput_items = ninput_items[0]+2+PHY_LEN;
+          }
+          else if(d_state == RETRANSMISSION){
+            assert(!d_retx_idx_buf.empty());
+            int idx_mapping = d_retx_idx_buf[d_retx_idx];
+            noutput_items = d_pkt_len_buf[idx_mapping]+2+PHY_LEN;
+          }
+        break;
         default:
           std::runtime_error("Wrong state");
         break;
@@ -177,6 +192,7 @@ namespace gr {
       }
         break;
         case SUCCESSIVE:
+        case CONSTRAINT:
         if(pmt::dict_has_key(msg,pmt::intern("sensing"))){
         sen_result = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("sensing"),pmt::PMT_T));
         // retransmission no matter what
@@ -255,8 +271,6 @@ namespace gr {
     {
       // limit: the limited delay is 256
       // this is due to the mac field design
-      //assert(d_latest_idx!=d_current_idx);
-      //std::cerr<<"<SU TX DEBUG>"<<"current idx:"<<d_current_idx<<" ,latest idx:"<<d_latest_idx<<std::endl;
       long int min_time = std::clock();
       int min_idx = 0;
       for(int i=0;i<d_queue_cap;++i){
@@ -280,7 +294,6 @@ namespace gr {
         if(idx_iter>=d_queue_cap){
           idx_iter%= d_queue_cap;
         }
-        //std::cerr<<"time info:" <<" ,idx:"<<i<<"<< ,time:"<<d_time_buf[d_retx_idx_buf[i]]<<std::endl;
       }
       d_retx_cnt=0;
       d_retx_idx=0;
@@ -322,7 +335,6 @@ namespace gr {
           switch(d_state){
             case CLEAR_TO_SEND:
             {
-              //std::cerr<<"SUTX DEBUG:"<<"current idx for pkt:"<<d_current_idx<<std::endl;
               if(d_time_buf[d_current_idx]!=0){
                   // feedback too slow, will be overwritten
                   // TODO
@@ -363,6 +375,52 @@ namespace gr {
               out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
               int idx_mapping = d_retx_idx_buf[d_retx_idx++];
               //std::cerr<<"retransmission index:"<<idx_mapping<<" ,corresponding index:"<<d_retx_idx-1<<std::endl;
+              d_retx_idx%=d_retx_idx_buf.size();
+              int tmp_pld_len =d_pkt_len_buf[idx_mapping]; 
+              memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
+              memcpy(out+PHY_LEN+2, d_queue_buf[idx_mapping],sizeof(char)*tmp_pld_len);
+              out[5] = (unsigned char) tmp_pld_len;
+              nout = tmp_pld_len+2+PHY_LEN;
+            break;
+            }
+            default:
+              throw std::runtime_error("Worng state");
+            break;
+          }
+        break;
+        case CONSTRAINT:
+          switch(d_state){
+            case CLEAR_TO_SEND:
+            {
+              int diff = d_current_idx - d_latest_idx;
+              if(diff<0)
+                diff += d_queue_cap;
+              if(diff>=d_clen){
+                  if(d_debug){
+                    std::cerr<<"SUTX constraint mode: reaching constraint length, force retransmission!"<<std::endl;
+                  }
+                  prepare_retx();
+                  d_state = RETRANSMISSION;
+                  return 0;
+              }
+              out[PHY_LEN+0] = (unsigned char)d_current_idx;
+              out[PHY_LEN+1] = 0x00;
+              memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
+              memcpy(out+PHY_LEN+2,in,sizeof(char)*ninput_items[0]);
+              memcpy(d_queue_buf[d_current_idx],in,sizeof(char)*ninput_items[0]);
+              out[5] = (unsigned char)ninput_items[0];  
+              d_pkt_len_buf[d_current_idx] = ninput_items[0];
+              d_time_buf[d_current_idx] = d_current_time;
+              d_current_idx = (d_current_idx+1)%d_queue_cap;
+              nout = ninput_items[0]+PHY_LEN+2;
+            }
+            break;
+            case RETRANSMISSION:
+            {
+              assert(!d_retx_idx_buf.empty());
+              out[0+PHY_LEN] = (unsigned char)d_retx_idx;
+              out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
+              int idx_mapping = d_retx_idx_buf[d_retx_idx++];
               d_retx_idx%=d_retx_idx_buf.size();
               int tmp_pld_len =d_pkt_len_buf[idx_mapping]; 
               memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);

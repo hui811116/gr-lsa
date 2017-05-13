@@ -4,10 +4,11 @@
   <key>lsa_interference_energy_detector_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.interference_energy_detector_cc($ed_thres, $voe_thres,$blocklength,$debug)</make>
+  <make>lsa.interference_energy_detector_cc($ed_thres, $voe_thres,$blocklength,$minlen,$debug)</make>
   <callback>set_ed_threshold($ed_thres)</callback>
   <callback>set_voe_threshold($voe_thres)</callback>
   <callback>set_blocklength($blocklength)</callback>
+  <callback>set_min_length($minlen)</callback>
   <param>
     <name>ED threshold(dB)</name>
     <key>ed_thres</key>
@@ -21,6 +22,11 @@
   <param>
     <name>Blocklength</name>
     <key>blocklength</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Interference Min length</name>
+    <key>minlen</key>
     <type>int</type>
   </param>
   <param>

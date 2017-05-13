@@ -54,6 +54,8 @@ namespace gr {
       void prepare_retx();
       void reset_queue();
 
+      int d_clen;   //for contraint length mode
+
       // statistic fields
       // long int d_transmit_pkts;
       // long int d_round_pkts;
@@ -62,7 +64,7 @@ namespace gr {
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
-      su_transmitter_bb_impl(const std::string& tagname, int mode, bool debug);
+      su_transmitter_bb_impl(const std::string& tagname, int mode, int len, bool debug);
       ~su_transmitter_bb_impl();
 
       // Where all the action really happens

@@ -53,6 +53,7 @@ namespace gr {
         float ed_threshold,
         float voe_threshold,
         size_t blocklength,
+        int minlen,
         bool debug);
 
       virtual void set_ed_threshold(float threshold_db)=0;
@@ -63,6 +64,9 @@ namespace gr {
 
       virtual void set_blocklength(size_t blocklength) =0;
       virtual size_t blocklength() const =0;
+
+      virtual void set_min_length(int minlen) =0;
+      virtual int min_length() const =0;
     };
 
   } // namespace lsa
