@@ -71,16 +71,17 @@ class stat_report_impl: public stat_report
   void
   msg_handler(pmt::pmt_t msg)
   {
-    //std::cerr<<"<Debug>"<<pmt::is_dict(msg)<< ","<<pmt::is_pair(msg)<<std::endl;
+    // pair and dict will both enter this state
     if(pmt::is_dict(msg)){
-      //std::cerr<<"dictionary!"<<std::endl;
       if(pmt::dict_has_key(msg,pmt::intern("LSA_hdr"))){
         assert(pmt::dict_has_key(msg,pmt::intern("Type")));
         pmt::pmt_t type = pmt::dict_ref(msg,pmt::intern("Type"),pmt::intern("wrong"));
-        //std::cerr<<"<stat report debug>"<<type<<std::endl;
         if(pmt::eqv(type,pmt::intern("Fresh_data"))){
           d_data_pkt_cnt++;
           d_suc_pkt_cnt++;
+          if(pmt::dict_has_key(msg,pmt::intern("payload"))){
+            d_acc_byte += pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(0)));
+          }
         }
         else if(pmt::eqv(type,pmt::intern("Retransmission"))){
           d_retx_pkt_cnt++;
@@ -90,19 +91,20 @@ class stat_report_impl: public stat_report
           return;
         }
       }
-    }
-    else if(pmt::is_pair(msg)){
-      pmt::pmt_t k = pmt::car(msg);
-      pmt::pmt_t v = pmt::cdr(msg);
-      if(pmt::eqv(k,pmt::intern("LSA_hdr"))){
+      else{
+        pmt::pmt_t k = pmt::car(msg);
+        pmt::pmt_t v = pmt::cdr(msg);
+        // add bytes
         if(pmt::is_blob(v)){
-          d_acc_byte+=pmt::blob_length(v); 
+          d_acc_byte+= pmt::blob_length(v);
+        }
+        // add pkt type
+        if(pmt::eqv(k,pmt::intern("LSA_hdr"))){
+          d_suc_pkt_cnt++;
         }
       }
-      else if(pmt::eqv(k,pmt::intern("sensing"))){
-        return;
-      }
     }
+    
   }
 
   void

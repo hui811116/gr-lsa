@@ -156,7 +156,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>10000</value>
+      <value>1e6</value>
     </param>
   </block>
   <block>
@@ -642,7 +642,7 @@
     </param>
     <param>
       <key>mode</key>
-      <value>2</value>
+      <value>1</value>
     </param>
     <param>
       <key>tag</key>
