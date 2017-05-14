@@ -50,6 +50,7 @@
 #include "lsa/moving_average_cc.h"
 #include "lsa/moving_average_ff.h"
 #include "lsa/coarse_sync_cc.h"
+#include "lsa/stat_report.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -126,3 +127,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, moving_average_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, moving_average_ff);
 %include "lsa/coarse_sync_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, coarse_sync_cc);
+%include "lsa/stat_report.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, stat_report);

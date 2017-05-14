@@ -174,7 +174,7 @@ namespace gr {
         dict = pmt::dict_add(dict,pmt::intern("ctime"),pmt::from_long(d_current_time));
         dict = pmt::dict_add(dict,pmt::intern("buffer_index"),pmt::from_long(d_sample_size));
         d_buffer_info.push_back(dict);
-        d_output_count%= d_min_output_items;
+        d_output_count-= d_min_output_items;
       }
       d_output_count+=nin;
       memcpy(out,in,sizeof(gr_complex)*nin);
@@ -183,6 +183,9 @@ namespace gr {
       
       if( d_sample_size == d_sample_cap){
         // update
+        if(d_debug){
+          std::cerr<<"<ProU Queue>reaching capacity, reduce size to half!"<<std::endl;
+        }
         half_queue_cap();
       }
       //have space 
@@ -198,9 +201,12 @@ namespace gr {
           long int tmp_time = pmt::to_long(pmt::dict_ref(p2_tags[i],pmt::intern("ctime"),pmt::from_long(-1)));
           int offset = pmt::to_long(pmt::dict_ref(p2_tags[i],pmt::intern("buffer_index"),pmt::from_long(-1)));
           if(tmp_time<0 || offset <0){
-            throw std::runtime_error("no time tags info");
+            std::cerr<<"<ProU Queue>time:"<<tmp_time<<" ,offset:"<<offset<<std::endl;
+            throw std::runtime_error("invalid tags info");
           }
-          //std::cerr<<"tag offset:"<<nitems_written(1)+offset-d_sample_idx<<std::endl;
+          if(d_debug){
+            std::cerr<<"<ProU Queue>adding time tag at:"<<nitems_written(1)+offset-d_sample_idx<<" ,time:"<<tmp_time<<std::endl;
+          }
           add_item_tag(1,nitems_written(1)+offset-d_sample_idx,pmt::intern("ctime"),pmt::from_long(tmp_time));
         }
         d_sample_idx += nout;
@@ -226,13 +232,12 @@ namespace gr {
       while(!d_sync_info.empty()){
         tmp_idx = pmt::to_long(pmt::dict_ref(d_sync_info[0],pmt::intern("buffer_index"),pmt::from_long(-1)));
         tmp_time= pmt::to_long(pmt::dict_ref(d_sync_info[0],pmt::intern("ctime"),pmt::from_long(-1)));
-        //std::cerr<<"checking time tag:"<<tmp_time<<std::endl;
         if(tmp_idx<0 || tmp_time <0){
           throw std::runtime_error("failed at sync info");
         }
-        //std::cerr<<"condition:"<<" idx:"<<tmp_idx << " ,nout:"<<nout<<" ,samp_idx:"<<d_sample_idx<<std::endl;
         if( (tmp_idx< (nout+d_sample_idx)) && (tmp_idx>= d_sample_idx) ){
-          //std::cerr<<"erased!"<<std::endl;
+          if(d_debug)
+            std::cerr<<"<ProU Queue debug> adding time tag:"<<d_sync_info[0]<<std::endl;
           tags.push_back(d_sync_info[0]);
           d_sync_info.erase(d_sync_info.begin());
         }
@@ -241,7 +246,7 @@ namespace gr {
         }
       }
       
-      return false;
+      return !tags.empty();
     }
 
     void

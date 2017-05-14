@@ -53,5 +53,6 @@ install(FILES
     chip_mapper_bb.h
     moving_average_cc.h
     moving_average_ff.h
-    coarse_sync_cc.h DESTINATION include/lsa
+    coarse_sync_cc.h
+    stat_report.h DESTINATION include/lsa
 )

@@ -690,7 +690,7 @@ namespace gr {
       d_info_index.push_back(begin_idx);
       if(d_debug){
         std::cerr<<"<ProU IC Debug>tags added:"<<dict;
-        std::cerr<<" ,index:"<<begin_idx<<std::endl;
+        std::cerr<<" ,index:"<<begin_idx<<" ,total info:"<<d_buffer_info.size()<<std::endl;
       }
       
     }
@@ -740,18 +740,12 @@ namespace gr {
         long int tmp_time = pmt::to_long(sample_time[i].value);
         int offset = (int) d_sample_size + sample_time[i].offset - nitems_read(0);
         d_samp_map.insert(std::pair<long int,int>(tmp_time,offset));
-        //if(d_debug){
-          //std::cerr<<"<ProU IC Debug>Sample Time tag added:"<<tmp_time<<" ,at:"<<offset<<std::endl;
-        //}
       }
       for(int i=0;i<sync_time.size();++i){
         long int tmp_time = pmt::to_long(sync_time[i].value);
         int offset = (int) d_sync_size + sync_time[i].offset - nitems_read(1);
         d_sync_map.insert(std::pair<long int,int>(tmp_time, offset));
         d_current_time = tmp_time;
-        //if(d_debug){
-          //std::cerr<<"<ProU IC Debug>Sync Time tag added:"<<tmp_time<<" ,at:"<<offset<<std::endl;
-        //}
       }
       memcpy(d_sample_buffer+d_sample_size, in, sizeof(gr_complex)*nin);
       memcpy(d_phase_buffer+d_sync_size, in_sync_p , sizeof(float)*nin);

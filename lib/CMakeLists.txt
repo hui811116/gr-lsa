@@ -56,7 +56,8 @@ list(APPEND lsa_sources
     chip_mapper_bb_impl.cc
     moving_average_cc_impl.cc
     moving_average_ff_impl.cc 
-    coarse_sync_cc_impl.cc )
+    coarse_sync_cc_impl.cc
+    stat_report.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
@@ -89,6 +90,7 @@ include_directories(${CPPUNIT_INCLUDE_DIRS})
 list(APPEND test_lsa_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/test_lsa.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_lsa.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/qa_stat_report.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_chip_mapper.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_ctrl.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_block_mac.cc
