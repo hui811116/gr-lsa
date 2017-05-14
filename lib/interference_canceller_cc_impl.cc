@@ -37,6 +37,7 @@ namespace gr {
   namespace lsa {
 
 #define TWO_PI (2.0f*M_PI)
+#define LSA_CODE_RATE_INV 8
 
 
     interference_canceller_cc::sptr
@@ -89,8 +90,8 @@ namespace gr {
       d_eng_buffer = (float*) volk_malloc( sizeof(float) * d_cap, volk_get_alignment());
 
       d_bps = bps;
-      d_hdr_bits = hdr_bits;
-      d_hdr_sample_len = d_hdr_bits /d_bps * d_sps;
+      d_hdr_bits = hdr_bits; // uncoded
+      d_hdr_sample_len = d_hdr_bits*LSA_CODE_RATE_INV /d_bps * d_sps;
 
       d_retx_buffer.clear(); 
       d_retx_pkt_size.clear();

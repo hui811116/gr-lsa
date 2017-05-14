@@ -5,12 +5,21 @@
   <category>[lsa]</category>
   <import>import lsa</import>
   <make>lsa.stat_report($ms)</make>
-  
+  <callback>set_period($ms)</callback>
+
   <param>
     <name>Period(ms)</name>
     <key>ms</key>
+    <value>4000</value>
     <type>float</type>
   </param>
+
+<!--
+  <sink>
+    <name>strobe_in</name>
+    <type>message</type>
+  </sink>
+  -->
 
   <sink>
     <name>msg_in</name>

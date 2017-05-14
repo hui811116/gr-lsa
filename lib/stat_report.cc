@@ -37,19 +37,23 @@ class stat_report_impl: public stat_report
                 gr::io_signature::make(0,0,0),
                 gr::io_signature::make(0,0,0)),
                 d_msg_portname(pmt::mp("msg_in")),
+                //d_strobe_port(pmt::mp("strobe_in")),
                 d_finished(false)
   {
-    //message_port_register_out(pmt::mp("stat"));
+    //message_port_register_in(d_strobe_port);
     message_port_register_in(d_msg_portname);
     set_msg_handler(d_msg_portname,boost::bind(&stat_report_impl::msg_handler,this,_1));
-
+    //set_msg_handler(d_strobe_port,boost::bind(&stat_report_impl::strobe_in,this,_1));
+    // 
     set_period(ms);
     // initialize statistics
+    reset_cnt();
   }
   ~stat_report_impl()
   {
 
   }
+  
   void
   set_period(const float& ms)
   {
@@ -67,7 +71,44 @@ class stat_report_impl: public stat_report
   void
   msg_handler(pmt::pmt_t msg)
   {
+    //std::cerr<<"<Debug>"<<pmt::is_dict(msg)<< ","<<pmt::is_pair(msg)<<std::endl;
+    if(pmt::is_dict(msg)){
+      //std::cerr<<"dictionary!"<<std::endl;
+      if(pmt::dict_has_key(msg,pmt::intern("LSA_hdr"))){
+        assert(pmt::dict_has_key(msg,pmt::intern("Type")));
+        pmt::pmt_t type = pmt::dict_ref(msg,pmt::intern("Type"),pmt::intern("wrong"));
+        //std::cerr<<"<stat report debug>"<<type<<std::endl;
+        if(pmt::eqv(type,pmt::intern("Fresh_data"))){
+          d_data_pkt_cnt++;
+          d_suc_pkt_cnt++;
+        }
+        else if(pmt::eqv(type,pmt::intern("Retransmission"))){
+          d_retx_pkt_cnt++;
+          d_suc_pkt_cnt++;
+        }
+        else{
+          return;
+        }
+      }
+    }
+    else if(pmt::is_pair(msg)){
+      pmt::pmt_t k = pmt::car(msg);
+      pmt::pmt_t v = pmt::cdr(msg);
+      if(pmt::eqv(k,pmt::intern("LSA_hdr"))){
+        if(pmt::is_blob(v)){
+          d_acc_byte+=pmt::blob_length(v); 
+        }
+      }
+      else if(pmt::eqv(k,pmt::intern("sensing"))){
+        return;
+      }
+    }
+  }
 
+  void
+  strobe_in(pmt::pmt_t strobe)
+  {
+    gen_stat();
   }
 
   bool
@@ -90,7 +131,36 @@ class stat_report_impl: public stat_report
   }
 
   private:
-  
+
+  int d_suc_pkt_cnt;
+  int d_retx_pkt_cnt;
+  int d_data_pkt_cnt;
+  uint64_t d_byte_cnt;           // the overall byte counter
+  uint64_t d_acc_byte;           // instanious byte count between periods
+  unsigned int d_iter_acc;       // iteration counter for periods
+  //int d_inst_acc_pkt;
+  //int d_inst_iter_cnt;
+  pmt::pmt_t d_msg;
+  boost::shared_ptr<gr::thread::thread> d_thread;
+  bool d_finished;
+  float d_period_ms;
+  const pmt::pmt_t d_msg_portname;
+  //const pmt::pmt_t d_strobe_port;
+  //pmt::pmt_t d_stat;
+
+  void
+  reset_cnt()
+  {
+    d_suc_pkt_cnt =0;
+    d_retx_pkt_cnt =0;
+    d_data_pkt_cnt =0;
+    //d_inst_acc_pkt = 0;
+    //d_inst_iter_cnt =0;
+    d_byte_cnt = 0;              
+    d_acc_byte = 0;              
+    d_iter_acc =0;               
+  }
+
   void
   run()
   {
@@ -106,20 +176,25 @@ class stat_report_impl: public stat_report
   void
   gen_stat()
   {
+    d_iter_acc++;
+    d_byte_cnt+= d_acc_byte;
+
     // show the statistics 
-    std::cout<<""<<std::endl;
+    std::cout<<"\n===Statistics==="<<std::endl;
+    std::cout<<"<Throughput(Bytes/s)>"<<d_acc_byte/d_period_ms*1000<<std::endl;
+    std::cout<<"<Runtime>"<<d_iter_acc*d_period_ms/1000<<" s"<<std::endl;
+    //std::cout<<"--------------------------------------------------"<<std::endl;
+    std::cout<<"<Success packets>"<<d_suc_pkt_cnt<<std::endl;
+    std::cout<<"<Data packets>"<<d_data_pkt_cnt<<std::endl;
+    std::cout<<"<Retransmission>"<<d_retx_pkt_cnt<<std::endl;
+    std::cout<<"===end==="<<std::endl;
+    // update counters and registers
+    d_acc_byte =0;
   }
-
-    boost::shared_ptr<gr::thread::thread> d_thread;
-    bool d_finished;
-    float d_period_ms;
-    const pmt::pmt_t d_msg_portname;
-    //pmt::pmt_t d_stat;
-
 };
 
 stat_report::sptr
-    stat_report::make(float ms){
+    stat_report::make(const float& ms){
       return gnuradio::get_initial_sptr(new stat_report_impl(ms));
     }
 
