@@ -63,9 +63,6 @@ namespace gr {
       float d_error;
       int   d_out_idx;
 
-      float d_prev_k;
-      float d_prev_f;
-      uint64_t d_prev_time_count;
       bool d_intf_state;
 
       uint64_t d_old_in, d_new_in, d_last_out;

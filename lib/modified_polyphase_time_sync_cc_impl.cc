@@ -75,9 +75,7 @@ namespace gr {
         throw std::runtime_error("pfb_clock_sync_ccf: please specify a filter.\n");
 
       d_intf_tagname = pmt::string_to_symbol(intf_tagname);
-      d_prev_k = 0;
-      d_prev_f = 0;
-      d_prev_time_count = 0;
+      
       d_intf_state = false;
       d_burst_mode = burst_mode;
       d_found_burst = false;
@@ -252,13 +250,15 @@ void
       std::vector<tag_t> ed_tags;
       get_tags_in_window(ed_tags, 0,0,d_sps*noutput_items,pmt::intern("ed_tag"));
 
+      const int64_t nread = nitems_read(0);
+
       int i = 0, count = 0;
       float error_r, error_i;
 
       // produce output as long as we can and there are enough input samples
       while(i < noutput_items) {
         if(!tags.empty()) {
-          size_t offset = tags[0].offset-nitems_read(0);
+          size_t offset = tags[0].offset-nread;
           if((offset >= (size_t)count) && (offset < (size_t)(count + d_sps))) {
             float center = (float)pmt::to_double(tags[0].value);
             d_k = d_nfilters*(center + (offset - count));
@@ -267,26 +267,14 @@ void
           }
         }
         if(!intf_tags.empty()) {
-          size_t offset = intf_tags[0].offset-nitems_read(0);
+          size_t offset = intf_tags[0].offset-nread;
           if((offset >= (size_t)count) && (offset < (size_t)(count + d_sps))) {
-            if(pmt::to_bool(intf_tags[0].value) && !d_intf_state){
-              //should add condition for interference detection
-              d_prev_k = d_k;
-              d_prev_f = d_rate_f;
-              d_prev_time_count=0;
-              d_intf_state = true;
-            }
-            else if(!pmt::to_bool(intf_tags[0].value) && d_intf_state){
-              //should add condition for interference detection
-              //reapply phase and freq before interference
-              d_intf_state = false;
-              d_rate_f = d_prev_f;
-            }
+            d_intf_state = pmt::to_bool(intf_tags[0].value);
             intf_tags.erase(intf_tags.begin());
           }
         }
         if(!ed_tags.empty()){
-          size_t offset = ed_tags[0].offset - nitems_read(0);
+          size_t offset = ed_tags[0].offset - nread;
           if((offset>= (size_t)count) && (offset<(size_t)(count+d_sps))){
             d_found_burst = pmt::to_bool(ed_tags[0].value);
               // signal found
@@ -314,13 +302,11 @@ void
 
     out[i+d_out_idx] = d_filters[d_filtnum]->filter(&in[count+d_out_idx]);
     d_k = d_k + d_rate_i + d_rate_f; // update phase
-    //
-    d_prev_time_count++;
 
           // Manage Tags
           std::vector<tag_t> xtags;
           std::vector<tag_t>::iterator itags;
-          d_new_in = nitems_read(0) + count + d_out_idx + d_sps;
+          d_new_in = nread + count + d_out_idx + d_sps;
           get_tags_in_range(xtags, 0, d_old_in, d_new_in);
           for(itags = xtags.begin(); itags != xtags.end(); itags++) {
             tag_t new_tag = *itags;
@@ -350,7 +336,7 @@ if(output_items.size() == 2) {
   d_error = (error_i + error_r) / 2.0;       // average error from I&Q channel
 
   // for burst mode, only update when in burst!
-  if(d_burst_mode && !d_found_burst){
+  if( (d_burst_mode && !d_found_burst) || (d_intf_state) ){
     d_error = 0; //forced to zero to stop updating
   }
 
@@ -367,8 +353,7 @@ if(output_items.size() == 2) {
 
   i+=d_osps;
   count += (int)floor(d_sps);
-  //
-  d_prev_time_count += (int)floor(d_sps);
+  
       }
       //pass samples to next block
       consume_each(count);

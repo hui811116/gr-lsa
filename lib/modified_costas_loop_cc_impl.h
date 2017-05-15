@@ -34,7 +34,7 @@ namespace gr {
       float d_error;
       float d_noise;
 
-      float d_prev_freq;      
+      //float d_prev_freq;      
       bool d_intf_state;
 
       bool d_burst_mode;
