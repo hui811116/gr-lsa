@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<block>
+  <name>ProU Packet Sink</name>
+  <key>lsa_prou_packet_sink_f</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.prou_packet_sink_f($thres)</make>
+  <callback>set_threshold</callback>
+  
+  <param>
+    <name>Threshold</name>
+    <key>thres</key>
+    <value>10</value>
+    <type>int</type>
+  </param>
+
+  
+  <sink>
+    <name>in</name>
+    <type>float</type>
+  </sink>
+
+  <source>
+    <name>pkt_out</name>
+    <type>message</type>
+  </source>
+</block>

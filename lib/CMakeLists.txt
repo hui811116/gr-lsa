@@ -57,7 +57,8 @@ list(APPEND lsa_sources
     moving_average_cc_impl.cc
     moving_average_ff_impl.cc 
     coarse_sync_cc_impl.cc
-    stat_report.cc )
+    stat_report.cc
+    prou_packet_sink_f_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

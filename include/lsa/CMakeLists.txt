@@ -54,5 +54,6 @@ install(FILES
     moving_average_cc.h
     moving_average_ff.h
     coarse_sync_cc.h
-    stat_report.h DESTINATION include/lsa
+    stat_report.h
+    prou_packet_sink_f.h DESTINATION include/lsa
 )
