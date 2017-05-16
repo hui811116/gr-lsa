@@ -52,6 +52,7 @@
 #include "lsa/coarse_sync_cc.h"
 #include "lsa/stat_report.h"
 #include "lsa/prou_packet_sink_f.h"
+#include "lsa/length_prefixer.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -115,7 +116,6 @@ GR_SWIG_BLOCK_MAGIC2(lsa, block_mac);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_ctrl);
 %include "lsa/chip_mapper.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, chip_mapper);
-
 %include "lsa/packet_sink.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, packet_sink);
 %include "lsa/su_transmitter_bb.h"
@@ -130,6 +130,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, moving_average_ff);
 GR_SWIG_BLOCK_MAGIC2(lsa, coarse_sync_cc);
 %include "lsa/stat_report.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, stat_report);
-
 %include "lsa/prou_packet_sink_f.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, prou_packet_sink_f);
+%include "lsa/length_prefixer.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, length_prefixer);

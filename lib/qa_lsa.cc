@@ -33,6 +33,7 @@
 #include "qa_su_ctrl.h"
 #include "qa_chip_mapper.h"
 #include "qa_stat_report.h"
+#include "qa_length_prefixer.h"
 
 CppUnit::TestSuite *
 qa_lsa::suite()
@@ -45,6 +46,7 @@ qa_lsa::suite()
   s->addTest(gr::lsa::qa_su_ctrl::suite());
   s->addTest(gr::lsa::qa_chip_mapper::suite());
   s->addTest(gr::lsa::qa_stat_report::suite());
+  s->addTest(gr::lsa::qa_length_prefixer::suite());
 
   return s;
 }

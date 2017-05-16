@@ -50,5 +50,6 @@ install(FILES
     lsa_moving_average_ff.xml
     lsa_coarse_sync_cc.xml
     lsa_stat_report.xml
-    lsa_prou_packet_sink_f.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_prou_packet_sink_f.xml
+    lsa_length_prefixer.xml DESTINATION share/gnuradio/grc/blocks
 )

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<block>
+  <name>Length Prefixer</name>
+  <key>lsa_length_prefixer</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.length_prefixer()</make>
+  
+  <sink>
+    <name>pdu_in</name>
+    <type>message</type>
+  </sink>
+
+  
+  <source>
+    <name>pdu_out</name>
+    <type>message</type>
+  </source>
+</block>
