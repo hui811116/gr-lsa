@@ -35,11 +35,12 @@ namespace gr {
       length_prefixer_impl() :block("length_prefixer",
                         gr::io_signature::make(0,0,0),
                         gr::io_signature::make(0,0,0)),
-                        d_out_port(pmt::mp("pdu_out"))
+                        d_out_port(pmt::mp("pdu_out")),
+                        d_in_port(pmt::mp("pdu_in"))
       {
-        message_port_register_in(pmt::mp("pdu_in"));
+        message_port_register_in(d_in_port);
         message_port_register_out(d_out_port);
-        set_msg_handler(d_out_port,boost::bind(&length_prefixer_impl::msg_handler,this,_1));
+        set_msg_handler(d_in_port,boost::bind(&length_prefixer_impl::msg_handler,this,_1));
       }
 
       ~length_prefixer_impl()
@@ -63,6 +64,7 @@ namespace gr {
       private:
       unsigned char d_buf[1024];
       const pmt::pmt_t d_out_port;
+      const pmt::pmt_t d_in_port;
     };
 
     length_prefixer::sptr

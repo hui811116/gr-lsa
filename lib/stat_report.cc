@@ -99,7 +99,8 @@ class stat_report_impl: public stat_report
           d_acc_byte+= pmt::blob_length(v);
         }
         // add pkt type
-        if(pmt::eqv(k,pmt::intern("LSA_hdr"))){
+        if(pmt::eqv(k,pmt::intern("LSA_hdr"))||
+           pmt::eqv(k,pmt::intern("ProU"))){
           d_suc_pkt_cnt++;
         }
       }
