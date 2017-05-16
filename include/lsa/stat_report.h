@@ -36,7 +36,7 @@ namespace gr {
     {
     public:
       typedef boost::shared_ptr<stat_report> sptr;
-      static sptr make(const float& ms);
+      static sptr make(const float& ms,int mode);
 
       virtual void set_period(const float& ms) =0;
       virtual float period() const =0;

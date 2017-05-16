@@ -25,29 +25,54 @@
 #include <gnuradio/io_signature.h>
 #include <lsa/stat_report.h>
 #include <gnuradio/block_detail.h>
+#include <iomanip>
 
 namespace gr {
   namespace lsa {
 
+enum STATMODE{
+  PROUTX=0,
+  PROURX=1,
+  SURX=2,
+  SUTX=3
+};
 
 class stat_report_impl: public stat_report
 {
   public:
-  stat_report_impl(float ms): block("stat_report",
+  stat_report_impl(float ms,int mode): block("stat_report",
                 gr::io_signature::make(0,0,0),
                 gr::io_signature::make(0,0,0)),
                 d_msg_portname(pmt::mp("msg_in")),
-                //d_strobe_port(pmt::mp("strobe_in")),
                 d_finished(false)
   {
-    //message_port_register_in(d_strobe_port);
     message_port_register_in(d_msg_portname);
     set_msg_handler(d_msg_portname,boost::bind(&stat_report_impl::msg_handler,this,_1));
-    //set_msg_handler(d_strobe_port,boost::bind(&stat_report_impl::strobe_in,this,_1));
-    // 
     set_period(ms);
     // initialize statistics
     reset_cnt();
+    switch(mode)
+    {
+      case PROUTX:
+        d_mode = PROUTX;
+        d_mode_type = "ProU TX";
+      break;
+      case PROURX:
+        d_mode = PROURX;
+        d_mode_type = "ProU RX";
+      break;
+      case SURX:
+        d_mode = SURX;
+        d_mode_type = "SU RX";
+      break;
+      case SUTX:
+        d_mode = SUTX;
+        d_mode_type = "SU TX";
+      break;
+      default:
+        throw std::runtime_error("Undefined mode, forced stop");
+      break;
+    }
   }
   ~stat_report_impl()
   {
@@ -105,13 +130,20 @@ class stat_report_impl: public stat_report
         }
       }
     }
-    
-  }
-
-  void
-  strobe_in(pmt::pmt_t strobe)
-  {
-    gen_stat();
+    else{
+      //not dictionary, possible for transmitter messages
+      if(pmt::eqv(msg,pmt::intern("TX"))){
+        d_tx_cnt++;
+      }
+      else if(pmt::eqv(msg,pmt::intern("LSA_data"))){
+        d_tx_cnt++;
+        d_data_pkt_cnt++;
+      }
+      else if(pmt::eqv(msg,pmt::intern("LSA_RE"))){
+        d_tx_cnt++;
+        d_retx_pkt_cnt++;
+      }
+    }
   }
 
   bool
@@ -134,22 +166,24 @@ class stat_report_impl: public stat_report
   }
 
   private:
-
-  int d_suc_pkt_cnt;
-  int d_retx_pkt_cnt;
-  int d_data_pkt_cnt;
+  int d_suc_pkt_cnt;             // record success packets
+  int d_retx_pkt_cnt;            // record retransmitted packets
+  int d_data_pkt_cnt;            // record data packets
   uint64_t d_byte_cnt;           // the overall byte counter
   uint64_t d_acc_byte;           // instanious byte count between periods
   unsigned int d_iter_acc;       // iteration counter for periods
-  //int d_inst_acc_pkt;
-  //int d_inst_iter_cnt;
+  
+  int d_tx_cnt;                  // transmitted packets
+  
   pmt::pmt_t d_msg;
   boost::shared_ptr<gr::thread::thread> d_thread;
   bool d_finished;
   float d_period_ms;
   const pmt::pmt_t d_msg_portname;
-  //const pmt::pmt_t d_strobe_port;
-  //pmt::pmt_t d_stat;
+  
+  int d_mode;                    // for different statistic reports
+  std::string d_mode_type;       // for easy output
+  
 
   void
   reset_cnt()
@@ -157,8 +191,7 @@ class stat_report_impl: public stat_report
     d_suc_pkt_cnt =0;
     d_retx_pkt_cnt =0;
     d_data_pkt_cnt =0;
-    //d_inst_acc_pkt = 0;
-    //d_inst_iter_cnt =0;
+    d_tx_cnt =0;
     d_byte_cnt = 0;              
     d_acc_byte = 0;              
     d_iter_acc =0;               
@@ -173,32 +206,53 @@ class stat_report_impl: public stat_report
         return;
       }
       gen_stat();
-      //message_port_pub(d_msg_portname,d_stat);
     }
   }
   void
   gen_stat()
   {
-    d_iter_acc++;
-    d_byte_cnt+= d_acc_byte;
-
-    // show the statistics 
-    std::cout<<"\n===Statistics==="<<std::endl;
-    std::cout<<"<Throughput(Bytes/s)>"<<d_acc_byte/d_period_ms*1000<<std::endl;
-    std::cout<<"<Runtime>"<<d_iter_acc*d_period_ms/1000<<" s"<<std::endl;
-    //std::cout<<"--------------------------------------------------"<<std::endl;
-    std::cout<<"<Success packets>"<<d_suc_pkt_cnt<<std::endl;
-    std::cout<<"<Data packets>"<<d_data_pkt_cnt<<std::endl;
-    std::cout<<"<Retransmission>"<<d_retx_pkt_cnt<<std::endl;
-    std::cout<<"===end==="<<std::endl;
-    // update counters and registers
-    d_acc_byte =0;
+    
+    d_iter_acc++;  // add for every statistic reporter
+    std::cout<<"\n===============Statistics==============="<<std::endl;
+    std::cout<<std::left<<std::setw(30)<<"<System Type>"<<std::right<<std::setw(10)<<d_mode_type<<std::endl;
+    std::cout<<std::left<<std::setw(30)<<"<Runtime (s)>"<<std::right<<std::setw(10)<<d_iter_acc*d_period_ms/1000<<std::endl;
+    switch(d_mode)
+    {
+      case PROUTX:
+        std::cout<<std::left<<std::setw(30)<<"<Transmit packets>"<<std::right<<std::setw(10)<<d_tx_cnt<<std::endl;
+      break;
+      case PROURX:
+        d_byte_cnt+= d_acc_byte;
+        // show the statistics 
+        std::cout<<std::left<<std::setw(30)<<"<Throughput(Bytes/s)>"<<std::right<<std::setw(10)<<d_acc_byte/d_period_ms*1000<<std::endl;
+        std::cout<<std::left<<std::setw(30)<<"<Success packets>"<<std::right<<std::setw(10)<<d_suc_pkt_cnt<<std::endl;
+        std::cout<<std::left<<std::setw(30)<<"<Data packets>"<<std::right<<std::setw(10)<<d_data_pkt_cnt<<std::endl;
+        // update counters and registers
+        d_acc_byte =0;
+      break;
+      case SUTX:
+        std::cout<<std::left<<std::setw(30)<<"<Transmit packets>"<<std::right<<std::setw(10)<<d_tx_cnt<<std::endl;
+        std::cout<<std::left<<std::setw(30)<<"<Data packets>"<<std::right<<std::setw(10)<<d_data_pkt_cnt<<std::endl;
+        std::cout<<std::left<<std::setw(30)<<"<Retransmission>"<<std::right<<std::setw(10)<<d_retx_pkt_cnt<<std::endl;
+      break;
+      case SURX:
+        d_byte_cnt+= d_acc_byte;
+        // show the statistics 
+        std::cout<<std::left<<std::setw(30)<<"<Throughput(Bytes/s)>"<<std::right<<std::setw(10)<<d_acc_byte/d_period_ms*1000<<std::endl;
+        std::cout<<std::left<<std::setw(30)<<"<Success packets>"<<std::right<<std::setw(10)<<d_suc_pkt_cnt<<std::endl;
+        std::cout<<std::left<<std::setw(30)<<"<Data packets>"<<std::right<<std::setw(10)<<d_data_pkt_cnt<<std::endl;
+        std::cout<<std::left<<std::setw(30)<<"<Retransmission>"<<std::right<<std::setw(10)<<d_retx_pkt_cnt<<std::endl;
+        // update counters and registers
+        d_acc_byte =0;
+      break;
+    }
+    std::cout<<"===================End=================="<<std::endl;
   }
 };
 
 stat_report::sptr
-    stat_report::make(const float& ms){
-      return gnuradio::get_initial_sptr(new stat_report_impl(ms));
+    stat_report::make(const float& ms, int mode){
+      return gnuradio::get_initial_sptr(new stat_report_impl(ms, mode));
     }
 
   } /* namespace lsa */

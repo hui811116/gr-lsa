@@ -402,7 +402,7 @@
     </param>
     <param>
       <key>msg</key>
-      <value>pmt.intern("TEST")</value>
+      <value>pmt.intern("TX")</value>
     </param>
     <param>
       <key>minoutbuf</key>
@@ -987,6 +987,45 @@
     <param>
       <key>minoutbuf</key>
       <value>0</value>
+    </param>
+  </block>
+  <block>
+    <key>lsa_stat_report</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(352, 12)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_stat_report_0</value>
+    </param>
+    <param>
+      <key>mode</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>ms</key>
+      <value>4000</value>
     </param>
   </block>
   <block>
@@ -1841,6 +1880,12 @@
     <sink_block_id>blocks_random_pdu_0</sink_block_id>
     <source_key>strobe</source_key>
     <sink_key>generate</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>blocks_message_strobe_0</source_block_id>
+    <sink_block_id>lsa_stat_report_0</sink_block_id>
+    <source_key>strobe</source_key>
+    <sink_key>msg_in</sink_key>
   </connection>
   <connection>
     <source_block_id>blocks_multiply_xx_0</source_block_id>
