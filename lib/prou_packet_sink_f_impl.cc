@@ -32,22 +32,22 @@ namespace gr {
     static const unsigned int d_mask = 0x7ffffffe;
     static const int MAXPLD = 128-1;
     static const unsigned int CHIPSET[16] = {
-      913698311,
-      1734271091,
-      1978533686,
-      1591767910,
-      3993450100,
-      3765659486,
-      121009647,
-      1936154337,
-      3381268985,
-      2560696205,
-      2316433608,
-      2703199384,
-      301517194,
-      529307808,
-      4173957649,
-      2358812959
+      3765939820,
+      3456596710,
+      1826650030,
+      1724778362,
+      778887287,
+      2061946375,
+      4155403488,
+      2272978638,
+      2676511123,
+      2985854233,
+      320833617,
+      422705285,
+      1368596360,
+      85537272,
+      2287047455,
+      4169472305
     };
     enum PKTSTATE{
       SEARCH,
@@ -179,6 +179,7 @@ namespace gr {
               if(d_pre_cnt ==0){
                 int thres = gr::blocks::count_bits32( (d_data_reg & d_mask) ^ (CHIPSET[0] & d_mask) );
                 if(thres < d_threshold){
+                  //std::cerr<<"prou packet sink:found a zero, thres:"<<thres<<std::endl;
                   d_pre_cnt++;
                 }
               }
@@ -191,7 +192,7 @@ namespace gr {
                       d_pre_cnt++;
                       d_byte_reg = 0x00;
                     }
-                    else if(gr::blocks::count_bits32((d_data_reg&d_mask)^(CHIPSET[7]&d_mask)<=d_threshold )){
+                    else if(gr::blocks::count_bits32((d_data_reg&d_mask)^(CHIPSET[7]&d_mask)) <=d_threshold ){
                       d_byte_reg = 0x70;
                     }
                     else{
@@ -273,6 +274,9 @@ namespace gr {
                 }
               }
             }
+          break;
+          default:
+            throw std::runtime_error("ProU packet sink enter undefined state");
           break;
         }
       }
