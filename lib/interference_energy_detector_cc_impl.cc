@@ -31,10 +31,6 @@
 namespace gr {
   namespace lsa {
 
-
-    //const pmt::pmt_t d_voe_begin_tag = pmt::intern("voe_begin");
-    //const pmt::pmt_t d_voe_end_tag = pmt::intern("voe_end");
-
     interference_energy_detector_cc::sptr
     interference_energy_detector_cc::make(
       float ed_threshold,
@@ -232,27 +228,7 @@ namespace gr {
             d_voe_cnt =0;
           }
         }
-        /*
-        if( var >= d_voe_thres){
-          if(!d_state_voe){
-            add_item_tag(0,nitems_written(0)+i,d_voe_tagname,pmt::PMT_T);
-            if(have_ed){
-              add_item_tag(1,nitems_written(1)+i,d_voe_tagname,pmt::PMT_T);
-              add_item_tag(2,nitems_written(2)+i,d_voe_tagname,pmt::PMT_T);
-            }
-            d_state_voe =true;
-          }
-        }
-        else{
-          if(d_state_voe){
-            add_item_tag(0,nitems_written(0)+i,d_voe_tagname,pmt::PMT_F);
-            if(have_ed){
-              add_item_tag(1,nitems_written(1)+i,d_voe_tagname,pmt::PMT_F);
-              add_item_tag(2,nitems_written(2)+i,d_voe_tagname,pmt::PMT_F);
-            }
-            d_state_voe = false;
-          }
-        }*/
+        
       }
 
       // each input stream.

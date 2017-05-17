@@ -410,7 +410,7 @@
     </param>
     <param>
       <key>period</key>
-      <value>60</value>
+      <value>30</value>
     </param>
   </block>
   <block>
