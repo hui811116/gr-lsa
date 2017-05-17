@@ -120,7 +120,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(216, 700)</value>
+      <value>(216, 676)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -147,7 +147,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(224, 636)</value>
+      <value>(216, 620)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -174,7 +174,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(232, 780)</value>
+      <value>(192, 732)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -201,7 +201,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(40, 660)</value>
+      <value>(40, 676)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -368,6 +368,33 @@
     </param>
     <param>
       <key>id</key>
+      <value>pre_code</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[mod.pre_diff_code()[pre_sym[i]] for i in range(0,len(pre_sym))]</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(40, 844)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
       <value>pre_points</value>
     </param>
     <param>
@@ -387,7 +414,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(40, 724)</value>
+      <value>(40, 732)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -608,7 +635,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(40, 596)</value>
+      <value>(40, 620)</value>
     </param>
     <param>
       <key>_rotation</key>

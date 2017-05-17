@@ -4,7 +4,8 @@
   <key>lsa_coarse_sync_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.coarse_sync_cc($thres,$sps)</make>
+  <make>lsa.coarse_sync_cc($thres,$sps,$ed)</make>
+  <callback>set_ed_threshold($ed)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -19,6 +20,11 @@
     <name>Samples per symbol</name>
     <key>sps</key>
     <type>int</type>
+  </param>
+  <param>
+    <name>ED level(db)</name>
+    <key>ed</key>
+    <type>float</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -38,6 +44,10 @@
     <name>norm</name>
     <type>float</type>
   </sink>
+  <sink>
+    <name>eng</name>
+    <type>float</type>
+  </sink>
   <!-- Make one 'source' node per output. Sub-nodes:
        * name (an identifier for the GUI)
        * type
@@ -46,5 +56,10 @@
   <source>
     <name>out</name>
     <type>complex</type>
+  </source>
+  <source>
+    <name>msg_out</name>
+    <type>message</type>
+    <optional>1</optional>
   </source>
 </block>

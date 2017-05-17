@@ -159,7 +159,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"name=NicB210"</value>
+      <value>"name=MyB210"</value>
     </param>
   </block>
   <block>
@@ -1245,6 +1245,10 @@
       <value>lsa_interference_energy_detector_cc_0</value>
     </param>
     <param>
+      <key>minlen</key>
+      <value>100</value>
+    </param>
+    <param>
       <key>maxoutbuf</key>
       <value>0</value>
     </param>
@@ -1262,6 +1266,10 @@
     <param>
       <key>alias</key>
       <value></value>
+    </param>
+    <param>
+      <key>burst</key>
+      <value>False</value>
     </param>
     <param>
       <key>comment</key>
@@ -1317,6 +1325,10 @@
     <param>
       <key>alias</key>
       <value></value>
+    </param>
+    <param>
+      <key>burst</key>
+      <value>False</value>
     </param>
     <param>
       <key>comment</key>
@@ -1381,6 +1393,45 @@
     <param>
       <key>taps</key>
       <value>rx_rrc_taps</value>
+    </param>
+  </block>
+  <block>
+    <key>lsa_stat_report</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1104, 188)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_stat_report_0</value>
+    </param>
+    <param>
+      <key>mode</key>
+      <value>2</value>
+    </param>
+    <param>
+      <key>ms</key>
+      <value>4000</value>
     </param>
   </block>
   <block>
@@ -4112,6 +4163,12 @@
     <sink_block_id>qtgui_const_sink_x_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>
+    <sink_block_id>lsa_stat_report_0</sink_block_id>
+    <source_key>msg</source_key>
+    <sink_key>msg_in</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>

@@ -32,8 +32,10 @@ namespace gr {
       int d_state;
       int d_auto_cnt;
       int d_copy_cnt;
+      int d_ed_cnt;
       int d_sps;
       float d_threshold;
+      float d_ed_threshold;
       const int d_valid_len;
       const int d_mingap;
       const int d_maxlen;
@@ -41,11 +43,15 @@ namespace gr {
       float d_coarse_cfo;
       const pmt::pmt_t d_edend_tagname;
 
+      const pmt::pmt_t d_out_port;
+
      public:
-      coarse_sync_cc_impl(float threshold, int sps);
+      coarse_sync_cc_impl(float threshold, int sps, float ed_thres);
       ~coarse_sync_cc_impl();
 
-      // Where all the action really happens
+      void set_ed_threshold(const float& ed_thres);
+      float ed_threshold() const;
+
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 
       int general_work(int noutput_items,
