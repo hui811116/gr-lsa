@@ -169,6 +169,7 @@ namespace gr {
       bool sen_result = false;
       int qidx=0;
       int qsize=0;
+      int pld_len = 0;
       switch(d_mode)
       {
         case NOQUEUE:
@@ -193,8 +194,16 @@ namespace gr {
         break;
         case SUCCESSIVE:
         case CONSTRAINT:
-        if(pmt::dict_has_key(msg,pmt::intern("sensing"))){
-        sen_result = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("sensing"),pmt::PMT_T));
+        assert(pmt::dict_has_key(msg,pmt::intern("queue_index")));
+        assert(pmt::dict_has_key(msg,pmt::intern("queue_size")));
+        assert(pmt::dict_has_key(msg,pmt::intern("payload")));
+        qidx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_index"),pmt::from_long(-1)));
+        qsize= pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_size"),pmt::from_long(-1)));
+        pld_len = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
+        // reserved length: 0-NACK, 1-ACK, 2-SENSING  
+        if(pmt::dict_has_key(msg,pmt::intern("LSA_sensing"))
+          ||pld_len == 2){
+        sen_result = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("LSA_sensing"),pmt::PMT_T));
         // retransmission no matter what
         if( (d_state == CLEAR_TO_SEND) && (sen_result) ){
           prepare_retx();
@@ -203,15 +212,14 @@ namespace gr {
               std::cerr<<"<SU TX DEBUG> Receiving Sensing info but no need for retransmission"<<std::endl;
             return;
           }
+          if(d_debug){
+            std::cerr<<"<SU TX DEBUG> Change state from <Clear-to-send> to <Retransmission>"<<std::endl;
+          }
           d_state = RETRANSMISSION;
           return;
         }
       }
         if(pmt::dict_has_key(msg,pmt::intern("LSA_hdr"))){
-        assert(pmt::dict_has_key(msg,pmt::intern("queue_index")));
-        assert(pmt::dict_has_key(msg,pmt::intern("queue_size")));
-        qidx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_index"),pmt::from_long(-1)));
-        qsize= pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_size"),pmt::from_long(-1)));
         if(qidx<0 || qsize<0){
           throw std::runtime_error("Undefined MAC fields");
         }
@@ -234,21 +242,22 @@ namespace gr {
               return;
             }
             if(qidx >= d_retx_idx_buf.size()){
-              if(d_debug)
+              if(d_debug){
                 std::cerr<<"<SU TX DEBUG>"<<"In retansmission state receiving idx exceed buffer size!"
                 <<"buf size:"<<d_retx_idx_buf.size()<<" ,rx:"<<qidx<<std::endl;
+              }
               return;
             }
             if(d_time_buf[d_retx_idx_buf[qidx]]!=0){
-              //std::cerr<<"<SU TX DEBUG>"<<"receiving success retransmission:"<<qidx<<std::endl;
               d_time_buf[d_retx_idx_buf[qidx]]=0;
               d_retx_cnt++;
               d_update_time = std::clock();
             }
             assert(!d_retx_idx_buf.empty());
             if(d_retx_cnt == d_retx_idx_buf.size()){
-              if(d_debug)
+              if(d_debug){
                 std::cerr<<"<STATE>Retransmission complete, reset queue and change state"<<std::endl;
+              }
               reset_queue();
               d_state = CLEAR_TO_SEND;
             }
@@ -257,7 +266,6 @@ namespace gr {
             throw std::runtime_error("Undefined state");
           break;
         }
-        
       }
         break;
         default:

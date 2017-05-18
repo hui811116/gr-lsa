@@ -385,7 +385,7 @@ enum SYSTEMSTATE{
                       // length 1 means ACK
                       // NOTE: in data channel, this case should not happen!
                       // NOTE: in control channel, there still have queue information to be recieved!
-                      d_pkt_byte =2;
+                      d_qsize =0;
                       enter_load_payload();
                       break;
                     }

@@ -85,7 +85,9 @@ namespace gr {
     void
     interference_tagger_cc_impl::report_interference()
     {
-      message_port_pub(d_msg_port,pmt::intern("sensing"));
+      pmt::pmt_t dict = pmt::make_dict();
+      dict = pmt::dict_add(dict,pmt::intern("LSA_sensing"),pmt::PMT_T);
+      message_port_pub(d_msg_port,dict);
     }
 
     int

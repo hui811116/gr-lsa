@@ -174,7 +174,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -795,14 +795,10 @@
     </param>
   </block>
   <block>
-    <key>blocks_null_sink</key>
+    <key>blocks_nlog10_ff</key>
     <param>
       <key>alias</key>
       <value></value>
-    </param>
-    <param>
-      <key>bus_conns</key>
-      <value>[[0,],]</value>
     </param>
     <param>
       <key>comment</key>
@@ -818,7 +814,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(392, 352)</value>
+      <value>(144, 300)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -826,19 +822,27 @@
     </param>
     <param>
       <key>id</key>
-      <value>blocks_null_sink_0</value>
+      <value>blocks_nlog10_ff_0</value>
     </param>
     <param>
-      <key>type</key>
-      <value>float</value>
+      <key>maxoutbuf</key>
+      <value>0</value>
     </param>
     <param>
-      <key>num_inputs</key>
-      <value>1</value>
+      <key>minoutbuf</key>
+      <value>0</value>
     </param>
     <param>
       <key>vlen</key>
       <value>1</value>
+    </param>
+    <param>
+      <key>k</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>n</key>
+      <value>10</value>
     </param>
   </block>
   <block>
@@ -1277,7 +1281,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(48, 240)</value>
+      <value>(48, 232)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1294,6 +1298,49 @@
     <param>
       <key>minoutbuf</key>
       <value>0</value>
+    </param>
+  </block>
+  <block>
+    <key>lsa_interference_tagger_cc</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(96, 336)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_interference_tagger_cc_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>voe_thres</key>
+      <value>voe_thres</value>
     </param>
   </block>
   <block>
@@ -1383,7 +1430,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(56, 380)</value>
+      <value>(56, 404)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -4116,6 +4163,12 @@
     </param>
   </block>
   <connection>
+    <source_block_id>blocks_nlog10_ff_0</source_block_id>
+    <sink_block_id>lsa_interference_tagger_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>1</sink_key>
+  </connection>
+  <connection>
     <source_block_id>blocks_repack_bits_bb_0</source_block_id>
     <sink_block_id>digital_map_bb_0</sink_block_id>
     <source_key>0</source_key>
@@ -4165,12 +4218,24 @@
   </connection>
   <connection>
     <source_block_id>lsa_interference_energy_detector_cc_0</source_block_id>
-    <sink_block_id>blocks_null_sink_0</sink_block_id>
+    <sink_block_id>blocks_nlog10_ff_0</sink_block_id>
     <source_key>1</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_interference_energy_detector_cc_0</source_block_id>
+    <sink_block_id>lsa_interference_tagger_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_interference_tagger_cc_0</source_block_id>
+    <sink_block_id>lsa_su_ctrl_0</sink_block_id>
+    <source_key>msg_out</source_key>
+    <sink_key>ctrl_in</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_interference_tagger_cc_0</source_block_id>
     <sink_block_id>lsa_modified_polyphase_time_sync_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
