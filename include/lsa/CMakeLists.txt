@@ -56,5 +56,6 @@ install(FILES
     coarse_sync_cc.h
     stat_report.h
     prou_packet_sink_f.h
-    length_prefixer.h DESTINATION include/lsa
+    length_prefixer.h
+    interference_tagger_cc.h DESTINATION include/lsa
 )

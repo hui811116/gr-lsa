@@ -51,5 +51,6 @@ install(FILES
     lsa_coarse_sync_cc.xml
     lsa_stat_report.xml
     lsa_prou_packet_sink_f.xml
-    lsa_length_prefixer.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_length_prefixer.xml
+    lsa_interference_tagger_cc.xml DESTINATION share/gnuradio/grc/blocks
 )
