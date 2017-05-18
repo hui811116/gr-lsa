@@ -61,6 +61,7 @@ namespace gr {
       int d_pre_cnt;
       int d_chip_cnt;
       unsigned char d_pkt_byte;
+      unsigned char d_pkt_pld;
       unsigned char d_symbol_cnt;
 
       unsigned char decode_chip(const unsigned int& reg);

@@ -37,10 +37,16 @@ namespace gr {
       unsigned char d_pkt_byte;
       unsigned char d_symbol_cnt;
 
+      unsigned char d_pkt_pld; // to copy the length tag
+      unsigned char d_qidx;
+      unsigned char d_qsize;
+
       int d_threshold;
       int d_state;
       
       pmt::pmt_t d_pld_out;
+
+      void msg_out();
 
       void enter_search();
       void enter_have_sync();

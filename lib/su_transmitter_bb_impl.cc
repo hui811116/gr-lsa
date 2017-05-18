@@ -203,6 +203,9 @@ namespace gr {
         // reserved length: 0-NACK, 1-ACK, 2-SENSING  
         if(pmt::dict_has_key(msg,pmt::intern("LSA_sensing"))
           ||pld_len == 2){
+            if(pld_len==2 && d_debug){
+              std::cerr<<"<SUTX debug> Receive Interfering signal from SU RX!"<<std::endl;
+            }
         sen_result = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("LSA_sensing"),pmt::PMT_T));
         // retransmission no matter what
         if( (d_state == CLEAR_TO_SEND) && (sen_result) ){
@@ -227,8 +230,8 @@ namespace gr {
         switch(d_state)
         {
           case CLEAR_TO_SEND:
-          if(d_time_buf[qidx]==0 || (qsize!=0) ){
-            // outdated ack or retransmission
+          if(d_time_buf[qidx]==0 || (qsize!=0) ||(pld_len != 1)){
+            // outdated ack or retransmission or not good ack
             return;
           }
           d_time_buf[qidx]=0;
@@ -248,10 +251,13 @@ namespace gr {
               }
               return;
             }
-            if(d_time_buf[d_retx_idx_buf[qidx]]!=0){
-              d_time_buf[d_retx_idx_buf[qidx]]=0;
-              d_retx_cnt++;
+            if(d_retx_time_buf[d_retx_idx_buf[qidx]]==0){
               d_update_time = std::clock();
+              d_retx_time_buf[d_retx_idx_buf[qidx]]=d_update_time;
+              d_retx_cnt++;
+              if(d_debug){
+                std::cerr<<"<SU TX DEBUG> Retransmission: received qidx:"<<qidx<<" ,still waiting:"<<d_retx_idx_buf.size()-d_retx_cnt<<std::endl;
+              }
             }
             assert(!d_retx_idx_buf.empty());
             if(d_retx_cnt == d_retx_idx_buf.size()){
@@ -296,6 +302,8 @@ namespace gr {
       }
       d_retx_idx_buf.clear();
       d_retx_idx_buf.resize(delay,0);
+      d_retx_time_buf.clear();
+      d_retx_time_buf.resize(delay,0);
       int idx_iter = min_idx;
       for(int i=0;i<delay;++i){
         d_retx_idx_buf[i] = idx_iter++;
@@ -382,7 +390,6 @@ namespace gr {
               out[0+PHY_LEN] = (unsigned char)d_retx_idx;
               out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
               int idx_mapping = d_retx_idx_buf[d_retx_idx++];
-              //std::cerr<<"retransmission index:"<<idx_mapping<<" ,corresponding index:"<<d_retx_idx-1<<std::endl;
               d_retx_idx%=d_retx_idx_buf.size();
               int tmp_pld_len =d_pkt_len_buf[idx_mapping]; 
               memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);

@@ -30,7 +30,23 @@ namespace gr {
   namespace lsa {
 
 static const unsigned int CHIPSET[16] = {
-                                  3653456430,
+  3765939820,
+      3456596710,
+      1826650030,
+      1724778362,
+      778887287,
+      2061946375,
+      4155403488,
+      2272978638,
+      2676511123,
+      2985854233,
+      320833617,
+      422705285,
+      1368596360,
+      85537272,
+      2287047455,
+      4169472305
+                                  /*3653456430,
                                   3986437410,
                                   786023250,
                                   585997365,
@@ -45,14 +61,18 @@ static const unsigned int CHIPSET[16] = {
                                   125537430,
                                   1618458825,
                                   2517072780,
-                                  3378542520};
+                                  3378542520*/
+                                  };
 static const int MAX_PLD = 127;
 enum SYSTEMSTATE{
   SEARCH_ZERO,
   HAVE_SYNC,
   LOAD_PAYLOAD
 };
-
+inline unsigned char slice(const float& f)
+    {
+      return (f>0)? 0x01:0x00;
+    }
 
     packet_sink::sptr
     packet_sink::make(int threshold)
@@ -66,7 +86,7 @@ enum SYSTEMSTATE{
      */
     packet_sink_impl::packet_sink_impl(int threshold)
       : gr::block("packet_sink",
-              gr::io_signature::make(1, 1, sizeof(char)),
+              gr::io_signature::make(1, 1, sizeof(float)),
               gr::io_signature::make(0, 0, 0)),
               d_threshold(threshold)
     {
@@ -124,6 +144,7 @@ enum SYSTEMSTATE{
       d_symbol_cnt =0;
       d_chip_cnt =0;
       d_pkt_byte = 0;
+      d_pkt_pld=0;
     }
 
     void
@@ -137,9 +158,21 @@ enum SYSTEMSTATE{
     }
 
     void
+    packet_sink_impl::msg_out()
+    {
+      pmt::pmt_t dict = pmt::make_dict();
+      dict= pmt::dict_add(dict,pmt::intern("LSA_hdr"),pmt::PMT_T);
+      dict= pmt::dict_add(dict,pmt::intern("queue_index"),pmt::from_long(d_qidx));
+      dict= pmt::dict_add(dict,pmt::intern("queue_size"),pmt::from_long(d_qsize));
+      dict= pmt::dict_add(dict,pmt::intern("payload"),pmt::from_long(d_pkt_pld));
+      message_port_pub(d_pld_out,dict);
+      //pmt::pmt_t blob = pmt::make_blob(d_buf,d_pkt_byte);
+      //message_port_pub(d_pld_out,pmt::cons(pmt::PMT_NIL,blob));
+    }
+
+    void
     packet_sink_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
-      /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
       ninput_items_required[0] = noutput_items;
     }
 
@@ -149,14 +182,14 @@ enum SYSTEMSTATE{
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
-      const unsigned char *in = (const unsigned char *) input_items[0];
+      const float *in = (const float *) input_items[0];
       int nin = ninput_items[0];
       int count = 0;
       while(count < nin){
         switch(d_state){
           case SEARCH_ZERO:
             while(count < nin){
-              d_data_reg = (d_data_reg << 1) | (0x01 & in[count++]);
+              d_data_reg = (d_data_reg << 1) | (0x01 & slice(in[count++]));
               if(d_pre_cnt >0){
                 d_chip_cnt++;
               }
@@ -190,7 +223,6 @@ enum SYSTEMSTATE{
                       if(gr::blocks::count_bits32( (d_data_reg&d_mask) ^ (CHIPSET[6]&d_mask))<=d_threshold){
                         //0xa
                         d_pkt_byte = d_pkt_byte | 0x6;
-                        //std::cerr<<"found 0xe6"<<std::endl;
                         enter_have_sync();
                         break;
                       }
@@ -206,12 +238,11 @@ enum SYSTEMSTATE{
           break;
           case HAVE_SYNC:
             while(count <nin){
-              d_data_reg = (d_data_reg<<1) | (0x01&in[count++]);
+              d_data_reg = (d_data_reg<<1) | (0x01&slice(in[count++]) );
               d_chip_cnt++;
               if(d_chip_cnt==32){
                 d_chip_cnt=0;
                 unsigned char c = decode_chip(d_data_reg);
-                //std::cerr<<"sync decoded symbol:"<<(int)c<<std::endl;
               if(c==0xff){
                 enter_search();
                 break;
@@ -227,12 +258,27 @@ enum SYSTEMSTATE{
                     d_pkt_byte |= c;
                     if(d_pkt_byte == 0){
                       //NACK
-                      message_port_pub(d_pld_out,pmt::cons(pmt::intern("NACK"),pmt::make_blob(d_buf,0)));
+                      pmt::pmt_t dict = pmt::make_dict();
+                      dict = pmt::dict_add(dict,pmt::intern("LSA_hdr"),pmt::PMT_T);
+                      dict = pmt::dict_add(dict,pmt::intern("queue_index"),pmt::from_long(0));
+                      dict = pmt::dict_add(dict,pmt::intern("queue_size"),pmt::from_long(0));
+                      dict = pmt::dict_add(dict,pmt::intern("payload"),pmt::from_long(0));
+                      message_port_pub(d_pld_out,dict);
                       enter_search();
                       break;
                     }
                     else if(d_pkt_byte <= MAX_PLD){
-                      enter_load_payload();
+                      //LSA special flags
+                      if(d_pkt_byte==1){
+                        //ACK
+                        d_pkt_pld = 1;
+                        d_pkt_byte =2;
+                        enter_load_payload();
+                      }
+                      else{
+                        d_pkt_pld = d_pkt_byte;
+                        enter_load_payload();
+                      }
                       break;
                     }
                     else{
@@ -246,7 +292,7 @@ enum SYSTEMSTATE{
           break;
           case LOAD_PAYLOAD:
             while(count < nin){
-              d_data_reg = (d_data_reg<<1) | (in[count++]&0x01);
+              d_data_reg = (d_data_reg<<1) | (slice(in[count++]) &0x01);
               d_chip_cnt++;
               if(d_chip_cnt==32){
                 d_chip_cnt=0;
@@ -268,10 +314,23 @@ enum SYSTEMSTATE{
                   if(d_symbol_cnt/2 >= d_pkt_byte){
                     // payload length collected
                     // special cases output from here,
-                    // ACK: length =1;
-                    // SEN: length =2;
-                    pmt::pmt_t blob = pmt::make_blob(d_buf,d_pkt_byte);
-                    message_port_pub(d_pld_out,pmt::cons(pmt::PMT_NIL,blob));
+                    if(d_pkt_pld == 1){
+                      // ACK: queue size must be zero
+                      d_qidx = d_buf[0];
+                      d_qsize = 0;
+                    }
+                    else if(d_pkt_pld==2){
+                      // sensing:
+                      d_qidx = 0xff;
+                      d_qsize = 0x00;
+                    }
+                    else{
+                      d_qidx = d_buf[0];
+                      d_qsize = d_buf[1];
+                    }
+                    // current version do not count the BER of SU
+                    //pmt::pmt_t blob = pmt::make_blob(d_buf,d_pkt_byte);
+                    //message_port_pub(d_pld_out,pmt::cons(pmt::PMT_NIL,blob));
                     enter_search();
                     break;
                   }

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<?grc format='1' created='3.7.12'?>
+<?grc format='1' created='3.7.11'?>
 <flow_graph>
   <timestamp>Sat May  6 00:25:26 2017</timestamp>
   <block>
@@ -79,6 +79,33 @@
     <param>
       <key>title</key>
       <value></value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(184, 516)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>dict_ccc</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>pmt.make_dict()</value>
     </param>
   </block>
   <block>
@@ -234,11 +261,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(968, 448)</value>
+      <value>(968, 480)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -247,6 +274,53 @@
     <param>
       <key>id</key>
       <value>blocks_message_debug_0</value>
+    </param>
+  </block>
+  <block>
+    <key>blocks_message_strobe</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(296, 588)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_message_strobe_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>msg</key>
+      <value>pmt.dict_add(dict_ccc,pmt.intern("LSA_sensing"),pmt.PMT_T)</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>period</key>
+      <value>1000</value>
     </param>
   </block>
   <block>
@@ -575,7 +649,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -599,6 +673,45 @@
     </param>
   </block>
   <block>
+    <key>lsa_su_ctrl</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(656, 584)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_su_ctrl_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+  </block>
+  <block>
     <key>lsa_su_transmitter_bb</key>
     <param>
       <key>alias</key>
@@ -618,7 +731,7 @@
     </param>
     <param>
       <key>debug</key>
-      <value>False</value>
+      <value>True</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -719,6 +832,12 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>blocks_message_strobe_0</source_block_id>
+    <sink_block_id>lsa_su_ctrl_0</sink_block_id>
+    <source_key>strobe</source_key>
+    <sink_key>ctrl_in</sink_key>
+  </connection>
+  <connection>
     <source_block_id>blocks_repack_bits_bb_0</source_block_id>
     <sink_block_id>digital_map_bb_0</sink_block_id>
     <source_key>0</source_key>
@@ -755,16 +874,16 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>lsa_su_ctrl_0</source_block_id>
+    <sink_block_id>blocks_message_debug_0</sink_block_id>
+    <source_key>ctrl_out</source_key>
+    <sink_key>print_pdu</sink_key>
+  </connection>
+  <connection>
     <source_block_id>lsa_su_transmitter_bb_0</source_block_id>
     <sink_block_id>lsa_chip_mapper_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>
-    <sink_block_id>blocks_message_debug_0</sink_block_id>
-    <source_key>msg</source_key>
-    <sink_key>print</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>

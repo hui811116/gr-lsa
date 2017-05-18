@@ -187,7 +187,7 @@ enum SYSTEMSTATE{
         msg = pmt::dict_add(msg, pmt::intern("LSA_hdr"),pmt::PMT_T);
         msg = pmt::dict_add(msg, pmt::intern("queue_index"),pmt::from_long(d_qidx));
         msg = pmt::dict_add(msg, pmt::intern("queue_size"),pmt::from_long(d_qsize));
-        msg = pmt::dict_add(msg, pmt::intern("payload"),pmt::from_long(d_pkt_byte));
+        msg = pmt::dict_add(msg, pmt::intern("payload"),pmt::from_long(d_pkt_pld));
         
         // differentiation for retransmission and fresh data
         if(d_qsize!=0){
@@ -376,6 +376,7 @@ enum SYSTEMSTATE{
                     // for special length settings
                     if(d_pkt_byte == 0){
                       // length 0 means NACK
+                      d_pkt_pld = 0;
                       // NOTE: in data channel, this case should not happen!
                       msg_out( (count-1)/d_hdr_bps );
                       enter_search();
@@ -383,13 +384,17 @@ enum SYSTEMSTATE{
                     }
                     else if(d_pkt_byte ==1){
                       // length 1 means ACK
+                      d_pkt_pld = 1;
                       // NOTE: in data channel, this case should not happen!
                       // NOTE: in control channel, there still have queue information to be recieved!
+                      d_pkt_byte = 2;
+                      // NOTE: require queue size and queue idx for differentiation of RETX/Fresh
                       d_qsize =0;
                       enter_load_payload();
                       break;
                     }
                     else if(d_pkt_byte <= MAX_PLD){
+                      d_pkt_pld = d_pkt_byte;
                       enter_load_payload();
                       break;
                     }

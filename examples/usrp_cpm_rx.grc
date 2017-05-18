@@ -456,6 +456,10 @@
       <value>lsa_stat_report_0</value>
     </param>
     <param>
+      <key>mode</key>
+      <value>0</value>
+    </param>
+    <param>
       <key>ms</key>
       <value>4000</value>
     </param>
@@ -1695,7 +1699,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(184, 84)</value>
+      <value>(200, 32)</value>
     </param>
     <param>
       <key>_rotation</key>

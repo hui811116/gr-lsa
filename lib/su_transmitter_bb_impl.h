@@ -47,6 +47,7 @@ namespace gr {
       const int d_queue_cap;        // maximum capacity of the queue, wrap around if pass the cap
 
       std::vector<int> d_retx_idx_buf; // use for tracking retransmission status
+      std::vector<long int> d_retx_time_buf; // use to record whether retransmission is received
       int d_retx_cnt;
       int d_retx_idx;
 
