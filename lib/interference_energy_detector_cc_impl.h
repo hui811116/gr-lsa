@@ -34,27 +34,17 @@ namespace gr {
       float* v_stddev;
       float* v_mean;
       int d_blocklength;
-      int d_minlen;
 
-      int d_voe_cnt;
-
-      float d_ed_thres;
       float d_voe_thres;
-
       pmt::pmt_t d_src_id;
-      const pmt::pmt_t d_ed_tagname;
       const pmt::pmt_t d_voe_tagname;
 
       bool d_debug;
-      bool d_state_ed;
       bool d_state_voe;
 
      public:
       interference_energy_detector_cc_impl(
-        float ed_threshold,
-        float voe_threshold,
         size_t blocklength,
-        int minlen,
         bool debug);
       ~interference_energy_detector_cc_impl();
 
@@ -66,17 +56,8 @@ namespace gr {
            gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
 
-      void set_ed_threshold(float threshold_db);
-      float ed_threshold() const;
-
-      void set_voe_threshold(float threshold_db);
-      float voe_threshold() const;
-
       void set_blocklength(size_t blocklength);
       size_t blocklength() const;
-
-      void set_min_length(int minlen);
-      int min_length() const;
     };
 
   } // namespace lsa

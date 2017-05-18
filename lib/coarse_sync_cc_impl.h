@@ -33,6 +33,7 @@ namespace gr {
       int d_auto_cnt;
       int d_copy_cnt;
       int d_ed_cnt;
+      int d_free_cnt;
       int d_sps;
       float d_threshold;
       float d_ed_threshold;
@@ -41,7 +42,7 @@ namespace gr {
       const int d_maxlen;
       const pmt::pmt_t d_cfo_key;
       float d_coarse_cfo;
-      const pmt::pmt_t d_edend_tagname;
+      const pmt::pmt_t d_ed_tagname;
 
       const pmt::pmt_t d_out_port;
 

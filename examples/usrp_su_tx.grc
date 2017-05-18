@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<?grc format='1' created='3.7.11'?>
+<?grc format='1' created='3.7.12'?>
 <flow_graph>
   <timestamp>Wed May  3 13:05:35 2017</timestamp>
   <block>
@@ -612,7 +612,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(672, 136)</value>
+      <value>(680, 128)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1028,7 +1028,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(640, 4)</value>
+      <value>(720, 20)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -1292,7 +1292,7 @@
     </param>
     <param>
       <key>name</key>
-      <value>Control channel const</value>
+      <value>""</value>
     </param>
     <param>
       <key>nconnections</key>
@@ -1383,7 +1383,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(888, 16)</value>
+      <value>(936, 12)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -1647,7 +1647,7 @@
     </param>
     <param>
       <key>name</key>
-      <value>Control Channel correlation</value>
+      <value>""</value>
     </param>
     <param>
       <key>nconnections</key>
@@ -1655,7 +1655,7 @@
     </param>
     <param>
       <key>size</key>
-      <value>10000</value>
+      <value>1024</value>
     </param>
     <param>
       <key>srate</key>
@@ -1675,7 +1675,7 @@
     </param>
     <param>
       <key>tr_mode</key>
-      <value>qtgui.TRIG_MODE_TAG</value>
+      <value>qtgui.TRIG_MODE_FREE</value>
     </param>
     <param>
       <key>tr_slope</key>
@@ -1683,7 +1683,7 @@
     </param>
     <param>
       <key>tr_tag</key>
-      <value>"corr_est"</value>
+      <value>""</value>
     </param>
     <param>
       <key>type</key>
@@ -1707,7 +1707,7 @@
     </param>
     <param>
       <key>ymin</key>
-      <value>0</value>
+      <value>-1</value>
     </param>
   </block>
   <block>
@@ -1734,7 +1734,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(432, 108)</value>
+      <value>(464, 100)</value>
     </param>
     <param>
       <key>_rotation</key>

@@ -31,7 +31,8 @@ namespace gr {
   namespace lsa {
 
     enum COARSESTATE{
-      SEARCH,
+      SEARCH_ED,
+      SEARCH_AUTO,
       COPY
     };
 
@@ -61,10 +62,10 @@ namespace gr {
               d_mingap(MINGAP*sps),
               d_maxlen(MAXLEN*sps),
               d_cfo_key(pmt::string_to_symbol("cfo_est")),
-              d_edend_tagname(pmt::intern("ed_tag")),
+              d_ed_tagname(pmt::intern("ed_tag")),
               d_out_port(pmt::mp("msg_out"))
     {
-      d_state = SEARCH;
+      d_state = SEARCH_ED;
       if(threshold > 1 || threshold<0){
         throw std::invalid_argument("Threshold should between 0 and 1");
       }
@@ -122,12 +123,114 @@ namespace gr {
       gr_complex *out = (gr_complex *) output_items[0];
 
       int nin = std::min(std::min(ninput_items[0],std::min(ninput_items[1],ninput_items[2])),ninput_items[3]) ;
+      //nin = std::min(noutput_items,nin);
       int count =0;
       int nout= 0;
 
       const uint64_t nread = nitems_read(0);
       const uint64_t nwrite= nitems_written(0);
 
+      switch(d_state){
+        case SEARCH_ED:
+          for(count;count<nin;++count){
+            if(in_eng[count]>d_ed_threshold){
+              d_ed_cnt++;
+              if(d_ed_cnt >= ED_LENGTH){
+                add_item_tag(0,nwrite,d_ed_tagname,pmt::PMT_T);
+                d_state = SEARCH_AUTO;
+                d_ed_cnt =0;
+                d_free_cnt =0;
+                break;
+              }
+            }
+            else{
+              d_ed_cnt =0;
+            }
+          }
+          consume_each(count);
+          return 0;
+        break;
+        case SEARCH_AUTO:
+          while(nout<noutput_items && count<nin){
+            if(in_mag_norm[count]>d_threshold){
+              d_auto_cnt++;
+              d_ed_cnt =0;
+              if(d_auto_cnt >=d_valid_len){
+                d_state = COPY;
+                d_auto_cnt =0;
+                // divide by delay
+                d_coarse_cfo = arg(in_corr[count])/(float)d_valid_len;
+                d_copy_cnt =0;
+                add_item_tag(0,nwrite+count,d_cfo_key,pmt::from_float(d_coarse_cfo));
+                out[nout++] = in_samp[count++] * gr_expj(-d_coarse_cfo * (d_copy_cnt++));
+                break;
+              }
+            }
+            else{
+              d_auto_cnt =0;
+              if(in_eng[count]<d_ed_threshold){
+                d_ed_cnt++;
+                if(d_ed_cnt>=ED_LENGTH){
+                  d_state = SEARCH_ED;
+                  d_ed_cnt =0;
+                  count++;
+                  break;
+                }
+              }
+              else{
+                d_ed_cnt =0;
+              }
+            }
+            out[nout++] = in_samp[count++] * gr_expj(-d_coarse_cfo * (d_free_cnt++));
+          }
+          consume_each(count);
+          return nout;
+        break;
+        case COPY:
+          while(count<nin && nout<noutput_items && d_copy_cnt < d_maxlen){
+            if(in_mag_norm[count]>d_threshold){
+              d_auto_cnt++;
+              if(d_auto_cnt < d_valid_len){
+                d_auto_cnt++;
+              }
+              else if(d_copy_cnt>=d_mingap){
+                d_coarse_cfo = arg(in_corr[count])/(float)d_valid_len;
+                d_auto_cnt =0;
+                d_copy_cnt =0;
+                add_item_tag(0,nwrite+nout,d_cfo_key,pmt::from_float(d_coarse_cfo));
+              }
+            }
+            else{
+              d_auto_cnt= 0;
+            }
+            if(in_eng[count]<d_ed_threshold){
+              d_ed_cnt++;
+              if(d_ed_cnt>=ED_LENGTH){
+                d_state = SEARCH_ED;
+                d_copy_cnt =0;
+                d_auto_cnt =0;
+                d_ed_cnt =0;
+                count++;
+                break;
+              }
+            }
+            out[nout++] = in_samp[count++] * gr_expj(d_coarse_cfo * (d_copy_cnt++)); 
+            if(d_copy_cnt>=d_maxlen){
+              d_state = (d_ed_cnt==0)? SEARCH_AUTO : SEARCH_ED;
+              d_copy_cnt =0;
+              d_auto_cnt =0;
+              d_ed_cnt =0;
+              break;
+            }
+          }
+          consume_each(count);
+          return nout;
+        break;
+        default:
+          throw std::runtime_error("Entering undefined state");
+        break;
+      }
+/*
       switch(d_state){
         case SEARCH:
           for(count;count<nin;++count){
@@ -199,7 +302,7 @@ namespace gr {
         default:
           throw std::runtime_error("Undefined state");
         break;
-      }
+      }*/
 
     }
 

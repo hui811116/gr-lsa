@@ -1215,6 +1215,10 @@
       <value></value>
     </param>
     <param>
+      <key>burst</key>
+      <value>False</value>
+    </param>
+    <param>
       <key>comment</key>
       <value></value>
     </param>
@@ -1268,6 +1272,10 @@
     <param>
       <key>alias</key>
       <value></value>
+    </param>
+    <param>
+      <key>burst</key>
+      <value>False</value>
     </param>
     <param>
       <key>comment</key>
@@ -1336,6 +1344,10 @@
   </block>
   <block>
     <key>lsa_prou_sample_queue_cc</key>
+    <param>
+      <key>bps</key>
+      <value>2</value>
+    </param>
     <param>
       <key>alias</key>
       <value></value>
@@ -1443,10 +1455,6 @@
   <block>
     <key>lsa_symbol_sync_receiver_cf</key>
     <param>
-      <key>acccode</key>
-      <value>accesscode</value>
-    </param>
-    <param>
       <key>alias</key>
       <value></value>
     </param>
@@ -1483,6 +1491,10 @@
       <value>lsa_symbol_sync_receiver_cf_0</value>
     </param>
     <param>
+      <key>buf_verbose</key>
+      <value>False</value>
+    </param>
+    <param>
       <key>maxoutbuf</key>
       <value>0</value>
     </param>
@@ -1491,8 +1503,12 @@
       <value>0</value>
     </param>
     <param>
-      <key>pld_const</key>
-      <value>mod</value>
+      <key>thres</key>
+      <value>10</value>
+    </param>
+    <param>
+      <key>diffcode</key>
+      <value>True</value>
     </param>
   </block>
   <block>
