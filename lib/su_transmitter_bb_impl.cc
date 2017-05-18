@@ -59,7 +59,7 @@ namespace gr {
     static const unsigned char LSA_PHY[] ={0x00,0x00,0x00,0x00,0xE6, 0x00};
     // the last feild is for packet length
     static const int PHY_LEN = 6;
-    
+    static const int RETX_LIMIT = 6;
 
     su_transmitter_bb::sptr
     su_transmitter_bb::make(const std::string& tagname, int mode, int len, bool debug)
@@ -82,6 +82,7 @@ namespace gr {
       message_port_register_in(d_msg_in);
       set_msg_handler(d_msg_in,boost::bind(&su_transmitter_bb_impl::msg_in,this,_1));
 
+      d_queue_busy = false;
       d_debug = debug;
       switch(mode){
         case 0:
@@ -165,6 +166,9 @@ namespace gr {
     void
     su_transmitter_bb_impl::msg_in(pmt::pmt_t msg)
     {
+      if(d_queue_busy){
+        return;
+      }
       assert(pmt::is_dict(msg));
       bool sen_result = false;
       int qidx=0;
@@ -264,7 +268,9 @@ namespace gr {
               if(d_debug){
                 std::cerr<<"<STATE>Retransmission complete, reset queue and change state"<<std::endl;
               }
+              d_queue_busy = true;
               reset_queue();
+              d_queue_busy = false;
               d_state = CLEAR_TO_SEND;
             }
           break;
@@ -313,6 +319,7 @@ namespace gr {
       }
       d_retx_cnt=0;
       d_retx_idx=0;
+      d_retx_iteration = 0;
       // do not change state here!!!!
     }
 
@@ -370,7 +377,6 @@ namespace gr {
                   prepare_retx();
                   d_state = RETRANSMISSION;
                   return 0;
-
               }
               out[PHY_LEN+0] = (unsigned char)d_current_idx;
               out[PHY_LEN+1] = 0x00;
@@ -390,7 +396,20 @@ namespace gr {
               out[0+PHY_LEN] = (unsigned char)d_retx_idx;
               out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
               int idx_mapping = d_retx_idx_buf[d_retx_idx++];
-              d_retx_idx%=d_retx_idx_buf.size();
+              if(d_retx_idx%d_retx_idx_buf.size()==0){
+                d_retx_iteration++;
+                d_retx_idx = 0;
+                if(d_retx_iteration==RETX_LIMIT){
+                  if(d_debug){
+                    std::cerr<<"<SU TX DEBUG>In retransmission state, retransmission count achieve limit...change state"<<std::endl;
+                  }
+                  d_queue_busy = true;
+                  reset_queue();
+                  d_queue_busy = false;
+                  d_state = CLEAR_TO_SEND;
+                  return 0;
+                }
+              }
               int tmp_pld_len =d_pkt_len_buf[idx_mapping]; 
               memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
               memcpy(out+PHY_LEN+2, d_queue_buf[idx_mapping],sizeof(char)*tmp_pld_len);
@@ -436,7 +455,18 @@ namespace gr {
               out[0+PHY_LEN] = (unsigned char)d_retx_idx;
               out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
               int idx_mapping = d_retx_idx_buf[d_retx_idx++];
-              d_retx_idx%=d_retx_idx_buf.size();
+              if(d_retx_idx%d_retx_idx_buf.size()==0){
+                d_retx_iteration++;
+                d_retx_idx = 0;
+                if(d_retx_iteration==RETX_LIMIT){
+                  d_queue_busy = true;
+                  reset_queue();
+                  d_queue_busy = false;
+                  d_state = CLEAR_TO_SEND;
+                  return 0;
+                }
+              }
+              //d_retx_idx%=d_retx_idx_buf.size();
               int tmp_pld_len =d_pkt_len_buf[idx_mapping]; 
               memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
               memcpy(out+PHY_LEN+2, d_queue_buf[idx_mapping],sizeof(char)*tmp_pld_len);

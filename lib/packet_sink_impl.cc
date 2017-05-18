@@ -315,9 +315,9 @@ inline unsigned char slice(const float& f)
                     // payload length collected
                     // special cases output from here,
                     if(d_pkt_pld == 1){
-                      // ACK: queue size must be zero
+                      // ACK: queue size contain RETX or Fresh info
                       d_qidx = d_buf[0];
-                      d_qsize = 0;
+                      d_qsize = d_buf[1];
                     }
                     else if(d_pkt_pld==2){
                       // sensing:
@@ -328,6 +328,7 @@ inline unsigned char slice(const float& f)
                       d_qidx = d_buf[0];
                       d_qsize = d_buf[1];
                     }
+                    msg_out();
                     // current version do not count the BER of SU
                     //pmt::pmt_t blob = pmt::make_blob(d_buf,d_pkt_byte);
                     //message_port_pub(d_pld_out,pmt::cons(pmt::PMT_NIL,blob));

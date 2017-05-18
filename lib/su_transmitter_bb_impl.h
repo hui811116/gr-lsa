@@ -34,6 +34,7 @@ namespace gr {
       unsigned char d_buf[256];     // temporary buffer for bytes
       int d_mode;                   // SU transmission schemes
       bool d_debug;
+      bool d_queue_busy;            // cleaning queue, reject any intervention
       int d_state;                  // SU TX state 
       
       long int d_current_time;      // naive idea, use time to track ack
@@ -50,6 +51,7 @@ namespace gr {
       std::vector<long int> d_retx_time_buf; // use to record whether retransmission is received
       int d_retx_cnt;
       int d_retx_idx;
+      int d_retx_iteration;         // count the iteration of retransmission
 
       void msg_in(pmt::pmt_t msg);
       void prepare_retx();
