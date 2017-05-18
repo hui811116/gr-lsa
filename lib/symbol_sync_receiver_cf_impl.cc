@@ -311,9 +311,9 @@ enum SYSTEMSTATE{
                         d_pre_cnt++;
                         d_pkt_byte = 0;
                       }
-                      else if(gr::blocks::count_bits32( (d_data_reg&d_mask) ^ (CHIPSET[7]&d_mask))<=d_threshold){
-                        //0x7
-                        d_pkt_byte = 7<<4;
+                      else if(gr::blocks::count_bits32( (d_data_reg&d_mask) ^ (CHIPSET[14]&d_mask))<=d_threshold){
+                        //0xE
+                        d_pkt_byte = 0xE0;
                       }
                       else{
                         enter_search();
@@ -321,9 +321,9 @@ enum SYSTEMSTATE{
                       }
                     }
                     else{
-                      if(gr::blocks::count_bits32( (d_data_reg&d_mask) ^ (CHIPSET[10]&d_mask))<=d_threshold){
-                        //0xa
-                        d_pkt_byte = d_pkt_byte | 0xa;
+                      if(gr::blocks::count_bits32( (d_data_reg&d_mask) ^ (CHIPSET[6]&d_mask))<=d_threshold){
+                        //0x6
+                        d_pkt_byte = d_pkt_byte | 0x6;
                         enter_have_sync();
                         break;
                       }

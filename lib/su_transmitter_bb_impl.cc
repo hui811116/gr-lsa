@@ -56,7 +56,7 @@ namespace gr {
     };
 
     static const int MAX_PLD_LEN = 125;  //(127-2);
-    static const unsigned char LSA_PHY[] ={0x00,0x00,0x00,0x00,0x7A, 0x00};
+    static const unsigned char LSA_PHY[] ={0x00,0x00,0x00,0x00,0xE6, 0x00};
     // the last feild is for packet length
     static const int PHY_LEN = 6;
     

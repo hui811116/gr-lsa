@@ -30,10 +30,10 @@ namespace gr {
   namespace lsa {
 
     
-    static const unsigned char lsa_SFD = 0x7A;
+    static const unsigned char lsa_SFD = 0xE6;
     static const size_t d_reserved_len = 4;
     static const size_t LSA_PREAMBLE_LEN = 5;
-    static const unsigned char lsa_preamble[] = {0x00,0x00,0x00,0x00,0x7A};
+    static const unsigned char lsa_preamble[] = {0x00,0x00,0x00,0x00,0xE6};
     static const int MAXIMUM_LEN = 127;
 
   class preamble_prefixer_impl : public preamble_prefixer

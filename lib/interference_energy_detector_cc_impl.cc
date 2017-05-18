@@ -199,7 +199,7 @@ namespace gr {
             d_state_ed = false;
           }
         }
-        if(var > d_voe_thres){
+        /*if(var > d_voe_thres){
           d_voe_cnt++;
           if(d_voe_cnt>=d_minlen && !d_state_voe){
             add_item_tag(0,nitems_written(0)+i,d_voe_tagname,pmt::PMT_T);
@@ -227,7 +227,7 @@ namespace gr {
           else{
             d_voe_cnt =0;
           }
-        }
+        }*/
         
       }
 
