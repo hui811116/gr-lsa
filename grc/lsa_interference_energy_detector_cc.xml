@@ -39,7 +39,6 @@
   <source>
     <name>VoE</name>
     <type>float</type>
-    <optional>1</optional>
   </source>
   
 </block>
