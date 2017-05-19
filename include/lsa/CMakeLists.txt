@@ -37,9 +37,6 @@ install(FILES
     symbol_level_ic_cc.h
     expand_symbal_to_sample_ff.h
     symbol_sync_receiver_cf.h
-    burst_synchronizer_cc.h
-    burst_parser_cc.h
-    mac.h
     preamble_prefixer.h
     packet_parser_b.h
     symbol_corrector_cc.h

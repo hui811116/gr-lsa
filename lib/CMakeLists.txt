@@ -40,9 +40,6 @@ list(APPEND lsa_sources
     symbol_level_ic_cc_impl.cc
     expand_symbal_to_sample_ff_impl.cc
     symbol_sync_receiver_cf_impl.cc
-    burst_synchronizer_cc_impl.cc
-    burst_parser_cc_impl.cc
-    mac.cc
     preamble_prefixer.cc
     packet_parser_b_impl.cc
     symbol_corrector_cc_impl.cc
@@ -100,8 +97,7 @@ list(APPEND test_lsa_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_block_mac.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_app_simple.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_preamble_prefixer.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_mac.cc
-)
+    )
 
 add_executable(test-lsa ${test_lsa_sources})
 

@@ -32,9 +32,6 @@ install(FILES
     lsa_symbol_level_ic_cc.xml
     lsa_expand_symbal_to_sample_ff.xml
     lsa_symbol_sync_receiver_cf.xml
-    lsa_burst_synchronizer_cc.xml
-    lsa_burst_parser_cc.xml
-    lsa_mac.xml
     lsa_preamble_prefixer.xml
     lsa_packet_parser_b.xml
     lsa_symbol_corrector_cc.xml
