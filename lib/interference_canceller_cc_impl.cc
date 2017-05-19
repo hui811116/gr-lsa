@@ -259,14 +259,14 @@ namespace gr {
         std::cerr<<"***************************************"<<std::endl;
         std::cerr<<"retx_buffer_size:"<<d_retx_buffer.size()<<" ,d_retx_count:"<<d_retx_count<<std::endl;
         std::cerr<<"sample size:"<<d_sample_size<<" ,sync_size:"<<d_sync_size<<std::endl;
-        std::cerr<<"Do interference cancellation:"<<std::endl;
-        for(int i=0;i<(d_last_info_idx+1) ;++i){
+        std::cerr<<"Do interference cancellation!"<<std::endl;
+        /*for(int i=0;i<(d_last_info_idx+1) ;++i){
           int qi,qs;
           qi = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_index"),pmt::from_long(-1)));
           qs = pmt::to_long(pmt::dict_ref(d_buffer_info[i],pmt::intern("queue_size"),pmt::from_long(-1)));
           std::cerr<<"["<<i<<"]"<<" ,index:"<<d_info_index[i]<<" ,queue_index:"<<qi<<" ,queue_size:"<<qs<<std::endl;
-        }
-        std::map<long int, int>::iterator samp_it,sync_it;
+        }*/
+        /*std::map<long int, int>::iterator samp_it,sync_it;
         std::cerr<<"----------------------------------------"<<std::endl;
         std::cerr<<"Sample map:"<<std::endl;
         for(samp_it=d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
@@ -276,7 +276,7 @@ namespace gr {
         std::cerr<<"Sync map;"<<std::endl;
         for(sync_it=d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
           std::cerr<<"time:"<<sync_it->first<<" ,index"<<sync_it->second<<std::endl;
-        }
+        }*/
         std::cerr<<"***************************************"<<std::endl;
       }
 
@@ -513,39 +513,59 @@ namespace gr {
       //removed till d_last_info_idx;
       // updating sync info
       std::map<long int, int>::iterator samp_it, sync_it;
+      if(d_debug){
+        std::cerr<<"<ProU IC DEBUG> update system hdr, begin from:"<<std::endl;
+        std::cerr<<d_buffer_info[d_last_info_idx]<<" ,index:"<<d_info_index[d_last_info_idx]<<std::endl;
+        std::cerr<<"<ProU IC size> sample size:"<<d_sample_size<<std::endl;
+        /*std::cerr<<"<ProU IC DEBUG> print all sync info"<<std::endl;
+        for(sync_it = d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
+          std::cerr<<"time:"<<sync_it->first<<" ,content:"<<sync_it->second<<std::endl;
+        }
+        std::cerr<<"++++++++++++++++++++++++++++++++++++++++++"<<std::endl;
+        for(samp_it = d_samp_map.begin();samp_it!=d_samp_map.end();++samp_it){
+          std::cerr<<"time:"<<samp_it->first<<" ,content:"<<samp_it->second<<std::endl;
+        }*/
+        std::cerr<<"++++++++++++++++++++++++++++++++++++++++++"<<std::endl;
+      }
       long int update_time = pmt::to_long(
         pmt::dict_ref(d_buffer_info[d_last_info_idx],pmt::intern("ctime"),
           pmt::from_long(-1)));
+      //NOTE: time when header is generated, the begin of it may in previous time tag!!!
       if(update_time<0){
         throw std::runtime_error("<Error>in update_system_hdr, time information not found");
       }
       int update_idx;
       sync_it = d_sync_map.find(update_time);
-      //if(sync_it==d_sync_map.end()){
-        //throw std::runtime_error("find no time info");
-      //}
+      if(sync_it==d_sync_map.end()){
+        throw std::runtime_error("find no time info");
+      }
       update_idx = sync_it->second;
+      while(update_idx>0&&sync_it!=d_sync_map.begin() ){
+        if(update_idx<=d_info_index[d_last_info_idx]){
+          break;
+        }
+        sync_it--;
+        update_idx = sync_it->second;
+      }
+      update_time = sync_it->first;
       d_sync_map.erase(d_sync_map.begin(),sync_it);
       for(sync_it =d_sync_map.begin();sync_it!=d_sync_map.end();++sync_it){
         d_sync_map[sync_it->first] = sync_it->second-update_idx;
       }
       memcpy(d_phase_buffer,d_phase_buffer+update_idx,sizeof(float)*(d_sync_size-update_idx));
       d_sync_size-=update_idx;
-
-      // handling sample information
-      // reset for sample
-      samp_it = d_samp_map.find(update_time);
-      if(samp_it == d_samp_map.end()){
-        throw std::runtime_error("find no time info");
-      }
       // reset update_idx for tracking index
-      update_idx = samp_it->second;
-
-      int rm_idx = d_info_index[d_last_info_idx];
       d_info_index.erase(d_info_index.begin(),d_info_index.begin()+d_last_info_idx);
       d_buffer_info.erase(d_buffer_info.begin(),d_buffer_info.begin()+d_last_info_idx);
       for(int k=0;k<d_info_index.size();++k){
         d_info_index[k]-= update_idx;
+      }
+      // handling sample information
+      // reset for sample
+      samp_it = d_samp_map.find(update_time);
+      update_idx = samp_it->second;
+      if(samp_it == d_samp_map.end()){
+        throw std::runtime_error("find no time info");
       }
       int rest_len = d_sample_size - update_idx;
       memcpy(d_sample_buffer, d_sample_buffer+update_idx, sizeof(gr_complex)*rest_len);
@@ -685,6 +705,7 @@ namespace gr {
       // tag back to begin of preamble
       begin_idx = offset-d_hdr_sample_len - tmp_pld;
       if(begin_idx <0){
+        std::cerr<<"<ProU IC DEBUG>offset:"<<offset<<" ,hdr_sample_len:"<<d_hdr_sample_len<<" ,tmp_pld:"<<tmp_pld<<std::endl;
         std::cerr<<"<ProU IC DEBUG>Warning: tag back to negative index, auto correct to 0"<<std::endl;
         begin_idx = 0;
       }

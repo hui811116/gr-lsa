@@ -186,7 +186,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>2.4e9</value>
+      <value>3.5e9</value>
     </param>
   </block>
   <block>
@@ -549,7 +549,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -796,7 +796,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -906,7 +906,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1106,7 +1106,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1181,7 +1181,7 @@
     </param>
     <param>
       <key>mode</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>tag</key>
@@ -1208,7 +1208,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -3242,7 +3242,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
