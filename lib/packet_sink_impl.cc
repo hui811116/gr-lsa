@@ -258,12 +258,12 @@ inline unsigned char slice(const float& f)
                     d_pkt_byte |= c;
                     if(d_pkt_byte == 0){
                       //NACK
-                      pmt::pmt_t dict = pmt::make_dict();
-                      dict = pmt::dict_add(dict,pmt::intern("LSA_hdr"),pmt::PMT_T);
+                      //pmt::pmt_t dict = pmt::make_dict();
+                      //dict = pmt::dict_add(dict,pmt::intern("LSA_hdr"),pmt::PMT_T);
                       //dict = pmt::dict_add(dict,pmt::intern("queue_index"),pmt::from_long(0));
                       //dict = pmt::dict_add(dict,pmt::intern("queue_size"),pmt::from_long(0));
-                      dict = pmt::dict_add(dict,pmt::intern("payload"),pmt::from_long(0));
-                      message_port_pub(d_pld_out,dict);
+                      //dict = pmt::dict_add(dict,pmt::intern("payload"),pmt::from_long(0));
+                      //message_port_pub(d_pld_out,dict);
                       enter_search();
                       break;
                     }
