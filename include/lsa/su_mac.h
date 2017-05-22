@@ -36,10 +36,7 @@ namespace gr {
     {
     public:
       typedef boost::shared_ptr<su_mac> sptr;
-      static sptr make(int bytes_per_packet);
-      //su_mac();
-      //~su_mac();
-    private:
+      static sptr make(int bytes_per_packet, bool debug);
     };
 
   } // namespace lsa

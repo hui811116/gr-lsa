@@ -36,7 +36,7 @@ namespace gr {
     {
     public:
     typedef boost::shared_ptr<block_phy> sptr;
-    static sptr make();
+    static sptr make(bool debug);
     };
 
   } // namespace lsa

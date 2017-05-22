@@ -4,19 +4,28 @@
   <key>lsa_block_phy</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.block_phy()</make>
+  <make>lsa.block_phy($debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
-  <!--
+  
   <param>
-    <name>...</name>
-    <key>...</key>
-    <type>...</type>
+    <name>Debug</name>
+    <key>debug</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>On</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Off</name>
+      <key>False</key>
+    </option>
   </param>
-  -->
+  
 
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)

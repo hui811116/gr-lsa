@@ -30,12 +30,14 @@
 namespace gr {
   namespace lsa {
 
+#define DEBUG d_debug && std::cerr
+
     static const int LSAMACLEN = 6;
 
     class su_mac_impl : public su_mac
     {
       public:
-      su_mac_impl(int bytes_per_packet):block("su_mac",
+      su_mac_impl(int bytes_per_packet, bool debug):block("su_mac",
                   gr::io_signature::make(0,0,0),
                   gr::io_signature::make(0,0,0)),
                   d_app_in_port(pmt::mp("app_in")),
@@ -55,6 +57,7 @@ namespace gr {
         d_bytes_per_packet = bytes_per_packet;
         d_current_base = -1;
         d_ack_cnt=0;
+        d_debug = debug;
       }
       ~su_mac_impl()
       {
@@ -66,14 +69,13 @@ namespace gr {
         pmt::pmt_t k = pmt::car(msg);
         pmt::pmt_t v = pmt::cdr(msg);
         if(!pmt::is_blob(v)){
-          throw std::runtime_error("not a blob!");
+          throw std::runtime_error("<SU MAC>not a blob!");
         }
         int new_base = pmt::to_long(k);
         if(new_base != d_current_base){
           // reaching retry limit
           d_current_base = new_base;
           generate_pdu(v);
-          std::cerr<<"<SU MAC DEBUG> generate complete"<<std::endl;
         }
         // processing payload and base counter
         message_port_pub(d_mac_out_port,d_current_pld);
@@ -87,14 +89,15 @@ namespace gr {
         pmt::pmt_t k = pmt::car(msg);
         pmt::pmt_t v = pmt::cdr(msg);
         if(!pmt::is_blob(v)){
-          throw std::runtime_error("SU MAC input not a blob");
+          throw std::runtime_error("<SU MAC> input not a blob");
         }
         size_t io(0);
         const uint8_t* uvec = pmt::u8vector_elements(v,io);
         // parse
         if(io==2){
           // length reserved for sensing
-          std::cerr<<"<SU MAC>received feedback of positive sensing information!"<<std::endl;
+          DEBUG <<"<SU MAC>received feedback of positive sensing information!"<<std::endl;
+          //std::cerr<<"<SU MAC>received feedback of positive sensing information!"<<std::endl;
           return;
         }else{
           // queue size and queue index and base point
@@ -109,15 +112,17 @@ namespace gr {
             // only control message
             // more likely for TX
             if(received_base == d_current_base){
-              std::cerr<<"<SU MAC>found a matched base point:(expected)"<<d_current_base<<std::endl;
+              //std::cerr<<"<SU MAC>found a matched base point:(expected)"<<d_current_base<<std::endl;
               if(qidx<d_ack_table.size()){
                 if(d_ack_table[qidx]==false){
-                  std::cerr<<"<SU MAC>segment:"<<qidx<<" ,acked!"<<std::endl;
+                  DEBUG <<"<SU MAC>segment:"<<qidx<<" ,acked!"<<std::endl;
+                  //std::cerr<<"<SU MAC>segment:"<<qidx<<" ,acked!"<<std::endl;
                   d_ack_table[qidx]=true;
                   d_ack_cnt++;
                   if(d_ack_cnt==d_ack_table.size()){
                     //transmission complete
-                    std::cerr<<"<SU MAC>all segments acked!"<<std::endl;
+                    DEBUG <<"<SU MAC>all segments ACKed!"<<std::endl;
+                    //std::cerr<<"<SU MAC>all segments ACKed!"<<std::endl;
                     // report success to app layer?
                     // FIXME. output content can be replaced!
                     message_port_pub(d_app_out_port,pmt::cons(pmt::from_long(d_current_base),pmt::PMT_NIL));
@@ -139,13 +144,14 @@ namespace gr {
                 d_blob_cnt++;
                 // ack one, 
                 pmt::pmt_t ack_frame = generate_ack_frame(qidx,qsize,received_base);
-                std::cerr<<"<SU MAC DEBUG>acking segment:"<<qidx<<" of base:"<<received_base<<std::endl;
-                //std::cerr<<ack_frame<<std::endl;
+                DEBUG << "<SU MAC DEBUG>ACK for segment:"<<qidx<<" of base:"<<received_base<<std::endl;
+                //std::cerr<<"<SU MAC DEBUG>acking segment:"<<qidx<<" of base:"<<received_base<<std::endl;
                 message_port_pub(d_mac_out_port,ack_frame);
               }
               if(d_blob_cnt == d_blob_buf.size()){
                 // all segments received
-                std::cerr<<"<SU MAC>Received a block (base point:"<<d_current_base<<")"<<std::endl;
+                DEBUG << "<SU MAC>Received a block (base point:"<<d_current_base<<")"<<std::endl;
+                //std::cerr<<"<SU MAC>Received a block (base point:"<<d_current_base<<")"<<std::endl;
                 int rebuild_cnt=0;
                 for(int i=0;i<d_blob_buf.size();++i){
                   size_t tmp_io(0);
@@ -172,7 +178,6 @@ namespace gr {
         size_t len_per_packet = 2+4+d_bytes_per_packet;
         unsigned int base = (unsigned int) d_current_base;
         unsigned char* u8_base = (unsigned char*) &base;
-        //gr::thread::scoped_lock lock(d_mutex);
         d_buf[2] = u8_base[3];
         d_buf[3] = u8_base[2];
         d_buf[4] = u8_base[1];
@@ -193,7 +198,6 @@ namespace gr {
           pmt::pmt_t tmp_msg = pmt::make_blob(d_buf,residual+6);
           msg_out = pmt::dict_add(msg_out,pmt::from_long(npacket-1),tmp_msg);
         }
-        //lock.unlock();
         d_ack_table.clear();
         d_ack_table.resize(npacket,false);
         d_ack_cnt =0;
@@ -203,7 +207,6 @@ namespace gr {
       pmt::pmt_t generate_ack_frame(int qidx, int qsize,unsigned int base)
       {
         // this is intended for receiver--> d_buf not used in rx mode
-        //gr::thread::scoped_lock lock(d_mutex);
         d_buf[0] = (unsigned char) qidx;
         d_buf[1] = (unsigned char) qsize;
         unsigned char* base_u8 = (unsigned char*)&base;
@@ -211,7 +214,6 @@ namespace gr {
         d_buf[3] = base_u8[2];
         d_buf[4] = base_u8[1];
         d_buf[5] = base_u8[0];
-        //lock.unlock();
         pmt::pmt_t dict = pmt::make_dict();
         pmt::pmt_t blob = pmt::make_blob(d_buf,LSAMACLEN);
         dict = pmt::dict_add(dict,pmt::intern("LSA_ACK"),blob);
@@ -225,6 +227,7 @@ namespace gr {
         const pmt::pmt_t d_app_out_port;
         const pmt::pmt_t d_mac_in_port;
         const pmt::pmt_t d_mac_out_port;
+        bool d_debug;                           // for debugging, output to error output
         
         gr::thread::mutex d_mutex;
         //gr::thread::condition_variable d_cond_var
@@ -246,9 +249,9 @@ namespace gr {
     };
 
     su_mac::sptr
-    su_mac::make(int bytes_per_packet)
+    su_mac::make(int bytes_per_packet, bool debug)
     {
-      return gnuradio::get_initial_sptr(new su_mac_impl(bytes_per_packet));
+      return gnuradio::get_initial_sptr(new su_mac_impl(bytes_per_packet, debug));
     }
 
   } /* namespace lsa */

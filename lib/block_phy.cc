@@ -29,6 +29,8 @@
 namespace gr {
   namespace lsa {
     
+#define DEBUG d_debug && std::cerr
+
     static const unsigned char LSAPREAMBLE[]={0x00,0x00,0x00,0x00,0xE6,0x00}; // last one for pkt len
     static const int LSAPHYLEN = 6;
     static const int LSAMAXLEN = 127-2;
@@ -36,7 +38,7 @@ namespace gr {
   class block_phy_impl:public block_phy
   {
     public:
-    block_phy_impl() : block("block_phy",
+    block_phy_impl(bool debug) : block("block_phy",
                 gr::io_signature::make(0,0,0),
                 gr::io_signature::make(0,0,0)),
                 d_mac_in_port(pmt::mp("mac_in")),
@@ -50,6 +52,7 @@ namespace gr {
       message_port_register_out(d_phy_out_port);
       set_msg_handler(d_mac_in_port,boost::bind(&block_phy_impl::mac_in,this,_1));
       set_msg_handler(d_phy_in_port,boost::bind(&block_phy_impl::phy_in,this,_1));
+      d_debug = debug;
     }
     ~block_phy_impl()
     {
@@ -60,7 +63,6 @@ namespace gr {
         // maybe is an ack frame
         throw std::runtime_error("<BLOCK PHY> input not a dictionary");
       }
-      //std::cerr<<msg<<" ,dict_has_key:"<<pmt::dict_has_key(msg,pmt::intern("LSA_ACK"))<<std::endl;
       if(pmt::dict_has_key(msg,pmt::intern("LSA_ACK"))){
         pmt::pmt_t dict_item = pmt::car(msg);
         pmt::pmt_t k = pmt::car(dict_item);
@@ -75,7 +77,6 @@ namespace gr {
         return;
       }
       else{
-        std::cerr<<"<BLOCK PHY DEBUG>sending data"<<std::endl;
         d_buf_cnt =0;
         std::vector<pmt::pmt_t> blob_stack;
         pmt::pmt_t dict_item(pmt::dict_items(msg));
@@ -86,7 +87,6 @@ namespace gr {
           dict_item = pmt::cdr(dict_item);
           // NOTE the order is reverse
           blob_stack.push_back(v);
-          //std::cerr<<"<BLOCK PHY DEBUG>received key"<<k<<std::endl;
         }
         for(int i = blob_stack.size()-1;i>=0;--i){
           size_t io(0);
@@ -110,7 +110,7 @@ namespace gr {
       pmt::pmt_t v = pmt::cdr(msg);
       size_t io(0);
       const uint8_t* uvec = pmt::u8vector_elements(v,io);
-      if(io==2 || io>4){
+      if(io==2 || io>=4){
         message_port_pub(d_mac_out_port,msg);
       }
     }
@@ -121,12 +121,13 @@ namespace gr {
       const pmt::pmt_t d_phy_out_port;
       unsigned char d_buf[8192];
       int d_buf_cnt;
+      bool d_debug;
   };
 
   block_phy::sptr
-  block_phy::make()
+  block_phy::make(bool debug)
   {
-    return gnuradio::get_initial_sptr(new block_phy_impl());
+    return gnuradio::get_initial_sptr(new block_phy_impl(debug));
   }
 
   } /* namespace lsa */
