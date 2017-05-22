@@ -70,16 +70,20 @@ namespace gr {
         bool
         start()
         {
-          gr::thread::thread t(&block_mac_impl::thread_run, this);
-          t.detach();
+          d_thread = boost::shared_ptr<gr::thread::thread>
+            (new gr::thread::thread(boost::bind(&block_mac_impl::thread_run,this)));
           return block::start();
         } 
         
         bool
         stop()
         {
+          
           d_stop.store(true);
           d_ack_received.notify_one();
+          d_thread->interrupt();
+          d_thread->join();
+          //std::cerr<<"<BLOCK MAC debug>calling stop"<<std::endl;
           return block::stop();
         }
 
@@ -94,7 +98,7 @@ namespace gr {
         void
         ack_in(pmt::pmt_t msg)
         {
-          gr::thread::scoped_lock lock(d_mutex);
+          //gr::thread::scoped_lock lock(d_mutex);
           assert(pmt::is_pair(msg));
           pmt::pmt_t k = pmt::car(msg);
           pmt::pmt_t v = pmt::cdr(msg);
@@ -114,6 +118,7 @@ namespace gr {
           }
           pmt::pmt_t msg = d_msg_queue.front();
           d_msg_queue.pop();
+          //lock.unlock();
           return msg;
         }
       private:
@@ -132,7 +137,7 @@ namespace gr {
               // this is set for timeout;
               d_ack_received.timed_wait(lock, boost::posix_time::milliseconds(d_timeout));
               lock.unlock();
-            }while(i++ < d_retx_lim && !d_stop.load() && !d_inc.load() );
+            }while( (i++ < d_retx_lim) && (!d_stop.load()) && (!d_inc.load()) );
 
             if(i>=d_retx_lim){
               // timeout
@@ -170,6 +175,7 @@ namespace gr {
         gr::thread::mutex d_mutex;
         gr::thread::condition_variable d_ack_received;
         gr::thread::condition_variable d_queue_filled;
+        boost::shared_ptr<gr::thread::thread> d_thread;
         std::atomic_bool d_stop;
         std::atomic_bool d_inc;
 			  std::queue<pmt::pmt_t> d_msg_queue;

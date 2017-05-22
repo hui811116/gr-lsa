@@ -53,7 +53,6 @@ namespace gr {
     }
     ~block_phy_impl()
     {
-
     }
     void mac_in(pmt::pmt_t msg)
     {

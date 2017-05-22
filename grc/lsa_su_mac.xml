@@ -24,6 +24,7 @@
   <sink>
     <name>app_in</name>
     <type>message</type>
+    <optional>1</optional>
   </sink>
   <sink>
     <name>mac_in</name>
@@ -39,6 +40,7 @@
   <source>
     <name>app_out</name>
     <type>message</type>
+    <optional>1</optional>
   </source>
   <source>
     <name>mac_out</name>

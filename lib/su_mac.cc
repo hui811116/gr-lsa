@@ -58,11 +58,10 @@ namespace gr {
       }
       ~su_mac_impl()
       {
-
       }
       void app_in(pmt::pmt_t msg)
       {
-        gr::thread::scoped_lock lock(d_mutex);
+        //gr::thread::scoped_lock lock(d_mutex);
         assert(pmt::is_pair(msg));
         pmt::pmt_t k = pmt::car(msg);
         pmt::pmt_t v = pmt::cdr(msg);
@@ -82,7 +81,7 @@ namespace gr {
 
       void mac_in(pmt::pmt_t msg)
       {
-        gr::thread::scoped_lock lock(d_mutex);
+        //gr::thread::scoped_lock lock(d_mutex);
         // TODO: still developing
         assert(pmt::is_pair(msg));
         pmt::pmt_t k = pmt::car(msg);
@@ -160,7 +159,6 @@ namespace gr {
 
       void generate_pdu(pmt::pmt_t v)
       {
-        gr::thread::scoped_lock lock(d_mutex);
         size_t io(0);
         const uint8_t* uvec = pmt::u8vector_elements(v,io);
         // for integer part
@@ -171,6 +169,7 @@ namespace gr {
         size_t len_per_packet = 2+4+d_bytes_per_packet;
         unsigned int base = (unsigned int) d_current_base;
         unsigned char* u8_base = (unsigned char*) &base;
+        //gr::thread::scoped_lock lock(d_mutex);
         d_buf[2] = u8_base[3];
         d_buf[3] = u8_base[2];
         d_buf[4] = u8_base[1];
@@ -191,6 +190,7 @@ namespace gr {
           pmt::pmt_t tmp_msg = pmt::make_blob(d_buf,residual+6);
           msg_out = pmt::dict_add(msg_out,pmt::from_long(npacket-1),tmp_msg);
         }
+        //lock.unlock();
         d_ack_table.clear();
         d_ack_table.resize(npacket,false);
         d_ack_cnt =0;
@@ -199,8 +199,8 @@ namespace gr {
 
       pmt::pmt_t generate_ack_frame(int qidx, int qsize,unsigned int base)
       {
-        gr::thread::scoped_lock lock(d_mutex);
         // this is intended for receiver--> d_buf not used in rx mode
+        //gr::thread::scoped_lock lock(d_mutex);
         d_buf[0] = (unsigned char) qidx;
         d_buf[1] = (unsigned char) qsize;
         unsigned char* base_u8 = (unsigned char*)&base;
@@ -208,6 +208,7 @@ namespace gr {
         d_buf[3] = base_u8[2];
         d_buf[4] = base_u8[1];
         d_buf[5] = base_u8[0];
+        //lock.unlock();
         return pmt::cons(pmt::intern("LSA_ACK"),pmt::make_blob(d_buf,LSAMACLEN));
       }
 
