@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<block>
+  <name>SU MAC</name>
+  <key>lsa_su_mac</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.su_mac($bpp)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Bytes per packet</name>
+    <key>bpp</key>
+    <type>int</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>app_in</name>
+    <type>message</type>
+  </sink>
+  <sink>
+    <name>mac_in</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>app_out</name>
+    <type>message</type>
+  </source>
+  <source>
+    <name>mac_out</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+</block>

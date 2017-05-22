@@ -25,183 +25,167 @@
 #include <gnuradio/io_signature.h>
 #include <lsa/block_mac.h>
 #include <gnuradio/block_detail.h>
-#include <ctime>
+#include <thread>
+#include <queue>
+#include <atomic>
 
 namespace gr {
   namespace lsa {
 
-
-    // LSA MAC DESIGN:
-    // BIT FIELD:
-    // ||DESTINATION||MAC ADDRESS||BLOCK ID||
-    //      1 byte      1 byte       2 bytes
-
-    static const long int d_timeout_clocks = CLOCKS_PER_SEC*4.0;
-
     class block_mac_impl:public block_mac{
       public: 
-        block_mac_impl(unsigned char addr,int block_len ,bool debug,bool verbose):block("block_mac",
+        block_mac_impl(int block_len, float timeout,int retx_lim, bool debug,bool verbose):block("block_mac",
                   gr::io_signature::make(0,0,0),
                   gr::io_signature::make(0,0,0)),
                   d_block_size(block_len),
-                  d_addr(addr),
-                  d_verbose(verbose)
+                  d_verbose(verbose),
+                  d_in_port(pmt::mp("msg_in")),
+                  d_ack_port(pmt::mp("ack_in")),
+                  d_out_port(pmt::mp("msg_out"))
         {
           if(block_len <0){
             throw std::invalid_argument("block length cannot be negative");
           }
-          d_block_count = 0;
-          d_block_clocks.resize(d_block_size, 0);
-          d_current_clocks = std::clock();
-          d_mac_in = pmt::mp("mac_in");
-          //d_mac_out= pmt::mp("mac_out");
-          d_phy_in = pmt::mp("phy_in");
-          d_phy_out= pmt::mp("phy_out");
-          //message_port_register_out(d_mac_out);
-          message_port_register_out(d_phy_out);
-          message_port_register_in(d_mac_in);
-          message_port_register_in(d_phy_in);
-          set_msg_handler(d_mac_in,boost::bind(&block_mac_impl::mac_in,this,_1));
-          set_msg_handler(d_phy_in,boost::bind(&block_mac_impl::phy_in,this,_1));
+          if(timeout<=0){
+            throw std::invalid_argument("Timeout setting failed");
+          }
+          d_timeout = timeout;
+          if(retx_lim<0){
+            throw std::invalid_argument("Retransmission count cannot be negiative");
+          }
+          d_retx_lim = retx_lim;
+          d_base = 0;
           d_debug = debug;
-
-          d_success_pkt = 0;
-          d_sum_of_rtt_clocks =0;
-          
-          d_mac_buf[1] = d_addr;
+          message_port_register_in(d_in_port);
+          message_port_register_in(d_ack_port);
+          message_port_register_out(d_out_port);
+          set_msg_handler(d_in_port,boost::bind(&block_mac_impl::msg_in,this,_1));
+          set_msg_handler(d_ack_port,boost::bind(&block_mac_impl::ack_in,this,_1));
         }
 
         ~block_mac_impl()
         {
-
-        }
-        void mac_in(pmt::pmt_t msg){
-          long int duration = std::clock() - d_current_clocks;
-          if(d_block_count<d_block_size){
-            assert(pmt::is_pair(msg));
-            pmt::pmt_t k = pmt::car(msg);
-            pmt::pmt_t v = pmt::cdr(msg);
-            assert(pmt::is_blob(v));
-            size_t io(0);
-            const unsigned char* uvec = pmt::u8vector_elements(v,io);
-            assert(io<2024);
-            memcpy(d_mac_buf+4,uvec,sizeof(char)*io);
-            // first thing to do is filling the buffer
-            assert(pmt::is_dict(k));
-            assert(pmt::dict_has_key(k,pmt::intern("DEST_ADDR")));
-            d_dest = pmt::to_long(pmt::dict_ref(k,pmt::intern("DEST_ADDR"),pmt::from_long(0)));
-            d_current_clocks = std::clock();
-            d_block_clocks[d_block_count] = d_current_clocks;
-            uint16_t bc_u16 = (uint16_t) d_block_count;
-            unsigned char * bc_u8arr = (unsigned char*)&bc_u16;
-            d_mac_buf[0] = d_dest;
-            d_mac_buf[2] = bc_u8arr[1];
-            d_mac_buf[3] = bc_u8arr[0];
-            d_block_count++;
-            message_port_pub(d_phy_out,pmt::cons(pmt::intern("DATA"),pmt::make_blob(d_mac_buf,io+4)));
-          }
-          else if(duration > d_timeout_clocks){
-            // timeout, summarize the result if verbose
-            if(d_verbose){
-              report();
-            }
-            // reset before new block transmission
-            reset();
-            return;
-          }
-          else{
-            // not timeout yet, do not take extra data
-            // 
-            return;
-          }
-          
         }
 
-        //void mac_out(){
-          //message_port_pub(d_mac_out,);
-        //}
-
-        void phy_in(pmt::pmt_t msg)
+        bool
+        start()
         {
+          gr::thread::thread t(&block_mac_impl::thread_run, this);
+          t.detach();
+          return block::start();
+        } 
+        
+        bool
+        stop()
+        {
+          d_stop.store(true);
+          d_ack_received.notify_one();
+          return block::stop();
+        }
+
+        void
+        msg_in(pmt::pmt_t msg)
+        {
+          pmt::pmt_t k = pmt::car(msg);
+          pmt::pmt_t v = pmt::cdr(msg);
+          //assert(pmt::is_blob(v));
+          enqueue(v);
+        }
+
+        void
+        ack_in(pmt::pmt_t msg)
+        {
+          gr::thread::scoped_lock lock(d_mutex);
           assert(pmt::is_pair(msg));
           pmt::pmt_t k = pmt::car(msg);
           pmt::pmt_t v = pmt::cdr(msg);
-          assert(pmt::is_blob(v));
-            size_t io(0);
-            const uint8_t* u8 = pmt::u8vector_elements(v,io);
-            assert(io>=4);
-            if(d_addr != u8[0]){
-              // not intended for this user, may be cross talk from other antenna
-                return ;
-              }
-          if(pmt::eqv(pmt::intern("LSA_DATA"),k))
-          {
-              d_mac_buf[0] = u8[1];
-              d_mac_buf[2] = u8[2];
-              d_mac_buf[3] = u8[3];
-              message_port_pub(d_phy_out,pmt::cons(pmt::intern("ACK"),pmt::make_blob(d_mac_buf,4))); 
-          }
-          else if(pmt::eqv(pmt::intern("ACK"),k))
-          {
-            uint16_t block_num = 0x00;
-            block_num = u8[2]<<8 | u8[3];
-            if(block_num >= d_block_count){
-              return;
-            }
-            d_success_pkt++;
-            d_sum_of_rtt_clocks += std::clock() - d_block_clocks[block_num];
+          if(pmt::to_long(k) == d_base){
+            d_base++;
+            d_inc.store(true);
           }
         }
 
-        void reset(){
-          d_block_count = 0;
-          d_current_clocks=std::clock();
-          d_block_clocks.resize(d_block_size,0);
-          d_success_pkt = 0;
-          d_sum_of_rtt_clocks =0;
-          d_dest = 0;
+        pmt::pmt_t 
+        queue_pop()
+        {
+          //std::cerr<<"Calling pop"<<std::endl;
+          gr::thread::scoped_lock lock(d_mutex);
+          while(d_msg_queue.empty()){
+            d_queue_filled.wait(lock);
+          }
+          pmt::pmt_t msg = d_msg_queue.front();
+          d_msg_queue.pop();
+          return msg;
         }
-        void report(){
-          double avg_rtt_time = 0;
-          if(d_success_pkt==0){
-            std::cout<<"<BLOCK MAC>NO successful transmission, cannot calculate RTT!"<<std::endl;
+      private:
+        void
+        thread_run()
+        {
+          //std::cerr<<"Thread start:"<<std::endl;
+          while(true){
+            d_stop.store(false);
+            d_inc.store(false);
+            pmt::pmt_t to_send = queue_pop();
+            int cur_base = d_base;
+            //std::cerr<<"Sending base point:"<<cur_base<<std::endl;
+            int i=0;
+            do{
+              message_port_pub(d_out_port,pmt::cons(pmt::from_long(cur_base),to_send) );
+              gr::thread::scoped_lock lock(d_mutex);
+              // this is set for timeout;
+              d_ack_received.timed_wait(lock, boost::posix_time::milliseconds(d_timeout));
+              lock.unlock();
+            }while(i++ < d_retx_lim && !d_stop.load() && !d_inc.load() );
+
+            if(i>=d_retx_lim){
+              // timeout
+              // delare failed
+              std::cerr<<"<Block Mac>Timeout, failed in transmission"<<std::endl;
+            } else if(d_inc.load()){
+              // base point shifted
+              std::cerr<<"<Block Mac>Base point received"<<std::endl;
+            } else{
+              // stopped;
+              //std::cerr<<"System stop"<<std::endl;
+            }
+          }
+        }
+        void
+        enqueue(pmt::pmt_t msg)
+        {
+          //std::cerr<<"Calling enqueue, size="<<d_msg_queue.size()<<std::endl;
+          gr::thread::scoped_lock lock(d_mutex);
+          if(d_msg_queue.size()<1000){
+            d_msg_queue.push(msg);
           }
           else{
-            avg_rtt_time = d_sum_of_rtt_clocks/(double)d_success_pkt/(double)CLOCKS_PER_SEC*1000;
-            std::cout<<"-----------------<BLOCK MAC>(Delay statistics)------------------"<<std::endl;
-            std::cout<<"Successive Packets: "<<d_success_pkt<<std::endl;
-            std::cout<<"Average Round Trip Time(ms):"<<avg_rtt_time<<std::endl;
-            std::cout<<"****************************************************************"<<std::endl;
+            std::cerr<<"enqueue failed: buffer full"<<std::endl;
           }
+          d_queue_filled.notify_one();
+          lock.unlock();
         }
-        
 
-      private:
-        pmt::pmt_t d_mac_out;
-        pmt::pmt_t d_mac_in;
-        pmt::pmt_t d_phy_out;
-        pmt::pmt_t d_phy_in;
-
-        size_t d_block_count;
-        long int d_current_clocks;
-        
-        unsigned char d_addr;
-        unsigned char d_dest;
-
-        std::vector<long int> d_block_clocks;
-        size_t d_success_pkt;
-        uint64_t d_sum_of_rtt_clocks;
-        
         bool d_debug;
         bool d_verbose;
-        const size_t d_block_size;
+        int d_block_size;
+        int d_retx_lim;
+        int d_base;
+        float d_timeout;
 
-        unsigned char d_mac_buf[2048];
+        gr::thread::mutex d_mutex;
+        gr::thread::condition_variable d_ack_received;
+        gr::thread::condition_variable d_queue_filled;
+        std::atomic_bool d_stop;
+        std::atomic_bool d_inc;
+			  std::queue<pmt::pmt_t> d_msg_queue;
+        const pmt::pmt_t d_out_port;
+        const pmt::pmt_t d_in_port;
+        const pmt::pmt_t d_ack_port;
     };
 
     block_mac::sptr
-    block_mac::make(unsigned char addr,int block_len,bool debug,bool verbose){
-      return gnuradio::get_initial_sptr(new block_mac_impl(addr,block_len,debug,verbose));
+    block_mac::make(int block_len,float timeout, int retx_lim,bool debug,bool verbose){
+      return gnuradio::get_initial_sptr(new block_mac_impl(block_len,timeout,retx_lim,debug,verbose));
     }
 
   } /* namespace lsa */

@@ -260,8 +260,8 @@ inline unsigned char slice(const float& f)
                       //NACK
                       pmt::pmt_t dict = pmt::make_dict();
                       dict = pmt::dict_add(dict,pmt::intern("LSA_hdr"),pmt::PMT_T);
-                      dict = pmt::dict_add(dict,pmt::intern("queue_index"),pmt::from_long(0));
-                      dict = pmt::dict_add(dict,pmt::intern("queue_size"),pmt::from_long(0));
+                      //dict = pmt::dict_add(dict,pmt::intern("queue_index"),pmt::from_long(0));
+                      //dict = pmt::dict_add(dict,pmt::intern("queue_size"),pmt::from_long(0));
                       dict = pmt::dict_add(dict,pmt::intern("payload"),pmt::from_long(0));
                       message_port_pub(d_pld_out,dict);
                       enter_search();
@@ -269,16 +269,16 @@ inline unsigned char slice(const float& f)
                     }
                     else if(d_pkt_byte <= MAX_PLD){
                       //LSA special flags
-                      if(d_pkt_byte==1){
+                      //if(d_pkt_byte==1){
                         //ACK
-                        d_pkt_pld = 1;
-                        d_pkt_byte =2;
-                        enter_load_payload();
-                      }
-                      else{
+                        //d_pkt_pld = 1;
+                        //d_pkt_byte =2;
+                        //enter_load_payload();
+                      //}
+                      //else{
                         d_pkt_pld = d_pkt_byte;
                         enter_load_payload();
-                      }
+                      //}
                       break;
                     }
                     else{
@@ -314,24 +314,24 @@ inline unsigned char slice(const float& f)
                   if(d_symbol_cnt/2 >= d_pkt_byte){
                     // payload length collected
                     // special cases output from here,
-                    if(d_pkt_pld == 1){
+                    //if(d_pkt_pld == 1){
                       // ACK: queue size contain RETX or Fresh info
-                      d_qidx = d_buf[0];
-                      d_qsize = d_buf[1];
-                    }
-                    else if(d_pkt_pld==2){
+                      //d_qidx = d_buf[0];
+                      //d_qsize = d_buf[1];
+                    //}
+                    //else if(d_pkt_pld==2){
                       // sensing:
-                      d_qidx = 0xff;
-                      d_qsize = 0x00;
-                    }
-                    else{
-                      d_qidx = d_buf[0];
-                      d_qsize = d_buf[1];
-                    }
-                    msg_out();
+                      //d_qidx = 0xff;
+                      //d_qsize = 0x00;
+                    //}
+                    //else{
+                      //d_qidx = d_buf[0];
+                      //d_qsize = d_buf[1];
+                    //}
+                    //msg_out();
                     // current version do not count the BER of SU
-                    //pmt::pmt_t blob = pmt::make_blob(d_buf,d_pkt_byte);
-                    //message_port_pub(d_pld_out,pmt::cons(pmt::PMT_NIL,blob));
+                    pmt::pmt_t blob = pmt::make_blob(d_buf,d_pkt_byte);
+                    message_port_pub(d_pld_out,pmt::cons(pmt::intern("LSA_hdr"),blob));
                     enter_search();
                     break;
                   }

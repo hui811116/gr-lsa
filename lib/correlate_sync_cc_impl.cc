@@ -145,11 +145,10 @@ namespace gr {
         detection = logf(corr_mag[i]) - 0.5*logf(eng_acc);
         if(detection >= d_thres_log + 0.5*d_eng_log){
           phase = fast_atan2f(corr[i].imag(),corr[i].real());
-          add_item_tag(0,nitems_written(0)+i,pmt::intern("corr_est"),pmt::from_bool(pmt::PMT_T));
+          add_item_tag(0,nitems_written(0)+i,pmt::intern("corr_est"),pmt::PMT_T);
           add_item_tag(0,nitems_written(0)+i,pmt::intern("phase_est"),pmt::from_float(phase));
           if(have_corr){
-            add_item_tag(1,nitems_written(1)+i,pmt::intern("corr_est"),pmt::from_bool(pmt::PMT_T));
-            //add_item_tag(1,nitems_written(1)+i,pmt::intern("phase_est"),pmt::from_float(phase));
+            add_item_tag(1,nitems_written(1)+i,pmt::intern("corr_est"),pmt::PMT_T);
           }
         }
 

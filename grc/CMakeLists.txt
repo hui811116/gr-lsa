@@ -49,5 +49,7 @@ install(FILES
     lsa_stat_report.xml
     lsa_prou_packet_sink_f.xml
     lsa_length_prefixer.xml
-    lsa_interference_tagger_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_interference_tagger_cc.xml
+    lsa_su_mac.xml
+    lsa_block_phy.xml DESTINATION share/gnuradio/grc/blocks
 )

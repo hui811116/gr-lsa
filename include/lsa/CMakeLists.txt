@@ -54,5 +54,7 @@ install(FILES
     stat_report.h
     prou_packet_sink_f.h
     length_prefixer.h
-    interference_tagger_cc.h DESTINATION include/lsa
+    interference_tagger_cc.h
+    su_mac.h
+    block_phy.h DESTINATION include/lsa
 )

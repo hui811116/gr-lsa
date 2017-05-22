@@ -51,6 +51,8 @@
 #include "lsa/prou_packet_sink_f.h"
 #include "lsa/length_prefixer.h"
 #include "lsa/interference_tagger_cc.h"
+#include "lsa/su_mac.h"
+#include "lsa/block_phy.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -119,3 +121,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, prou_packet_sink_f);
 GR_SWIG_BLOCK_MAGIC2(lsa, length_prefixer);
 %include "lsa/interference_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_tagger_cc);
+%include "lsa/su_mac.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, su_mac);
+%include "lsa/block_phy.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, block_phy);

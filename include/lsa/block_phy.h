@@ -19,8 +19,8 @@
  */
 
 
-#ifndef INCLUDED_LSA_BLOCK_MAC_H
-#define INCLUDED_LSA_BLOCK_MAC_H
+#ifndef INCLUDED_LSA_BLOCK_PHY_H
+#define INCLUDED_LSA_BLOCK_PHY_H
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
@@ -32,16 +32,15 @@ namespace gr {
      * \brief <+description+>
      *
      */
-    class LSA_API block_mac : virtual public block
+    class LSA_API block_phy : virtual public block
     {
     public:
-      typedef boost::shared_ptr<block_mac> sptr;
-      static sptr make(int block_len, float timeout, int retx_lim,bool debug, bool verbose);
-    private:
+    typedef boost::shared_ptr<block_phy> sptr;
+    static sptr make();
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_BLOCK_MAC_H */
+#endif /* INCLUDED_LSA_BLOCK_PHY_H */
 

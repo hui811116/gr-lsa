@@ -57,7 +57,9 @@ list(APPEND lsa_sources
     stat_report.cc
     prou_packet_sink_f_impl.cc
     length_prefixer.cc
-    interference_tagger_cc_impl.cc )
+    interference_tagger_cc_impl.cc
+    su_mac.cc
+    block_phy.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

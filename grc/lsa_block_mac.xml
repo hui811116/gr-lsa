@@ -4,20 +4,25 @@
   <key>lsa_block_mac</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.block_mac($addr,$block_len,$debug,$verbose)</make>
+  <make>lsa.block_mac($block_len,$timeout, $retx_lim,$debug,$verbose)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <param>
-    <name>Address</name>
-    <key>addr</key>
+    <name>Block Length</name>
+    <key>block_len</key>
     <type>int</type>
   </param>
   <param>
-    <name>Block Length</name>
-    <key>block_len</key>
+    <name>Timeout</name>
+    <key>timeout</key>
+    <type>float</type>
+  </param>
+  <param>
+    <name>Retry limit</name>
+    <key>retx_lim</key>
     <type>int</type>
   </param>
   <param>
@@ -55,13 +60,14 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <sink>
-    <name>mac_in</name>
+    <name>msg_in</name>
     <type>message</type>
     <optional>1</optional>
   </sink>
   <sink>
-    <name>phy_in</name>
+    <name>ack_in</name>
     <type>message</type>
+    <optional>1</optional>
   </sink>
   <!-- Make one 'source' node per output. Sub-nodes:
        * name (an identifier for the GUI)
@@ -69,7 +75,7 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>phy_out</name>
+    <name>msg_out</name>
     <type>message</type>
   </source>
 </block>
