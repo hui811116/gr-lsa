@@ -60,10 +60,11 @@ namespace gr {
         // maybe is an ack frame
         throw std::runtime_error("<BLOCK PHY> input not a dictionary");
       }
+      //std::cerr<<msg<<" ,dict_has_key:"<<pmt::dict_has_key(msg,pmt::intern("LSA_ACK"))<<std::endl;
       if(pmt::dict_has_key(msg,pmt::intern("LSA_ACK"))){
-        //std::cerr<<"<BLOCK PHY DEBUG>acking one segment"<<std::endl;
-        pmt::pmt_t k = pmt::car(msg);
-        pmt::pmt_t v = pmt::cdr(msg);
+        pmt::pmt_t dict_item = pmt::car(msg);
+        pmt::pmt_t k = pmt::car(dict_item);
+        pmt::pmt_t v = pmt::cdr(dict_item);
         assert(pmt::is_blob(v));
         size_t oo(0);
         const uint8_t* ackvec = pmt::u8vector_elements(v,oo);
@@ -74,6 +75,7 @@ namespace gr {
         return;
       }
       else{
+        std::cerr<<"<BLOCK PHY DEBUG>sending data"<<std::endl;
         d_buf_cnt =0;
         std::vector<pmt::pmt_t> blob_stack;
         pmt::pmt_t dict_item(pmt::dict_items(msg));

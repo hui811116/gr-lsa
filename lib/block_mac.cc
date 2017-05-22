@@ -145,7 +145,7 @@ namespace gr {
               std::cerr<<"<Block Mac>Timeout, failed in transmission"<<std::endl;
             } else if(d_inc.load()){
               // base point shifted
-              std::cerr<<"<Block Mac>Base point received"<<std::endl;
+              std::cerr<<"<Block Mac>Base point received:"<<d_base<<std::endl;
             } else{
               // stopped;
             }

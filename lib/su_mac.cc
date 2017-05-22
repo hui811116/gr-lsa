@@ -119,6 +119,8 @@ namespace gr {
                     //transmission complete
                     std::cerr<<"<SU MAC>all segments acked!"<<std::endl;
                     // report success to app layer?
+                    // FIXME. output content can be replaced!
+                    message_port_pub(d_app_out_port,pmt::cons(pmt::from_long(d_current_base),pmt::PMT_NIL));
                   }
                 }
               }
@@ -138,6 +140,7 @@ namespace gr {
                 // ack one, 
                 pmt::pmt_t ack_frame = generate_ack_frame(qidx,qsize,received_base);
                 std::cerr<<"<SU MAC DEBUG>acking segment:"<<qidx<<" of base:"<<received_base<<std::endl;
+                //std::cerr<<ack_frame<<std::endl;
                 message_port_pub(d_mac_out_port,ack_frame);
               }
               if(d_blob_cnt == d_blob_buf.size()){
@@ -209,7 +212,12 @@ namespace gr {
         d_buf[4] = base_u8[1];
         d_buf[5] = base_u8[0];
         //lock.unlock();
-        return pmt::cons(pmt::intern("LSA_ACK"),pmt::make_blob(d_buf,LSAMACLEN));
+        pmt::pmt_t dict = pmt::make_dict();
+        pmt::pmt_t blob = pmt::make_blob(d_buf,LSAMACLEN);
+        dict = pmt::dict_add(dict,pmt::intern("LSA_ACK"),blob);
+        //dict = pmt::dict_add(dict,pmt::intern("LSA_ACK"),pmt::from_long(66666));
+        return dict;
+        //return pmt::cons(pmt::intern("LSA_ACK"),);
       }
 
       private:
