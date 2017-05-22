@@ -30,6 +30,8 @@
 namespace gr {
   namespace lsa {
 
+    static const int LSAMACLEN = 6;
+
     class su_mac_impl : public su_mac
     {
       public:
@@ -52,6 +54,7 @@ namespace gr {
         }
         d_bytes_per_packet = bytes_per_packet;
         d_current_base = -1;
+        d_ack_cnt=0;
       }
       ~su_mac_impl()
       {
@@ -62,9 +65,7 @@ namespace gr {
         gr::thread::scoped_lock lock(d_mutex);
         assert(pmt::is_pair(msg));
         pmt::pmt_t k = pmt::car(msg);
-        //std::cerr<<"<SU MAC DEBUG>"<<k<<std::endl;
         pmt::pmt_t v = pmt::cdr(msg);
-        //std::cerr<<"<SU MAC DEBUG>"<<v<<std::endl;
         if(!pmt::is_blob(v)){
           throw std::runtime_error("not a blob!");
         }
@@ -78,6 +79,7 @@ namespace gr {
         // processing payload and base counter
         message_port_pub(d_mac_out_port,d_current_pld);
       }
+
       void mac_in(pmt::pmt_t msg)
       {
         gr::thread::scoped_lock lock(d_mutex);
@@ -86,7 +88,7 @@ namespace gr {
         pmt::pmt_t k = pmt::car(msg);
         pmt::pmt_t v = pmt::cdr(msg);
         if(!pmt::is_blob(v)){
-          throw std::runtime_error("SU MAC input not a block");
+          throw std::runtime_error("SU MAC input not a blob");
         }
         size_t io(0);
         const uint8_t* uvec = pmt::u8vector_elements(v,io);
@@ -95,34 +97,70 @@ namespace gr {
           // length reserved for sensing
           std::cerr<<"<SU MAC>received feedback of positive sensing information!"<<std::endl;
           return;
-        }
-        // queue size and queue index and base point
-        unsigned int received_base = uvec[2]<<24;
-        received_base |= uvec[3] << 16;
-        received_base |= uvec[4] << 8;
-        received_base |= uvec[5];
-        if(received_base == d_current_base){
-          std::cerr<<"<SU MAC>found a matched base point:(expected)"<<d_current_base<<std::endl;
+        }else{
+          // queue size and queue index and base point
+          unsigned int received_base = uvec[2]<<24;
+          received_base |= uvec[3] << 16;
+          received_base |= uvec[4] << 8;
+          received_base |= uvec[5];
           // checking queue index and queue size here!
           int qidx = uvec[0];
           int qsize= uvec[1];
-          if(qidx<d_ack_table.size()){
-            if(d_ack_table[qidx]==false){
-              std::cerr<<"<SU MAC>segment:"<<qidx<<" ,acked!"<<std::endl;
-              d_ack_table[qidx]=true;
-              d_ack_cnt++;
-              if(d_ack_cnt==d_ack_table.size()){
-                //transmission complete
-                std::cerr<<"<SU MAC>packet acked!"<<std::endl;
+          if(io==6){
+            // only control message
+            // more likely for TX
+            if(received_base == d_current_base){
+              std::cerr<<"<SU MAC>found a matched base point:(expected)"<<d_current_base<<std::endl;
+              if(qidx<d_ack_table.size()){
+                if(d_ack_table[qidx]==false){
+                  std::cerr<<"<SU MAC>segment:"<<qidx<<" ,acked!"<<std::endl;
+                  d_ack_table[qidx]=true;
+                  d_ack_cnt++;
+                  if(d_ack_cnt==d_ack_table.size()){
+                    //transmission complete
+                    std::cerr<<"<SU MAC>all segments acked!"<<std::endl;
+                    // report success to app layer?
+                  }
+                }
               }
             }
-          }
+          }else{
+              // contain payload
+              if( (received_base != d_rx_base) && (qidx ==0) && (qsize!=0) ){
+              // detect an initial frame
+              d_current_base = received_base;
+              d_blob_buf.clear();
+              d_blob_buf.resize(qsize,pmt::PMT_NIL);
+              d_blob_cnt=0;
+              }
+              if(pmt::is_null(d_blob_buf[qidx])){
+                d_blob_buf[qidx] = pmt::make_blob(uvec,io-6); 
+                d_blob_cnt++;
+                // ack one, 
+                pmt::pmt_t ack_frame = generate_ack_frame(qidx,qsize,received_base);
+                std::cerr<<"<SU MAC DEBUG>acking segment:"<<qidx<<" of base:"<<received_base<<std::endl;
+                message_port_pub(d_mac_out_port,ack_frame);
+              }
+              if(d_blob_cnt == d_blob_buf.size()){
+                // all segments received
+                std::cerr<<"<SU MAC>Received a block (base point:"<<d_current_base<<")"<<std::endl;
+                int rebuild_cnt=0;
+                for(int i=0;i<d_blob_buf.size();++i){
+                  size_t tmp_io(0);
+                  const uint8_t* tmp_uvec = pmt::u8vector_elements(d_blob_buf[i],tmp_io);
+                  memcpy(&d_rx_buf[rebuild_cnt],tmp_uvec,sizeof(char)*tmp_io);
+                  rebuild_cnt+=tmp_io;
+                }
+                message_port_pub(d_app_out_port,pmt::cons(pmt::from_long(d_rx_base),pmt::make_blob(d_rx_buf,rebuild_cnt)));
+              }
+          } 
         }
       }
       
 
       void generate_pdu(pmt::pmt_t v)
       {
+        gr::thread::scoped_lock lock(d_mutex);
         size_t io(0);
         const uint8_t* uvec = pmt::u8vector_elements(v,io);
         // for integer part
@@ -159,6 +197,20 @@ namespace gr {
         d_current_pld = msg_out;
       }
 
+      pmt::pmt_t generate_ack_frame(int qidx, int qsize,unsigned int base)
+      {
+        gr::thread::scoped_lock lock(d_mutex);
+        // this is intended for receiver--> d_buf not used in rx mode
+        d_buf[0] = (unsigned char) qidx;
+        d_buf[1] = (unsigned char) qsize;
+        unsigned char* base_u8 = (unsigned char*)&base;
+        d_buf[2] = base_u8[3];
+        d_buf[3] = base_u8[2];
+        d_buf[4] = base_u8[1];
+        d_buf[5] = base_u8[0];
+        return pmt::cons(pmt::intern("LSA_ACK"),pmt::make_blob(d_buf,LSAMACLEN));
+      }
+
       private:
         const pmt::pmt_t d_app_in_port;
         const pmt::pmt_t d_app_out_port;
@@ -166,17 +218,21 @@ namespace gr {
         const pmt::pmt_t d_mac_out_port;
         
         gr::thread::mutex d_mutex;
-        //gr::thread::condition_variable d_;
-        std::vector<bool> d_ack_table;
-        int d_ack_cnt;
+        //gr::thread::condition_variable d_cond_var
+        std::vector<bool> d_ack_table;          // transmitter acking table
+        int d_ack_cnt;                          // transmitter ack counter
+        int d_current_base;                     // base point for transmitter
+        pmt::pmt_t d_current_pld;               // temporary buffer for transmitter
+        int d_bytes_per_packet;                 // transmission parameters for TX
 
-        int d_current_base;
-        pmt::pmt_t d_current_pld;
-        int d_bytes_per_packet;
-        //require a table to record
-        bool d_compensate;
+        std::vector<pmt::pmt_t> d_blob_buf;     // receiver buffer for multiple segments
+        int d_blob_cnt;                         // receiver segment buffer
+        int d_rx_base;                          // base point for receiver
+        
+        //bool d_compensate;
         // NOTE: trying to accommondate multiple payloads
-        unsigned char d_buf[256];
+        unsigned char d_buf[2048];              // transmitter buffer
+        unsigned char d_rx_buf[2048];           // receiver rebuild buffer
 
     };
 

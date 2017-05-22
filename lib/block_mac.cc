@@ -88,7 +88,6 @@ namespace gr {
         {
           pmt::pmt_t k = pmt::car(msg);
           pmt::pmt_t v = pmt::cdr(msg);
-          //assert(pmt::is_blob(v));
           enqueue(v);
         }
 
@@ -100,6 +99,7 @@ namespace gr {
           pmt::pmt_t k = pmt::car(msg);
           pmt::pmt_t v = pmt::cdr(msg);
           if(pmt::to_long(k) == d_base){
+            std::cerr<<"<BLOCK MAC> acked base point:"<<k<<std::endl;
             d_base++;
             d_inc.store(true);
           }
@@ -108,7 +108,6 @@ namespace gr {
         pmt::pmt_t 
         queue_pop()
         {
-          //std::cerr<<"Calling pop"<<std::endl;
           gr::thread::scoped_lock lock(d_mutex);
           while(d_msg_queue.empty()){
             d_queue_filled.wait(lock);
@@ -121,13 +120,11 @@ namespace gr {
         void
         thread_run()
         {
-          //std::cerr<<"Thread start:"<<std::endl;
           while(true){
             d_stop.store(false);
             d_inc.store(false);
             pmt::pmt_t to_send = queue_pop();
             int cur_base = d_base;
-            //std::cerr<<"Sending base point:"<<cur_base<<std::endl;
             int i=0;
             do{
               message_port_pub(d_out_port,pmt::cons(pmt::from_long(cur_base),to_send) );
@@ -146,14 +143,12 @@ namespace gr {
               std::cerr<<"<Block Mac>Base point received"<<std::endl;
             } else{
               // stopped;
-              //std::cerr<<"System stop"<<std::endl;
             }
           }
         }
         void
         enqueue(pmt::pmt_t msg)
         {
-          //std::cerr<<"Calling enqueue, size="<<d_msg_queue.size()<<std::endl;
           gr::thread::scoped_lock lock(d_mutex);
           if(d_msg_queue.size()<1000){
             d_msg_queue.push(msg);

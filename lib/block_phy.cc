@@ -57,33 +57,49 @@ namespace gr {
     }
     void mac_in(pmt::pmt_t msg)
     {
-      //std::cerr<<"<BLOCK PHY>received a message"<<std::endl;
       if(!pmt::is_dict(msg)){
+        // maybe is an ack frame
         throw std::runtime_error("<BLOCK PHY> input not a dictionary");
       }
-      d_buf_cnt =0;
-      std::vector<pmt::pmt_t> blob_stack;
-      pmt::pmt_t dict_item(pmt::dict_items(msg));
-      while(!pmt::is_null(dict_item)){
-        pmt::pmt_t this_dict(pmt::car(dict_item));
-        pmt::pmt_t k = pmt::car(this_dict);
-        pmt::pmt_t v = pmt::cdr(this_dict);
-        dict_item = pmt::cdr(dict_item);
-        // NOTE the order is reverse
-        blob_stack.push_back(v);
-        //std::cerr<<"<BLOCK PHY DEBUG>received key"<<k<<std::endl;
+      if(pmt::dict_has_key(msg,pmt::intern("LSA_ACK"))){
+        //std::cerr<<"<BLOCK PHY DEBUG>acking one segment"<<std::endl;
+        pmt::pmt_t k = pmt::car(msg);
+        pmt::pmt_t v = pmt::cdr(msg);
+        assert(pmt::is_blob(v));
+        size_t oo(0);
+        const uint8_t* ackvec = pmt::u8vector_elements(v,oo);
+        memcpy(d_buf,LSAPREAMBLE,sizeof(char)*LSAPHYLEN);
+        d_buf[LSAPHYLEN-1] = (unsigned char)oo;
+        memcpy(d_buf+LSAPHYLEN,ackvec,sizeof(char)*oo);
+        message_port_pub(d_phy_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_buf,LSAPHYLEN+oo)));
+        return;
       }
-      for(int i = blob_stack.size()-1;i>=0;--i){
-        size_t io(0);
-        const uint8_t* uvec = pmt::u8vector_elements(blob_stack[i],io);
-        assert(io<LSAMAXLEN);
-        memcpy(&d_buf[d_buf_cnt],LSAPREAMBLE,sizeof(char)*LSAPHYLEN);
-        d_buf[d_buf_cnt+LSAPHYLEN-1] = (unsigned char) io;
-        memcpy(&d_buf[d_buf_cnt+LSAPHYLEN],uvec,sizeof(char)*io);
-        d_buf_cnt+= (io+LSAPHYLEN);
+      else{
+        d_buf_cnt =0;
+        std::vector<pmt::pmt_t> blob_stack;
+        pmt::pmt_t dict_item(pmt::dict_items(msg));
+        while(!pmt::is_null(dict_item)){
+          pmt::pmt_t this_dict(pmt::car(dict_item));
+          pmt::pmt_t k = pmt::car(this_dict);
+          pmt::pmt_t v = pmt::cdr(this_dict);
+          dict_item = pmt::cdr(dict_item);
+          // NOTE the order is reverse
+          blob_stack.push_back(v);
+          //std::cerr<<"<BLOCK PHY DEBUG>received key"<<k<<std::endl;
+        }
+        for(int i = blob_stack.size()-1;i>=0;--i){
+          size_t io(0);
+          const uint8_t* uvec = pmt::u8vector_elements(blob_stack[i],io);
+          assert(io<LSAMAXLEN);
+          memcpy(&d_buf[d_buf_cnt],LSAPREAMBLE,sizeof(char)*LSAPHYLEN);
+          d_buf[d_buf_cnt+LSAPHYLEN-1] = (unsigned char) io;
+          memcpy(&d_buf[d_buf_cnt+LSAPHYLEN],uvec,sizeof(char)*io);
+          d_buf_cnt+= (io+LSAPHYLEN);
+        }
+        pmt::pmt_t blob = pmt::make_blob(d_buf,d_buf_cnt);
+        message_port_pub(d_phy_out_port,pmt::cons(pmt::PMT_NIL,blob));
       }
-      pmt::pmt_t blob = pmt::make_blob(d_buf,d_buf_cnt);
-      message_port_pub(d_phy_out_port,pmt::cons(pmt::PMT_NIL,blob));
+      
     }
     void phy_in(pmt::pmt_t msg)
     {
