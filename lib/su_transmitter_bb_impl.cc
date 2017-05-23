@@ -24,7 +24,6 @@
 
 #include <gnuradio/io_signature.h>
 #include "su_transmitter_bb_impl.h"
-#include <ctime>
 
 namespace gr {
   namespace lsa {
@@ -33,8 +32,8 @@ namespace gr {
     // -------------------------------------
     //              BIT FIELD
     // -------------------------------------
-    // queue idx| queue size| 
-    //    1byte |    1byte  |
+    // queue idx| queue size| base point   |
+    //    1byte |    1byte  |    4bytes
     // -------------------------------------
     // STATES: 1) CLEAR_TO_SEND, 2) RETRANSMISSION
     // BEHAVIOR:     queue size =0,    queue_size = buf size
@@ -45,75 +44,48 @@ namespace gr {
     // preamble| signal frame dilimeter| pkt length|
     //  4 bytes|        1 byte         |   1 byte
 
-    enum SUTXMODE{
-      SUCCESSIVE=0,
-      NOQUEUE=1,
-      CONSTRAINT=2
-    };
-    enum SUTXSTATE{
-      CLEAR_TO_SEND,
-      RETRANSMISSION
-    };
+#define DEBUG d_debug && std::cerr
 
     static const int MAX_PLD_LEN = 125;  //(127-2);
-    static const unsigned char LSA_PHY[] ={0x00,0x00,0x00,0x00,0xE6, 0x00};
+    static const unsigned char LSAPHYHDR[] ={0x00,0x00,0x00,0x00,0xE6,0x00}; // last bytes for length field
+    static const unsigned char LSAMACHDR[] ={0x00,0x00,0x00,0x00,0x00,0x00}; // qidx,qsize,base x 4
     // the last feild is for packet length
-    static const int PHY_LEN = 6;
-    static const int RETX_LIMIT = 6;
+    static const int PHYLEN = 6;
+    static const int MACLEN = 6;
+    
 
     su_transmitter_bb::sptr
-    su_transmitter_bb::make(const std::string& tagname, int mode, int len, bool debug)
+    su_transmitter_bb::make(const std::string& tagname,int bytes_per_packet, bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new su_transmitter_bb_impl(tagname,mode,len,debug));
+        (new su_transmitter_bb_impl(tagname,bytes_per_packet,debug));
     }
 
     /*
      * The private constructor
      */
-    su_transmitter_bb_impl::su_transmitter_bb_impl(const std::string& tagname, int mode, int len,bool debug)
+    su_transmitter_bb_impl::su_transmitter_bb_impl(
+      const std::string& tagname, int bytes_per_packet,bool debug)
       : gr::tagged_stream_block("su_transmitter_bb",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(1, 1, sizeof(char)), tagname),
               d_lentag(pmt::intern(tagname)),
-              d_queue_cap(256)
+              d_block_cap(64),
+              d_pkt_cap(256),
+              d_msg_in(pmt::mp("msg_in"))
     {
-      d_msg_in = pmt::mp("msg_in");
       message_port_register_in(d_msg_in);
       set_msg_handler(d_msg_in,boost::bind(&su_transmitter_bb_impl::msg_in,this,_1));
 
-      d_queue_busy = false;
-      d_debug = debug;
-      switch(mode){
-        case 0:
-          d_mode = SUCCESSIVE;
-        break;
-        case 1:
-          d_mode = NOQUEUE;
-        break;
-        case 2:
-          d_mode = CONSTRAINT;
-          d_clen = len;
-        break;
-        default:
-          d_mode = NOQUEUE;
-        break;
+      if(bytes_per_packet<0 || bytes_per_packet>125){
+        throw std::invalid_argument("invalid bytes per packet");
       }
-      d_state = CLEAR_TO_SEND;
-      d_queue_buf.resize(d_queue_cap,NULL);
-      d_pkt_len_buf.resize(d_queue_cap,0);
-      d_time_buf.resize(d_queue_cap,0);
-      for(int i=0;i<d_queue_cap;++i){
-        d_queue_buf[i] = new unsigned char[256];
-      }
-      d_latest_idx = 0;
-      d_current_idx = 0;
-      d_current_time = std::clock();
-      d_update_time = std::clock();
+      d_bytes_per_packet = bytes_per_packet;
 
-      d_retx_cnt=0;
-      d_retx_idx=0;
-      
+      d_debug = debug;
+      d_pkt_circ_cnt = 0;
+      d_base_cnt=0;
+      d_base_rx = -1;
     }
 
     /*
@@ -121,216 +93,159 @@ namespace gr {
      */
     su_transmitter_bb_impl::~su_transmitter_bb_impl()
     {
-      for(int i=0;i<d_queue_cap;++i){
-        delete [] d_queue_buf[i];
-      }
-      d_queue_buf.clear();
+      
     }
 
     int
     su_transmitter_bb_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
-      assert(ninput_items <= MAX_PLD_LEN);
-      int noutput_items = ninput_items[0]+2+PHY_LEN;
-      switch(d_mode){
-        case NOQUEUE:
-        break;
-        case SUCCESSIVE:
-          if(d_state == CLEAR_TO_SEND){
-            noutput_items = ninput_items[0]+2+PHY_LEN;
-          }
-          else if(d_state == RETRANSMISSION){
-            assert(!d_retx_idx_buf.empty());
-            int idx_mapping = d_retx_idx_buf[d_retx_idx];
-            noutput_items = d_pkt_len_buf[idx_mapping]+2+PHY_LEN;
-          }
-        break;
-        case CONSTRAINT:
-          if(d_state == CLEAR_TO_SEND){
-            noutput_items = ninput_items[0]+2+PHY_LEN;
-          }
-          else if(d_state == RETRANSMISSION){
-            assert(!d_retx_idx_buf.empty());
-            int idx_mapping = d_retx_idx_buf[d_retx_idx];
-            noutput_items = d_pkt_len_buf[idx_mapping]+2+PHY_LEN;
-          }
-        break;
-        default:
-          std::runtime_error("Wrong state");
-        break;
+      int nopkt;
+      myBlock_t tmp_block;
+      if(!d_blist.empty()){
+        tmp_block = d_blist.front();
+        nopkt = tmp_block.block_len;
       }
-      
-      return noutput_items;
+      else{
+        nopkt =ninput_items[0]/d_bytes_per_packet;
+      }
+      return nopkt*(d_bytes_per_packet+MACLEN+PHYLEN);
     }
 
     void
     su_transmitter_bb_impl::msg_in(pmt::pmt_t msg)
     {
-      if(d_queue_busy){
+      assert(pmt::is_pair(msg));
+      pmt::pmt_t k = pmt::car(msg);
+      pmt::pmt_t v = pmt::cdr(msg);
+      if(!pmt::is_blob(v)){
+        throw std::runtime_error("<SU TX DEBUG>msg_in: message in is not a pair(x,blob)");
+      }
+      // receive blob from LSA CTRL channel
+      size_t io(0);
+      const uint8_t* uvec = pmt::u8vector_elements(v,io);
+      myACK_t tmp_ack;
+      myBlock_t tmp_block;
+      if(io == 2){
+        DEBUG<<"<SU TX DEBUG>msg_in:receiving positive sensing information, reset ack table"<<std::endl;
+        // TODO
+        // do somthing
+        // insert previous base block back to the begin of queue!!
+      }
+      else if(io==6){
+        int qidx,qsize;
+        unsigned int base;
+        parse_pdu(qidx,qsize,base,uvec);
+        DEBUG<<"<SU TX DEBUG>mag_in:receiving ctrl info: block_idx="<<qidx<<" ,block_size="<<qsize<<" ,base="<<base;
+        assert(!d_acklist.empty());
+        tmp_ack = d_acklist.front();
+        if( (tmp_ack.base_point == base) && (tmp_ack.npkt == qsize) && (tmp_ack.npkt>qidx) ){
+          if((tmp_ack.ack_table[qidx])==false ){
+            tmp_ack.ack_table[qidx] = true;
+            tmp_ack.ack_cnt++;
+            if(tmp_ack.ack_cnt == tmp_ack.npkt){
+              DEBUG<<"<SU TX DEBUG>msg_in:base point--"<<tmp_ack.base_point<<" ACKed!"<<std::endl;
+              tmp_block = d_blist.front();
+              // record previous acked block in case causing interference
+              record_block(tmp_block.mem_addr,tmp_block.block_len);
+              // dequeue ACKed element
+              d_blist.pop_front();
+              d_acklist.pop_front();
+              // update queue buffers
+              d_base_rx++; // increment acked base
+              d_base_cnt++;
+            }
+          }
+        }
+      }
+      else if(io>6){
+        // valid MAC HDR
+        int qidx,qsize;
+        unsigned int base;
+        parse_pdu(qidx,qsize,base,uvec);
+        DEBUG<<"<SU TX DEBUG>mag_in:receiving pdu: abort..."<<std::endl;
         return;
       }
-      assert(pmt::is_dict(msg));
-      bool sen_result = false;
-      int qidx=0;
-      int qsize=0;
-      int pld_len = 0;
-      switch(d_mode)
-      {
-        case NOQUEUE:
-          if(pmt::dict_has_key(msg,pmt::intern("LSA_hdr"))){
-        assert(pmt::dict_has_key(msg,pmt::intern("queue_index")));
-        assert(pmt::dict_has_key(msg,pmt::intern("queue_size")));
-        qidx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_index"),pmt::from_long(-1)));
-        qsize= pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_size"),pmt::from_long(-1)));
-        if(qidx<0 || qsize<0){
-          throw std::runtime_error("Undefined MAC fields");
-        }
-        assert(qidx < d_queue_cap);
-        if(d_time_buf[qidx]==0){
-          // outdated ack
-          return;
-        }
-        d_time_buf[qidx]=0;
-        d_latest_idx= qidx;
-        d_update_time = std::clock();
-        // can add statistics counter here
-      }
-        break;
-        case SUCCESSIVE:
-        case CONSTRAINT:
-        assert(pmt::dict_has_key(msg,pmt::intern("queue_index")));
-        assert(pmt::dict_has_key(msg,pmt::intern("queue_size")));
-        assert(pmt::dict_has_key(msg,pmt::intern("payload")));
-        qidx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_index"),pmt::from_long(-1)));
-        qsize= pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_size"),pmt::from_long(-1)));
-        pld_len = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
-        // reserved length: 0-NACK, 1-ACK, 2-SENSING  
-        if(pmt::dict_has_key(msg,pmt::intern("LSA_sensing"))
-          ||pld_len == 2){
-            if(pld_len==2 && d_debug){
-              std::cerr<<"<SUTX debug> Receive Interfering signal from SU RX!"<<std::endl;
-            }
-        sen_result = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("LSA_sensing"),pmt::PMT_T));
-        // retransmission no matter what
-        if( (d_state == CLEAR_TO_SEND) && (sen_result) ){
-          prepare_retx();
-          if(d_retx_idx_buf.empty()){
-            if(d_debug)
-              std::cerr<<"<SU TX DEBUG> Receiving Sensing info but no need for retransmission"<<std::endl;
-            return;
-          }
-          if(d_debug){
-            std::cerr<<"<SU TX DEBUG> Change state from <Clear-to-send> to <Retransmission>"<<std::endl;
-          }
-          d_state = RETRANSMISSION;
-          return;
-        }
-      }
-        if(pmt::dict_has_key(msg,pmt::intern("LSA_hdr"))){
-        if(qidx<0 || qsize<0){
-          throw std::runtime_error("Undefined MAC fields");
-        }
-        assert(qidx < d_queue_cap);
-        switch(d_state)
-        {
-          case CLEAR_TO_SEND:
-          if(d_time_buf[qidx]==0 || (qsize!=0) ||(pld_len != 1)){
-            // outdated ack or retransmission or not good ack
-            return;
-          }
-          d_time_buf[qidx]=0;
-          d_latest_idx= qidx;
-          d_update_time = std::clock();
-          // can add statistics counter here
-          break;
-          case RETRANSMISSION:
-            if(sen_result || qsize==0){
-              // sensing true or not retransmission
-              return;
-            }
-            if(qidx >= d_retx_idx_buf.size()){
-              if(d_debug){
-                std::cerr<<"<SU TX DEBUG>"<<"In retansmission state receiving idx exceed buffer size!"
-                <<"buf size:"<<d_retx_idx_buf.size()<<" ,rx:"<<qidx<<std::endl;
-              }
-              return;
-            }
-            if(d_retx_time_buf[d_retx_idx_buf[qidx]]==0){
-              d_update_time = std::clock();
-              d_retx_time_buf[d_retx_idx_buf[qidx]]=d_update_time;
-              d_retx_cnt++;
-              if(d_debug){
-                std::cerr<<"<SU TX DEBUG> Retransmission: received qidx:"<<qidx<<" ,still waiting:"<<d_retx_idx_buf.size()-d_retx_cnt<<std::endl;
-              }
-            }
-            assert(!d_retx_idx_buf.empty());
-            if(d_retx_cnt == d_retx_idx_buf.size()){
-              if(d_debug){
-                std::cerr<<"<STATE>Retransmission complete, reset queue and change state"<<std::endl;
-              }
-              d_queue_busy = true;
-              reset_queue();
-              d_queue_busy = false;
-              d_state = CLEAR_TO_SEND;
-            }
-          break;
-          default:
-            throw std::runtime_error("Undefined state");
-          break;
-        }
-      }
-        break;
-        default:
-          throw std::runtime_error("Undefined state");
-        break;
+      else{
+        // invalid Size for current implementation
+        DEBUG<<"<SU TX DEBUG>msg_in: invalid payload length, do nothing"<<std::endl;
       }
     }
 
     void
-    su_transmitter_bb_impl::prepare_retx()
+    su_transmitter_bb_impl::insert_block(const unsigned char* in, int nin)
     {
-      // limit: the limited delay is 256
-      // this is due to the mac field design
-      long int min_time = std::clock();
-      int min_idx = 0;
-      for(int i=0;i<d_queue_cap;++i){
-        if(d_time_buf[i]!=0 && d_time_buf[i]<min_time){
-          min_time = d_time_buf[i];
-          min_idx = i;
-        }
+      myBlock_t tmp_block;
+      int npkt = nin/d_bytes_per_packet;
+      tmp_block.mem_addr = d_pkt_circ_cnt;
+      tmp_block.block_len = npkt;
+      tmp_block.base_point = d_base_cnt;
+      //DEBUG<<"<SU TX>insert block: nin="<<nin<<" ,mem_addr="<<d_pkt_circ_cnt<<" ,number of packets="
+      //<<npkt<<" ,bytes per packet="<<d_bytes_per_packet<<std::endl;
+      assert(npkt < d_pkt_cap);
+      for(int i=0;i<npkt;++i){
+        memcpy(d_mem_pool[d_pkt_circ_cnt][i],LSAPHYHDR,sizeof(char)*PHYLEN);
+        memcpy(d_mem_pool[d_pkt_circ_cnt][i]+PHYLEN,LSAMACHDR,sizeof(char)*MACLEN);
+        d_mem_pool[d_pkt_circ_cnt][i][PHYLEN-1] = (unsigned char)d_bytes_per_packet;
+        d_mem_pool[d_pkt_circ_cnt][i][PHYLEN] = (unsigned char)i;
+        d_mem_pool[d_pkt_circ_cnt][i][PHYLEN+1] = (unsigned char)npkt;
+        uint8_t * base_u8 = (uint8_t*)&d_base_cnt;
+        d_mem_pool[d_pkt_circ_cnt][i][PHYLEN+2] = base_u8[3];
+        d_mem_pool[d_pkt_circ_cnt][i][PHYLEN+3] = base_u8[2];
+        d_mem_pool[d_pkt_circ_cnt][i][PHYLEN+4] = base_u8[1];
+        d_mem_pool[d_pkt_circ_cnt][i][PHYLEN+5] = base_u8[0];
+        memcpy(d_mem_pool[d_pkt_circ_cnt][i]+PHYLEN+MACLEN,in+i*d_bytes_per_packet,sizeof(char)*d_bytes_per_packet);
       }
-      int delay = d_current_idx-min_idx;
-      if(delay == 0){
-        throw std::runtime_error("<SU TX DEBUG> overlap for current index and min time idx, abort");
+      // insert into list
+      d_blist.push_back(tmp_block);
+      // also, create a ack list
+      myACK_t tmp_ack;
+      tmp_ack.base_point = d_base_cnt;
+      for(int i=0;i<npkt;++i){
+        tmp_ack.ack_table[i] = false;
       }
-      if(min_idx>d_current_idx){
-        delay = d_current_idx + d_queue_cap- min_idx;
+      tmp_ack.ack_cnt = 0;
+      tmp_ack.npkt = npkt;
+
+      d_acklist.push_back(tmp_ack);
+      // update buffer info
+      d_base_cnt++;
+      d_pkt_circ_cnt = (d_pkt_circ_cnt+1)% d_pkt_cap; // wrap around for circular memory
+    }
+
+    int
+    su_transmitter_bb_impl::output_block(unsigned char* out,int noutput_items)
+    {
+      assert(!d_blist.empty());
+      myBlock_t tmp_block = d_blist.front();
+      int mem_addr = tmp_block.mem_addr;
+      int block_len= tmp_block.block_len;
+      int base = tmp_block.base_point;
+      int nout = d_bytes_per_packet * block_len;
+      assert(noutput_items>=nout);
+      for(int i=0;i<block_len;++i){
+        memcpy(out+i*d_bytes_per_packet,d_mem_pool[mem_addr][i],sizeof(char)*d_bytes_per_packet);
       }
-      d_retx_idx_buf.clear();
-      d_retx_idx_buf.resize(delay,0);
-      d_retx_time_buf.clear();
-      d_retx_time_buf.resize(delay,0);
-      int idx_iter = min_idx;
-      for(int i=0;i<delay;++i){
-        d_retx_idx_buf[i] = idx_iter++;
-        if(idx_iter>=d_queue_cap){
-          idx_iter%= d_queue_cap;
-        }
-      }
-      d_retx_cnt=0;
-      d_retx_idx=0;
-      d_retx_iteration = 0;
-      // do not change state here!!!!
+      return nout;
     }
 
     void
-    su_transmitter_bb_impl::reset_queue()
+    su_transmitter_bb_impl::parse_pdu(int& qidx,int& qsize,unsigned int& base,const uint8_t* uvec)
     {
-      memset(d_pkt_len_buf.data(),0,sizeof(size_t)*d_queue_cap);
-      memset(d_time_buf.data(),0,sizeof(long int)*d_queue_cap);
-      d_latest_idx =0;
-      d_current_idx =0;
-      d_current_time = std::clock();
+      qidx = uvec[0];
+      qsize= uvec[1];
+      base = uvec[2]<<24;
+      base |= uvec[3]<<16;
+      base |= uvec[4]<<8;
+      base |= uvec[5];
+    }
+
+    void
+    su_transmitter_bb_impl::record_block(int cir_mem_idx, int npkt)
+    {
+      for(int i=0;i<npkt;++i){
+        memcpy(d_prev_block[i],d_mem_pool[cir_mem_idx][i],sizeof(char)*d_bytes_per_packet);
+      }
+      d_prev_npkt = npkt;
     }
 
     int
@@ -341,148 +256,15 @@ namespace gr {
     {
       const unsigned char *in = (const unsigned char *) input_items[0];
       unsigned char *out = (unsigned char *) output_items[0];
-      d_current_time = std::clock();
-      int nout=ninput_items[0]+PHY_LEN+2;
-      switch(d_mode){
-        case NOQUEUE:
-          out[PHY_LEN+0] = (unsigned char)d_current_idx;
-          out[PHY_LEN+1] = 0x00;
-          d_current_idx%=d_queue_cap;
-          memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
-          memcpy(out+PHY_LEN+2,in,sizeof(char)*ninput_items[0]);
-          out[5] = (unsigned char) ninput_items[0];
-          d_current_idx = (d_current_idx+1) % d_queue_cap;
-          nout = ninput_items[0]+PHY_LEN+2;
-        break;
-        case SUCCESSIVE:
-          switch(d_state){
-            case CLEAR_TO_SEND:
-            {
-              if(d_time_buf[d_current_idx]!=0){
-                  // feedback too slow, will be overwritten
-                  // TODO
-                  // find a way to halt until feedback keep up
-                  // or find a way to enqueue more packets until first feedback return
-                  if(d_debug){
-                    std::cerr<<"<WARNING> Feedback too slow, overwrite buffer to continue"<<std::endl;
-                  }
-                  // Or we can force retransmission here. 
-                  // first version: reset and continue
-                  //reset_queue();
-                  // second version: auto retransmission
-                  d_current_idx--;
-                  if(d_current_idx<0){
-                    d_current_idx+= d_queue_cap;
-                  }
-                  prepare_retx();
-                  d_state = RETRANSMISSION;
-                  return 0;
-              }
-              out[PHY_LEN+0] = (unsigned char)d_current_idx;
-              out[PHY_LEN+1] = 0x00;
-              memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
-              memcpy(out+PHY_LEN+2,in,sizeof(char)*ninput_items[0]);
-              memcpy(d_queue_buf[d_current_idx],in,sizeof(char)*ninput_items[0]);
-              out[5] = (unsigned char)ninput_items[0];  
-              d_pkt_len_buf[d_current_idx] = ninput_items[0];
-              d_time_buf[d_current_idx] = d_current_time;
-              d_current_idx = (d_current_idx+1)%d_queue_cap;
-              nout = ninput_items[0]+PHY_LEN+2;
-            }
-            break;
-            case RETRANSMISSION:
-            {
-              assert(!d_retx_idx_buf.empty());
-              out[0+PHY_LEN] = (unsigned char)d_retx_idx;
-              out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
-              int idx_mapping = d_retx_idx_buf[d_retx_idx++];
-              if(d_retx_idx%d_retx_idx_buf.size()==0){
-                d_retx_iteration++;
-                d_retx_idx = 0;
-                if(d_retx_iteration==RETX_LIMIT){
-                  if(d_debug){
-                    std::cerr<<"<SU TX DEBUG>In retransmission state, retransmission count achieve limit...change state"<<std::endl;
-                  }
-                  d_queue_busy = true;
-                  reset_queue();
-                  d_queue_busy = false;
-                  d_state = CLEAR_TO_SEND;
-                  return 0;
-                }
-              }
-              int tmp_pld_len =d_pkt_len_buf[idx_mapping]; 
-              memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
-              memcpy(out+PHY_LEN+2, d_queue_buf[idx_mapping],sizeof(char)*tmp_pld_len);
-              out[5] = (unsigned char) tmp_pld_len;
-              nout = tmp_pld_len+2+PHY_LEN;
-            break;
-            }
-            default:
-              throw std::runtime_error("Worng state");
-            break;
-          }
-        break;
-        case CONSTRAINT:
-          switch(d_state){
-            case CLEAR_TO_SEND:
-            {
-              int diff = d_current_idx - d_latest_idx;
-              if(diff<0)
-                diff += d_queue_cap;
-              if(diff>=d_clen){
-                  if(d_debug){
-                    std::cerr<<"SUTX constraint mode: reaching constraint length, force retransmission!"<<std::endl;
-                  }
-                  prepare_retx();
-                  d_state = RETRANSMISSION;
-                  return 0;
-              }
-              out[PHY_LEN+0] = (unsigned char)d_current_idx;
-              out[PHY_LEN+1] = 0x00;
-              memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
-              memcpy(out+PHY_LEN+2,in,sizeof(char)*ninput_items[0]);
-              memcpy(d_queue_buf[d_current_idx],in,sizeof(char)*ninput_items[0]);
-              out[5] = (unsigned char)ninput_items[0];  
-              d_pkt_len_buf[d_current_idx] = ninput_items[0];
-              d_time_buf[d_current_idx] = d_current_time;
-              d_current_idx = (d_current_idx+1)%d_queue_cap;
-              nout = ninput_items[0]+PHY_LEN+2;
-            }
-            break;
-            case RETRANSMISSION:
-            {
-              assert(!d_retx_idx_buf.empty());
-              out[0+PHY_LEN] = (unsigned char)d_retx_idx;
-              out[1+PHY_LEN] = (unsigned char)d_retx_idx_buf.size();
-              int idx_mapping = d_retx_idx_buf[d_retx_idx++];
-              if(d_retx_idx%d_retx_idx_buf.size()==0){
-                d_retx_iteration++;
-                d_retx_idx = 0;
-                if(d_retx_iteration==RETX_LIMIT){
-                  d_queue_busy = true;
-                  reset_queue();
-                  d_queue_busy = false;
-                  d_state = CLEAR_TO_SEND;
-                  return 0;
-                }
-              }
-              //d_retx_idx%=d_retx_idx_buf.size();
-              int tmp_pld_len =d_pkt_len_buf[idx_mapping]; 
-              memcpy(out,LSA_PHY,sizeof(char)*PHY_LEN);
-              memcpy(out+PHY_LEN+2, d_queue_buf[idx_mapping],sizeof(char)*tmp_pld_len);
-              out[5] = (unsigned char) tmp_pld_len;
-              nout = tmp_pld_len+2+PHY_LEN;
-            break;
-            }
-            default:
-              throw std::runtime_error("Worng state");
-            break;
-          }
-        break;
-        default:
-          throw std::runtime_error("Undefined mode");
-        break;
+      int nout = 0;
+      // input handling
+      if(d_blist.size()<d_pkt_cap){
+        // there still capacity for new block
+        insert_block(in, ninput_items[0]);
       }
+      // output handling
+      // for first implementation, only transmit one block until it is received!!
+      nout = output_block(out,noutput_items);
       return nout;
     }
 

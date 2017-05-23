@@ -4,7 +4,7 @@
   <key>lsa_su_transmitter_bb</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_transmitter_bb($tag,$mode, $clen, $debug)</make>
+  <make>lsa.su_transmitter_bb($tag,$bpp,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -17,22 +17,10 @@
     <type>string</type>
   </param>
   <param>
-    <name>Mode</name>
-    <key>mode</key>
-    <value>0</value>
+    <name>Bytes/Packet</name>
+    <key>bpp</key>
+    <value>64</value>
     <type>int</type>
-    <option>
-      <name>Successive</name>
-      <key>0</key>
-    </option>
-    <option>
-      <name>No queue</name>
-      <key>1</key>
-    </option>
-    <option>
-      <name>Constraint</name>
-      <key>2</key>
-    </option>
   </param>
   <param>
     <name>Debug</name>
@@ -47,11 +35,6 @@
       <name>Off</name>
       <key>False</key>
     </option>
-  </param>
-  <param>
-    <name>Constraint length</name>
-    <key>clen</key>
-    <type>int</type>
   </param>
 
   <sink>

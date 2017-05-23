@@ -264,7 +264,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>100</value>
+      <value>256</value>
     </param>
   </block>
   <block>
@@ -549,7 +549,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -796,7 +796,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -906,7 +906,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1106,7 +1106,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1140,12 +1140,12 @@
       <value></value>
     </param>
     <param>
-      <key>comment</key>
-      <value></value>
+      <key>bpp</key>
+      <value>64</value>
     </param>
     <param>
-      <key>clen</key>
-      <value>100</value>
+      <key>comment</key>
+      <value></value>
     </param>
     <param>
       <key>affinity</key>
@@ -1180,10 +1180,6 @@
       <value>0</value>
     </param>
     <param>
-      <key>mode</key>
-      <value>1</value>
-    </param>
-    <param>
       <key>tag</key>
       <value>"packet_len"</value>
     </param>
@@ -1208,7 +1204,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -3242,7 +3238,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
