@@ -81,7 +81,6 @@ namespace gr {
         throw std::invalid_argument("invalid bytes per packet");
       }
       d_bytes_per_packet = bytes_per_packet;
-
       d_debug = debug;
       d_pkt_circ_cnt = 0;
       d_base_cnt=0;
@@ -179,13 +178,11 @@ namespace gr {
       tmp_block.mem_addr = d_pkt_circ_cnt;
       tmp_block.block_len = npkt;
       tmp_block.base_point = d_base_cnt;
-      //DEBUG<<"<SU TX>insert block: nin="<<nin<<" ,mem_addr="<<d_pkt_circ_cnt<<" ,number of packets="
-      //<<npkt<<" ,bytes per packet="<<d_bytes_per_packet<<std::endl;
       assert(npkt < d_pkt_cap);
       for(int i=0;i<npkt;++i){
         memcpy(d_mem_pool[d_pkt_circ_cnt][i],LSAPHYHDR,sizeof(char)*PHYLEN);
         memcpy(d_mem_pool[d_pkt_circ_cnt][i]+PHYLEN,LSAMACHDR,sizeof(char)*MACLEN);
-        d_mem_pool[d_pkt_circ_cnt][i][PHYLEN-1] = (unsigned char)d_bytes_per_packet;
+        d_mem_pool[d_pkt_circ_cnt][i][PHYLEN-1] = (unsigned char)d_bytes_per_packet + MACLEN;
         d_mem_pool[d_pkt_circ_cnt][i][PHYLEN] = (unsigned char)i;
         d_mem_pool[d_pkt_circ_cnt][i][PHYLEN+1] = (unsigned char)npkt;
         uint8_t * base_u8 = (uint8_t*)&d_base_cnt;
@@ -220,10 +217,11 @@ namespace gr {
       int mem_addr = tmp_block.mem_addr;
       int block_len= tmp_block.block_len;
       int base = tmp_block.base_point;
-      int nout = d_bytes_per_packet * block_len;
+      int eq_pkt_len = d_bytes_per_packet+MACLEN+PHYLEN;
+      int nout = (eq_pkt_len) * block_len;
       assert(noutput_items>=nout);
       for(int i=0;i<block_len;++i){
-        memcpy(out+i*d_bytes_per_packet,d_mem_pool[mem_addr][i],sizeof(char)*d_bytes_per_packet);
+        memcpy(out+i*(eq_pkt_len),d_mem_pool[mem_addr][i],sizeof(char)*(eq_pkt_len) );
       }
       return nout;
     }
@@ -242,8 +240,9 @@ namespace gr {
     void
     su_transmitter_bb_impl::record_block(int cir_mem_idx, int npkt)
     {
+      int eq_len = d_bytes_per_packet + MACLEN+PHYLEN;
       for(int i=0;i<npkt;++i){
-        memcpy(d_prev_block[i],d_mem_pool[cir_mem_idx][i],sizeof(char)*d_bytes_per_packet);
+        memcpy(d_prev_block[i],d_mem_pool[cir_mem_idx][i],sizeof(char)*eq_len);
       }
       d_prev_npkt = npkt;
     }

@@ -25,9 +25,9 @@
 #include <gnuradio/io_signature.h>
 #include <lsa/block_mac.h>
 #include <gnuradio/block_detail.h>
-#include <thread>
+//#include <thread>
 #include <queue>
-#include <atomic>
+//#include <atomic>
 
 namespace gr {
   namespace lsa {
@@ -78,8 +78,8 @@ namespace gr {
         bool
         stop()
         {
-          
-          d_stop.store(true);
+          d_stop = true;
+          //d_stop.store(true);
           d_ack_received.notify_one();
           d_thread->interrupt();
           d_thread->join();
@@ -105,7 +105,8 @@ namespace gr {
           if(pmt::to_long(k) == d_base){
             std::cerr<<"<BLOCK MAC> acked base point:"<<k<<std::endl;
             d_base++;
-            d_inc.store(true);
+            //d_inc.store(true);
+            d_inc=true;
           }
         }
 
@@ -126,8 +127,8 @@ namespace gr {
         thread_run()
         {
           while(true){
-            d_stop.store(false);
-            d_inc.store(false);
+            d_stop = false;
+            d_inc = false;
             pmt::pmt_t to_send = queue_pop();
             int cur_base = d_base;
             int i=0;
@@ -137,13 +138,13 @@ namespace gr {
               // this is set for timeout;
               d_ack_received.timed_wait(lock, boost::posix_time::milliseconds(d_timeout));
               lock.unlock();
-            }while( (i++ < d_retx_lim) && (!d_stop.load()) && (!d_inc.load()) );
+            }while( (i++ < d_retx_lim) && (!d_stop) && (!d_inc) );
 
             if(i>=d_retx_lim){
               // timeout
               // delare failed
               std::cerr<<"<Block Mac>Timeout, failed in transmission"<<std::endl;
-            } else if(d_inc.load()){
+            } else if(d_inc){
               // base point shifted
               std::cerr<<"<Block Mac>Base point received:"<<d_base<<std::endl;
             } else{
@@ -176,8 +177,10 @@ namespace gr {
         gr::thread::condition_variable d_ack_received;
         gr::thread::condition_variable d_queue_filled;
         boost::shared_ptr<gr::thread::thread> d_thread;
-        std::atomic_bool d_stop;
-        std::atomic_bool d_inc;
+        bool d_stop;
+        bool d_inc;
+        //std::atomic_bool d_stop;
+        //std::atomic_bool d_inc;
 			  std::queue<pmt::pmt_t> d_msg_queue;
         const pmt::pmt_t d_out_port;
         const pmt::pmt_t d_in_port;

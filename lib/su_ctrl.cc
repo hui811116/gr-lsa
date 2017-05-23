@@ -61,15 +61,16 @@ static const unsigned char LSA_CTRL= 0x06;
       void
       msg_in(pmt::pmt_t msg)
       {
-        assert(pmt::is_dict(msg));
+        pmt::pmt_t key = pmt::car(msg);
+        pmt::pmt_t value = pmt::cdr(msg);
         pmt::pmt_t blob;
         int qsize,qidx;
         unsigned int base;
-        if(pmt::dict_has_key(msg,pmt::intern("LSA_hdr"))){
-          pmt::pmt_t k = pmt::car(msg);
-          pmt::pmt_t v = pmt::cdr(msg);
+        if(pmt::eqv(key,pmt::intern("LSA_hdr")) && pmt::is_blob(value)){
+          //pmt::pmt_t k = pmt::car(msg);
+          //pmt::pmt_t v = pmt::cdr(msg);
           size_t io(0);
-          const uint8_t* uvec = pmt::u8vector_elements(v,io);
+          const uint8_t* uvec = pmt::u8vector_elements(value,io);
           if(io==2){
             DEBUG<<"<SU CTRL DEBUG>recieved a sensing positive tag"<<std::endl;
             d_ctrl_buf[PHY_LEN-1]=LSA_SEN;

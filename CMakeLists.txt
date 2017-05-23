@@ -56,7 +56,7 @@ cmake_policy(SET CMP0026 OLD)
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT WIN32)
     #http://gcc.gnu.org/wiki/Visibility
     add_definitions(-fvisibility=hidden)
-    add_definitions(-std=c++11)
+    #add_definitions(-std=c++11)
 endif()
 
 ########################################################################

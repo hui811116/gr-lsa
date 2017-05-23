@@ -25,7 +25,7 @@
 #include <gnuradio/io_signature.h>
 #include <lsa/su_mac.h>
 #include <gnuradio/block_detail.h>
-#include <thread>
+//#include <thread>
 
 namespace gr {
   namespace lsa {
