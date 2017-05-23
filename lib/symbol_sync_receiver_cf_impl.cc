@@ -52,6 +52,8 @@ namespace gr {
                                   3378542520};
 static const int MAX_PLD = 127;
 static const int CODE_RATE_INV= 8;
+static const unsigned int d_mask = 0x7ffffffe;
+
 enum SYSTEMSTATE{
   SEARCH_ZERO,
   HAVE_SYNC,
@@ -62,7 +64,6 @@ enum SYSTEMSTATE{
     symbol_sync_receiver_cf::make(
       const gr::digital::constellation_sptr& hdr_const,
       int threshold,
-      bool diffcode,
       bool buf_verbose,
       bool debug)
     {
@@ -70,7 +71,6 @@ enum SYSTEMSTATE{
         (new symbol_sync_receiver_cf_impl(
           hdr_const,
           threshold,
-          diffcode,
           buf_verbose,
           debug));
     }
@@ -81,35 +81,25 @@ enum SYSTEMSTATE{
     symbol_sync_receiver_cf_impl::symbol_sync_receiver_cf_impl(
       const gr::digital::constellation_sptr& hdr_const,
       int threshold,
-      bool diffcode,
       bool buf_verbose,
       bool debug)
       : gr::block("symbol_sync_receiver_cf",
               gr::io_signature::make3(1, 3, sizeof(gr_complex),sizeof(float),sizeof(float)),
-              gr::io_signature::make2(0, 2, sizeof(float),sizeof(float)))
+              gr::io_signature::make2(0, 2, sizeof(float),sizeof(float))),
+              d_timetag(pmt::intern("ctime")),
+              d_msg_port(pmt::mp("msg"))
     {
-
       d_hdr_const = hdr_const->base();
-      d_hdr_map = hdr_const->pre_diff_code();
       d_hdr_bps = hdr_const->bits_per_symbol();
-
       d_time_offset_count=0;
-      d_timetag = pmt::string_to_symbol("ctime");
-      d_msg_port = pmt::mp("msg");
-
       d_debug = debug;
       d_buf_verbose = buf_verbose;
-      d_diffcode = diffcode;
-      //d_state = SEARCH_ZERO;
-      d_mask = 0x7ffffffe;
+      d_state = SEARCH_ZERO;
       enter_search();
-
       set_tag_propagation_policy(TPP_DONT);
       message_port_register_out(d_msg_port);
-
       // coded 
       d_threshold = (threshold<0)? 0: threshold;
-
       set_max_noutput_items(8192/d_hdr_bps);
       d_current_time =0;
     }
@@ -175,29 +165,19 @@ enum SYSTEMSTATE{
 
 
     void
-    symbol_sync_receiver_cf_impl::msg_out(int sym_idx)
+    symbol_sync_receiver_cf_impl::msg_out()
     {
-      pmt::pmt_t msg = pmt::make_dict();
+      pmt::pmt_t msg=pmt::PMT_NIL; 
       if(d_buf_verbose){
-
+        msg = pmt::make_dict();
         msg = pmt::dict_add(msg, pmt::intern("ctime"),pmt::from_long(d_current_time));
         msg = pmt::dict_add(msg, pmt::intern("buffer_offset"),pmt::from_long(d_time_offset_count));
       }
-        // for header info
-        msg = pmt::dict_add(msg, pmt::intern("LSA_hdr"),pmt::PMT_T);
-        msg = pmt::dict_add(msg, pmt::intern("queue_index"),pmt::from_long(d_qidx));
-        msg = pmt::dict_add(msg, pmt::intern("queue_size"),pmt::from_long(d_qsize));
-        msg = pmt::dict_add(msg, pmt::intern("payload"),pmt::from_long(d_pkt_pld));
-        
-        // differentiation for retransmission and fresh data
-        if(d_qsize!=0){
-          msg = pmt::dict_add(msg, pmt::intern("Type"),pmt::intern("Retransmission"));
-        }
-        else{
-          msg = pmt::dict_add(msg, pmt::intern("Type"),pmt::intern("Fresh_data"));
-        }
-        msg = pmt::dict_add(msg, pmt::intern("counter"),pmt::from_long(d_qidx));
-      
+      else{
+        msg = pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_out_buf,d_pkt_byte));
+      }
+      d_qidx = d_out_buf[0];
+      d_qsize =d_out_buf[1];
       message_port_pub(d_msg_port, msg);
     }
 
@@ -240,31 +220,17 @@ enum SYSTEMSTATE{
         }
         //consume should also be moved to end
       }
-
       std::vector<tag_t> time_tag;
       get_tags_in_range(time_tag, 0, nitems_read(0),nitems_read(0)+nfix, d_timetag);
 
       //should add sensing tags
-      if(d_diffcode)
-      {
         for(int i=0;i<nfix;++i){
-        unsigned char temp =d_hdr_map[ d_hdr_const->decision_maker(&in[i])];
-        for(int j =0;j<d_hdr_bps;++j){
-          // MSB endianess
-          d_bytes_buf[i*d_hdr_bps+j] = (temp>> (d_hdr_bps-1-j)) & 0x01;
+          unsigned char temp =d_hdr_const->decision_maker(&in[i]);
+          for(int j =0;j<d_hdr_bps;++j){
+            // MSB endianess
+            d_bytes_buf[i*d_hdr_bps+j] = (temp>> (d_hdr_bps-1-j)) & 0x01;
+          }
         }
-      }
-      }
-      else{
-        for(int i=0;i<nfix;++i){
-        unsigned char temp =d_hdr_const->decision_maker(&in[i]);
-        for(int j =0;j<d_hdr_bps;++j){
-          // MSB endianess
-          d_bytes_buf[i*d_hdr_bps+j] = (temp>> (d_hdr_bps-1-j)) & 0x01;
-        }
-      }
-      }
-      
       int nin = nfix * d_hdr_bps;
       int count=0;
       while(count < nin)
@@ -377,20 +343,7 @@ enum SYSTEMSTATE{
                     if(d_pkt_byte == 0){
                       // length 0 means NACK
                       d_pkt_pld = 0;
-                      // NOTE: in data channel, this case should not happen!
-                      msg_out( (count-1)/d_hdr_bps );
                       enter_search();
-                      break;
-                    }
-                    else if(d_pkt_byte ==1){
-                      // length 1 means ACK
-                      d_pkt_pld = 1;
-                      // NOTE: in data channel, this case should not happen!
-                      // NOTE: in control channel, there still have queue information to be recieved!
-                      d_pkt_byte = 2;
-                      // NOTE: require queue size and queue idx for differentiation of RETX/Fresh
-                      d_qsize =0;
-                      enter_load_payload();
                       break;
                     }
                     else if(d_pkt_byte <= MAX_PLD){
@@ -434,30 +387,14 @@ enum SYSTEMSTATE{
                   break;
                 }
                 else{
-                  if(d_symbol_cnt<4){
-                    if(d_symbol_cnt==0){
-                      d_qidx = c<<4;
-                    }
-                    else if(d_symbol_cnt==1){
-                      d_qidx |= c;
-                    }
-                    else if(d_symbol_cnt==2){
-                      d_qsize = c<<4;
-                    }
-                    else{
-                      d_qsize |= c;
-                      // all info are ready
-                      // feedback to front end;
-                      // first try:
-                      //msg_out(noutput_items,true);
-                    }
+                  if(d_symbol_cnt%2==0){
+                    d_out_buf[d_symbol_cnt/2] = (c<<4);
+                  }else{
+                    d_out_buf[d_symbol_cnt/2] |= c;
                   }
-                  
                   d_symbol_cnt++;
                   if(d_symbol_cnt/2 >= d_pkt_byte){
-                    // output header
-                    // second try
-                    msg_out( (count-1) /d_hdr_bps);
+                    msg_out();
                     if(out_sync){
                       int index= (count-1)/d_hdr_bps;
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("LSA_hdr"),pmt::PMT_T);
@@ -489,7 +426,6 @@ enum SYSTEMSTATE{
         consume(1,nfix);
         consume(2,nfix);
       }
-      
       consume(0,nfix);
       // Tell runtime system how many output items we produced.
       return WORK_CALLED_PRODUCE;

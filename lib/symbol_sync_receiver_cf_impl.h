@@ -24,6 +24,7 @@
 #include <lsa/symbol_sync_receiver_cf.h>
 #include <pmt/pmt.h>
 #include <utility>
+#include <gnuradio/digital/constellation.h>
 
 namespace gr {
   namespace lsa {
@@ -34,28 +35,23 @@ namespace gr {
       int d_state;
       bool d_debug;
       bool d_buf_verbose;
-      bool d_diffcode;
-
       int d_hdr_bps;
-      unsigned char d_qsize;
-      unsigned char d_qidx;
-      std::vector<int> d_hdr_map;
 
       gr::digital::constellation_sptr d_hdr_const;
       long int d_current_time;
       unsigned int d_time_offset_count;
-      pmt::pmt_t d_timetag;
-      pmt::pmt_t d_msg_port;
-
-      void msg_out(int sym_idx);
+      const pmt::pmt_t d_timetag;
+      const pmt::pmt_t d_msg_port;
 
       // buffer for constellation
       unsigned char d_bytes_buf[8192];
+      unsigned char d_out_buf[256];
       // coded version
       int d_threshold;
       unsigned int d_data_reg;
-      unsigned int d_mask;
       unsigned int d_byte_cnt;
+      unsigned char d_qidx;
+      unsigned char d_qsize;
       
       int d_pld_cnt;
       int d_pre_cnt;
@@ -64,6 +60,7 @@ namespace gr {
       unsigned char d_pkt_pld;
       unsigned char d_symbol_cnt;
 
+      void msg_out();
       unsigned char decode_chip(const unsigned int& reg);
       void enter_search();
       void enter_have_sync();
@@ -73,7 +70,6 @@ namespace gr {
       symbol_sync_receiver_cf_impl(
         const gr::digital::constellation_sptr& hdr_const,
         int threshold,
-        bool diffcode,
         bool buf_verbose,
         bool debug);
       ~symbol_sync_receiver_cf_impl();

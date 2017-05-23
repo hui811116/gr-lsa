@@ -29,12 +29,18 @@
 namespace gr {
   namespace lsa {
 
-static const unsigned char LSA_ACK = 0x01;
-static const unsigned char LSA_NACK= 0x00;
-static const unsigned char LSA_SEN = 0x02;
+#define d_debug true
+#define DEBUG d_debug && std::cerr
 
-    static const unsigned char SU_PHY[] = {0x00,0x00,0x00,0x00,0xE6,0x00,0x00,0x00}; // including length, qidx, qsize
-    static const int PHY_LEN = 8;
+static const unsigned char LSA_ACK = 0x01;
+//static const unsigned char LSA_NACK= 0x00;
+static const unsigned char LSA_SEN = 0x02;
+static const unsigned char LSA_CTRL= 0x06;
+
+    static const unsigned char SU_PHY[] = {0x00,0x00,0x00,0x00,0xE6,0x00}; // including length
+    static const unsigned char SU_MAC[] = {0x00,0x00,0x00,0x00,0x00,0x00}; // q1,q2, base x4
+    static const int PHY_LEN = 6;
+    static const int MAC_LEN = 6;
 
     class su_ctrl_impl: public su_ctrl{
       public:
@@ -57,17 +63,46 @@ static const unsigned char LSA_SEN = 0x02;
       {
         assert(pmt::is_dict(msg));
         pmt::pmt_t blob;
-        uint8_t qsize,qidx;
+        int qsize,qidx;
+        unsigned int base;
         if(pmt::dict_has_key(msg,pmt::intern("LSA_hdr"))){
-          uint8_t qidx,qsize;
-          qidx= pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_index"),pmt::from_long(0)));
-          qsize=pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_size"),pmt::from_long(0)));
-          set_hdr(LSA_ACK,qidx,qsize);
-          blob = pmt::make_blob(d_ctrl_buf,PHY_LEN);
+          pmt::pmt_t k = pmt::car(msg);
+          pmt::pmt_t v = pmt::cdr(msg);
+          size_t io(0);
+          const uint8_t* uvec = pmt::u8vector_elements(v,io);
+          if(io==2){
+            DEBUG<<"<SU CTRL DEBUG>recieved a sensing positive tag"<<std::endl;
+            d_ctrl_buf[PHY_LEN-1]=LSA_SEN;
+            d_ctrl_buf[PHY_LEN+0]=0xff;
+            d_ctrl_buf[PHY_LEN+1]=0x00;
+            blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_SEN);
+          }else if(io==6){
+            parse_pdu(qidx,qsize,base,uvec);
+            DEBUG<<"<SU CTRL DEBUG>received a LSA Control frame:"
+            <<"block_idx="<<qidx<<" ,block_size="<<qsize<<" ,base="<<base<<std::endl;
+            return;
+          }else if(io>6){
+            parse_pdu(qidx,qsize,base,uvec);
+            DEBUG<<"<SU CTRL DEBUG>received PHY packet--block_idx="
+            <<qidx<<" ,block_size="<<qsize<<" ,base="<<base<<std::endl;
+            d_ctrl_buf[PHY_LEN-1]= LSA_CTRL;
+            d_ctrl_buf[PHY_LEN]  =(unsigned char)qidx;
+            d_ctrl_buf[PHY_LEN+1]=(unsigned char)qsize;
+            unsigned char* base_u8 = (unsigned char*)&base;
+            d_ctrl_buf[PHY_LEN+2]= base_u8[3];
+            d_ctrl_buf[PHY_LEN+3]= base_u8[2];
+            d_ctrl_buf[PHY_LEN+4]= base_u8[1];
+            d_ctrl_buf[PHY_LEN+5]= base_u8[0];
+            blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_CTRL);
+          }else{
+            return;
+          }
         }
         else if(pmt::dict_has_key(msg,pmt::intern("LSA_sensing"))){
-          set_hdr(LSA_SEN,0xff,0x00);
-          blob = pmt::make_blob(d_ctrl_buf,PHY_LEN);
+          d_ctrl_buf[PHY_LEN-1] = LSA_SEN;
+          d_ctrl_buf[PHY_LEN  ] = 0xff;
+          d_ctrl_buf[PHY_LEN+1] = 0x00;
+          blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_SEN);
         }
         else{
           return;
@@ -76,21 +111,26 @@ static const unsigned char LSA_SEN = 0x02;
         assert(pmt::is_blob(blob));
         message_port_pub(d_msg_out,pmt::cons(pmt::PMT_NIL,blob));
       }
-      void
-      set_hdr(uint8_t len, uint8_t qidx,uint8_t qsize){
-          d_ctrl_buf[5] = len;
-          d_ctrl_buf[6] = qidx;
-          d_ctrl_buf[7] = qsize;
-      }
+      
       private:
+      void parse_pdu(int& qidx,int& qsize,unsigned int& base, const uint8_t* uvec)
+      {
+        qidx = uvec[0];
+        qsize= uvec[1];
+        base = uvec[2]<<24;
+        base|= uvec[3]<<16;
+        base|= uvec[4]<<8;
+        base|= uvec[5];
+      }
+
       pmt::pmt_t d_msg_in;
       pmt::pmt_t d_msg_out;
       unsigned char d_ctrl_buf[256];
       // bits field
       // ---------------------------------------------------
-      // | preamble | SFD  | LEN   | qidx | qsize |
+      // | preamble | SFD  | LEN   | qidx | qsize |  base
       // ---------------------------------------------------
-      // |   32     |   8  |   8   |  8   |  8    |  
+      // |   32     |   8  |   8   |  8   |  8    |   32
       // ---------------------------------------------------
 
     };
