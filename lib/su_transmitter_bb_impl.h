@@ -32,50 +32,84 @@ namespace gr {
       public:
       friend class su_transmitter_bb_impl;
       myBlock_t(){}
+      myBlock_t(int addr,int blen,unsigned int base){
+        d_mem_addr = addr;
+        d_block_len = blen;
+        d_base_point = base;
+      }
       myBlock_t(const myBlock_t& myblock){
-        mem_addr = myblock.mem_addr;
-        block_len = myblock.block_len;
-        base_point = myblock.base_point;
+        d_mem_addr = myblock.d_mem_addr;
+        d_block_len = myblock.d_block_len;
+        d_base_point = myblock.d_base_point;
       }
       ~myBlock_t(){}
       const myBlock_t& operator = (const myBlock_t& block){
-        mem_addr = block.mem_addr;
-        block_len = block.block_len;
-        base_point = block.base_point;
+        d_mem_addr = block.d_mem_addr;
+        d_block_len = block.d_block_len;
+        d_base_point = block.d_base_point;
         return *this;
       }
-      int mem_addr;
-      int block_len;
-      unsigned int base_point;
+      const myBlock_t& operator *() const{return *this;}
+      int block_len() const{return d_block_len;}
+      int mem_addr() const{return d_mem_addr;}
+      unsigned int base_point() const{return d_base_point;}
+      private:
+      int d_mem_addr;
+      int d_block_len;
+      unsigned int d_base_point;
     };
     // helper class: an object to store ACK information
     class myACK_t{
       public:
       friend class su_transmitter_bb_impl;
       myACK_t(){}
+      myACK_t(int npkt, unsigned int base)
+      {
+        assert(npkt<=64);
+        for(int i=0;i<npkt;++i){d_ack_table[i]=false;}
+        d_base_point = base;
+        d_npkt = npkt;
+        d_ack_cnt =0 ;
+      }
       myACK_t(const myACK_t& ack){
         for(int i=0;i<64;++i){
-          ack_table[i] = ack.ack_table[i];
+          d_ack_table[i] = ack.d_ack_table[i];
         }
-        ack_cnt = ack.ack_cnt;
-        npkt = ack.npkt;
-        base_point = ack.base_point;
+        d_ack_cnt = ack.d_ack_cnt;
+        d_npkt = ack.d_npkt;
+        d_base_point = ack.d_base_point;
       }
       ~myACK_t(){}
+      const myACK_t& operator *() const {return *this;}
       const myACK_t& operator =(const myACK_t& ack)
       {
         for(int i=0;i<64;++i){
-          ack_table[i] = ack.ack_table[i];
+          d_ack_table[i] = ack.d_ack_table[i];
         }
-        ack_cnt = ack.ack_cnt;
-        npkt = ack.npkt;
-        base_point = ack.base_point;
+        d_ack_cnt = ack.d_ack_cnt;
+        d_npkt = ack.d_npkt;
+        d_base_point = ack.d_base_point;
         return *this;
       }
-      bool ack_table[64];
-      int ack_cnt;
-      int npkt;
-      unsigned int base_point;
+      bool set_ack(int idx, unsigned int base){
+        assert(idx<npkt);
+        if( (!d_ack_table[idx]) && (d_base_point == base) ){
+          d_ack_table[idx] = true;
+          d_ack_cnt++;
+          return true;
+        }else {
+          return false;
+        }
+      }
+      bool check_ack() const {return d_ack_cnt == d_npkt;}
+      int get_npkt() const {return d_npkt;}
+      unsigned int get_base() const {return d_base_point;}
+      int get_ack_cnt() const {return d_ack_cnt;}
+      private:
+      bool d_ack_table[64];
+      int d_ack_cnt;
+      int d_npkt;
+      unsigned int d_base_point;
     };
     // main class
     class su_transmitter_bb_impl : public su_transmitter_bb

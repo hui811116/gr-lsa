@@ -99,10 +99,9 @@ namespace gr {
     su_transmitter_bb_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
       int nopkt;
-      myBlock_t tmp_block;
+      myBlock_t* bptr = &d_blist.front();
       if(!d_blist.empty()){
-        tmp_block = d_blist.front();
-        nopkt = tmp_block.block_len;
+        nopkt = bptr->block_len();
       }
       else{
         nopkt =ninput_items[0]/d_bytes_per_packet;
@@ -122,8 +121,9 @@ namespace gr {
       // receive blob from LSA CTRL channel
       size_t io(0);
       const uint8_t* uvec = pmt::u8vector_elements(v,io);
-      myACK_t tmp_ack;
-      myBlock_t tmp_block;
+      myACK_t* ack_ptr;
+      //myACK_t tmp_ack;
+      myBlock_t* tmp_block;
       if(io == 2){
         DEBUG<<"<SU TX DEBUG>msg_in:receiving positive sensing information, reset ack table"<<std::endl;
         // TODO
@@ -134,18 +134,17 @@ namespace gr {
         int qidx,qsize;
         unsigned int base;
         parse_pdu(qidx,qsize,base,uvec);
-        DEBUG<<"<SU TX DEBUG>mag_in:receiving ctrl info: block_idx="<<qidx<<" ,block_size="<<qsize<<" ,base="<<base;
         assert(!d_acklist.empty());
-        tmp_ack = d_acklist.front();
-        if( (tmp_ack.base_point == base) && (tmp_ack.npkt == qsize) && (tmp_ack.npkt>qidx) ){
-          if((tmp_ack.ack_table[qidx])==false ){
-            tmp_ack.ack_table[qidx] = true;
-            tmp_ack.ack_cnt++;
-            if(tmp_ack.ack_cnt == tmp_ack.npkt){
-              DEBUG<<"<SU TX DEBUG>msg_in:base point--"<<tmp_ack.base_point<<" ACKed!"<<std::endl;
-              tmp_block = d_blist.front();
+        ack_ptr = &d_acklist.front();
+        //DEBUG<<"Receive a control message:"<<qidx<<" ,"<<qsize<<" ,"<<base<<std::endl;
+        if( (ack_ptr->get_npkt() == qsize) && (ack_ptr->get_npkt()>qidx) ){
+          if(ack_ptr->set_ack(qidx,base)){
+            DEBUG<<"<SU TX DEBUG>msg_in: ACK----base:"<<base<<" ,block size="<<qsize<<" ,block idx="<<qidx<<std::endl;
+            if(ack_ptr->check_ack()){
+              DEBUG<<"<SU TX DEBUG>msg_in:base point--"<<ack_ptr->get_base()<<" ACKed!"<<std::endl;
+              tmp_block = &d_blist.front();
               // record previous acked block in case causing interference
-              record_block(tmp_block.mem_addr,tmp_block.block_len);
+              record_block(tmp_block->mem_addr(),tmp_block->block_len());
               // dequeue ACKed element
               d_blist.pop_front();
               d_acklist.pop_front();
@@ -173,12 +172,9 @@ namespace gr {
     void
     su_transmitter_bb_impl::insert_block(const unsigned char* in, int nin)
     {
-      myBlock_t tmp_block;
       int npkt = nin/d_bytes_per_packet;
-      tmp_block.mem_addr = d_pkt_circ_cnt;
-      tmp_block.block_len = npkt;
-      tmp_block.base_point = d_base_cnt;
       assert(npkt < d_pkt_cap);
+      myBlock_t tmp_block(d_pkt_circ_cnt,npkt,d_base_cnt);
       for(int i=0;i<npkt;++i){
         memcpy(d_mem_pool[d_pkt_circ_cnt][i],LSAPHYHDR,sizeof(char)*PHYLEN);
         memcpy(d_mem_pool[d_pkt_circ_cnt][i]+PHYLEN,LSAMACHDR,sizeof(char)*MACLEN);
@@ -195,14 +191,7 @@ namespace gr {
       // insert into list
       d_blist.push_back(tmp_block);
       // also, create a ack list
-      myACK_t tmp_ack;
-      tmp_ack.base_point = d_base_cnt;
-      for(int i=0;i<npkt;++i){
-        tmp_ack.ack_table[i] = false;
-      }
-      tmp_ack.ack_cnt = 0;
-      tmp_ack.npkt = npkt;
-
+      myACK_t tmp_ack(npkt,d_base_cnt);
       d_acklist.push_back(tmp_ack);
       // update buffer info
       d_base_cnt++;
@@ -213,10 +202,10 @@ namespace gr {
     su_transmitter_bb_impl::output_block(unsigned char* out,int noutput_items)
     {
       assert(!d_blist.empty());
-      myBlock_t tmp_block = d_blist.front();
-      int mem_addr = tmp_block.mem_addr;
-      int block_len= tmp_block.block_len;
-      int base = tmp_block.base_point;
+      myBlock_t* tmp_block = &d_blist.front();
+      int mem_addr = tmp_block->mem_addr();
+      int block_len= tmp_block->block_len();
+      int base = tmp_block->base_point();
       int eq_pkt_len = d_bytes_per_packet+MACLEN+PHYLEN;
       int nout = (eq_pkt_len) * block_len;
       assert(noutput_items>=nout);

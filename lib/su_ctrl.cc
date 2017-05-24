@@ -41,6 +41,7 @@ static const unsigned char LSA_CTRL= 0x06;
     static const unsigned char SU_MAC[] = {0x00,0x00,0x00,0x00,0x00,0x00}; // q1,q2, base x4
     static const int PHY_LEN = 6;
     static const int MAC_LEN = 6;
+    static const unsigned int BASEMAX = 16777216;
 
     class su_ctrl_impl: public su_ctrl{
       public:
@@ -84,17 +85,21 @@ static const unsigned char LSA_CTRL= 0x06;
             return;
           }else if(io>6){
             parse_pdu(qidx,qsize,base,uvec);
-            DEBUG<<"<SU CTRL DEBUG>received PHY packet--block_idx="
-            <<qidx<<" ,block_size="<<qsize<<" ,base="<<base<<std::endl;
-            d_ctrl_buf[PHY_LEN-1]= LSA_CTRL;
-            d_ctrl_buf[PHY_LEN]  =(unsigned char)qidx;
-            d_ctrl_buf[PHY_LEN+1]=(unsigned char)qsize;
-            unsigned char* base_u8 = (unsigned char*)&base;
-            d_ctrl_buf[PHY_LEN+2]= base_u8[3];
-            d_ctrl_buf[PHY_LEN+3]= base_u8[2];
-            d_ctrl_buf[PHY_LEN+4]= base_u8[1];
-            d_ctrl_buf[PHY_LEN+5]= base_u8[0];
-            blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_CTRL);
+            if(crc_check(qidx,qsize,base)){
+              DEBUG<<"<SU CTRL DEBUG>received PHY packet--block_idx="
+              <<qidx<<" ,block_size="<<qsize<<" ,base="<<base<<std::endl;
+              d_ctrl_buf[PHY_LEN-1]= LSA_CTRL;
+              d_ctrl_buf[PHY_LEN]  =(unsigned char)qidx;
+              d_ctrl_buf[PHY_LEN+1]=(unsigned char)qsize;
+              unsigned char* base_u8 = (unsigned char*)&base;
+              d_ctrl_buf[PHY_LEN+2]= base_u8[3];
+              d_ctrl_buf[PHY_LEN+3]= base_u8[2];
+              d_ctrl_buf[PHY_LEN+4]= base_u8[1];
+              d_ctrl_buf[PHY_LEN+5]= base_u8[0];
+              blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_CTRL);  
+            }else{
+              return ;
+            }
           }else{
             return;
           }
@@ -122,6 +127,16 @@ static const unsigned char LSA_CTRL= 0x06;
         base|= uvec[3]<<16;
         base|= uvec[4]<<8;
         base|= uvec[5];
+      }
+      bool crc_check(int qidx,int qsize,unsigned int base)
+      {
+        if(qidx>=qsize){
+          return false;
+        }else if(base>BASEMAX){
+          return false;
+        }else{
+          return true;
+        }
       }
 
       pmt::pmt_t d_msg_in;
