@@ -172,7 +172,6 @@ namespace gr {
             if(voe_in[count]>d_voe_thres){
               d_voe_cnt++;
               if(d_voe_cnt>=VOELEN && d_cpy_cnt>=MAXLEN){
-                //DEBUG<<"<Ring Queue>In copy state, found another interfering signal, reset copy counter"<<std::endl;
                 d_voe_cnt = 0;
                 d_cpy_cnt =0;
               }

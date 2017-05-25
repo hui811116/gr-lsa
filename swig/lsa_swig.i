@@ -54,6 +54,7 @@
 #include "lsa/su_mac.h"
 #include "lsa/block_phy.h"
 #include "lsa/prou_ring_queue_cc.h"
+#include "lsa/interference_cancellation_core_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -128,3 +129,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, su_mac);
 GR_SWIG_BLOCK_MAGIC2(lsa, block_phy);
 %include "lsa/prou_ring_queue_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, prou_ring_queue_cc);
+%include "lsa/interference_cancellation_core_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, interference_cancellation_core_cc);

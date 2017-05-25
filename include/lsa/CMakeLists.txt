@@ -57,5 +57,6 @@ install(FILES
     interference_tagger_cc.h
     su_mac.h
     block_phy.h
-    prou_ring_queue_cc.h DESTINATION include/lsa
+    prou_ring_queue_cc.h
+    interference_cancellation_core_cc.h DESTINATION include/lsa
 )

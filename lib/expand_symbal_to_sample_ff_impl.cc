@@ -72,7 +72,6 @@ namespace gr {
     void
     expand_symbal_to_sample_ff_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
-      /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
       for(int i=0;i<ninput_items_required.size();++i){
         ninput_items_required[i] = noutput_items/relative_rate()+history();
       }
@@ -135,14 +134,7 @@ namespace gr {
         while(t_phase<0)
           t_phase+= d_nfilts;
       }
-      // Tell runtime system how many input items we consumed on
-      // each input stream.
-      
-      
       consume_each (consume);
-      //std::cout<<"<debug>sync interp:"<<"consume:"<<consume<<std::endl;
-      //std::cout<<"noutput:"<<noutput_items<<" ,inputn:"<<ninput_items[0]<<std::endl;
-      // Tell runtime system how many output items we produced.
       return nout;
     }
 

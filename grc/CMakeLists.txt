@@ -52,5 +52,6 @@ install(FILES
     lsa_interference_tagger_cc.xml
     lsa_su_mac.xml
     lsa_block_phy.xml
-    lsa_prou_ring_queue_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_prou_ring_queue_cc.xml
+    lsa_interference_cancellation_core_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

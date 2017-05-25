@@ -60,7 +60,8 @@ list(APPEND lsa_sources
     interference_tagger_cc_impl.cc
     su_mac.cc
     block_phy.cc
-    prou_ring_queue_cc_impl.cc )
+    prou_ring_queue_cc_impl.cc
+    interference_cancellation_core_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

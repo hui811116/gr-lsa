@@ -52,6 +52,7 @@ namespace gr {
       unsigned int d_byte_cnt;
       unsigned char d_qidx;
       unsigned char d_qsize;
+      unsigned int d_base;
       
       int d_pld_cnt;
       int d_pre_cnt;
