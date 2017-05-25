@@ -51,5 +51,6 @@ install(FILES
     lsa_length_prefixer.xml
     lsa_interference_tagger_cc.xml
     lsa_su_mac.xml
-    lsa_block_phy.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_block_phy.xml
+    lsa_prou_ring_queue_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

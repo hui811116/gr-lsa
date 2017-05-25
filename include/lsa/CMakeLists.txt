@@ -56,5 +56,6 @@ install(FILES
     length_prefixer.h
     interference_tagger_cc.h
     su_mac.h
-    block_phy.h DESTINATION include/lsa
+    block_phy.h
+    prou_ring_queue_cc.h DESTINATION include/lsa
 )

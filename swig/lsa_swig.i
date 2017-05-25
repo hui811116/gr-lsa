@@ -53,6 +53,7 @@
 #include "lsa/interference_tagger_cc.h"
 #include "lsa/su_mac.h"
 #include "lsa/block_phy.h"
+#include "lsa/prou_ring_queue_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -125,3 +126,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, interference_tagger_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_mac);
 %include "lsa/block_phy.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, block_phy);
+%include "lsa/prou_ring_queue_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, prou_ring_queue_cc);

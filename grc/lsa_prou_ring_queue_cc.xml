@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<block>
+  <name>ProU Ring Queue</name>
+  <key>lsa_prou_ring_queue_cc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.prou_ring_queue_cc($thres)</make>
+  <callback>set_voe_threshold($thres)</callback>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>VoE threshold(dB)</name>
+    <key>thres</key>
+    <value>-60</value>
+    <type>float</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+  <sink>
+    <name>VoE</name>
+    <type>float</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+</block>
