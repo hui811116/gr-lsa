@@ -35,10 +35,8 @@ namespace gr {
     class LSA_API su_ctrl : virtual public block
     {
     public:
-      //su_ctrl();
-      //~su_ctrl();
       typedef boost::shared_ptr<su_ctrl> sptr;
-      static sptr make();
+      static sptr make(bool debug);
     private:
     };
 

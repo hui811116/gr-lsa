@@ -4,7 +4,7 @@
   <key>lsa_prou_ring_queue_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.prou_ring_queue_cc($thres)</make>
+  <make>lsa.prou_ring_queue_cc($thres,$debug)</make>
   <callback>set_voe_threshold($thres)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
@@ -17,7 +17,20 @@
     <value>-60</value>
     <type>float</type>
   </param>
-
+  <param>
+    <name>Debug</name>
+    <key>debug</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>On</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Off</name>
+      <key>False</key>
+    </option>
+  </param>
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type

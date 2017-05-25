@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::prou_ring_queue_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(float thres);
+      static sptr make(float thres, bool debug);
       virtual void set_voe_threshold(float voe_thres) = 0;
       virtual float voe_threshold()const =0;
     };

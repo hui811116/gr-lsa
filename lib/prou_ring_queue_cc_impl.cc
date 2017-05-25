@@ -28,6 +28,8 @@
 namespace gr {
   namespace lsa {
 
+#define DEBUG d_debug && std::cout
+
     enum RINGSTATE{
       SEARCH,
       RING,
@@ -39,16 +41,16 @@ namespace gr {
     static const int COPYMAX= MAXLEN *16;
 
     prou_ring_queue_cc::sptr
-    prou_ring_queue_cc::make(float thres)
+    prou_ring_queue_cc::make(float thres, bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new prou_ring_queue_cc_impl(thres));
+        (new prou_ring_queue_cc_impl(thres,debug));
     }
 
     /*
      * The private constructor
      */
-    prou_ring_queue_cc_impl::prou_ring_queue_cc_impl(float thres)
+    prou_ring_queue_cc_impl::prou_ring_queue_cc_impl(float thres, bool debug)
       : gr::block("prou_ring_queue_cc",
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(float)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
@@ -57,6 +59,7 @@ namespace gr {
       d_ring_mem = new gr_complex[d_mem_cap];
       enter_search();
       set_voe_threshold(thres);
+      d_debug = debug;
     }
 
     /*
@@ -124,6 +127,8 @@ namespace gr {
       int nin = std::min(ninput_items[0],ninput_items[1]);
       int count = 0;
       int nout = 0;
+      const uint64_t nread = nitems_read(0);
+      const uint64_t nwrite= nitems_written(0);
 
       switch(d_state){
         case SEARCH:
@@ -131,6 +136,10 @@ namespace gr {
             if(voe_in[count++]>d_voe_thres){
               d_voe_cnt++;
               if(d_voe_cnt >= VOELEN){
+                DEBUG<<"<RING queue>VoE greater than minmum length threshold! change state"<<std::endl;
+                if(d_debug){
+                  add_item_tag(0,nread,pmt::intern("VoE_detected"),pmt::PMT_T);
+                }
                 enter_ring();
                 break;
               }
@@ -148,10 +157,11 @@ namespace gr {
         case RING:
           while(nout<noutput_items && d_ring_cnt<d_mem_cap)
           {
-            int eq_idx = (d_ring_idx+d_ring_cnt++)%d_mem_cap;
+            int eq_idx = (d_ring_idx+(d_ring_cnt++) )%d_mem_cap;
             out[nout++] = d_ring_mem[eq_idx];
           }
           if(d_ring_cnt==d_mem_cap){
+            DEBUG<<"<Ring Queue>Ring memory released, change state to copy..."<<std::endl;
             enter_copy();
           }
           consume_each(0);
@@ -159,17 +169,21 @@ namespace gr {
         break;
         case COPY:
           while(nout<noutput_items && count<nin && d_cpy_cnt<COPYMAX){
-            if(voe_in[count++]>d_voe_thres){
+            if(voe_in[count]>d_voe_thres){
               d_voe_cnt++;
-              if(d_voe_cnt>=VOELEN){
+              if(d_voe_cnt>=VOELEN && d_cpy_cnt>=MAXLEN){
+                //DEBUG<<"<Ring Queue>In copy state, found another interfering signal, reset copy counter"<<std::endl;
                 d_voe_cnt = 0;
                 d_cpy_cnt =0;
               }
             }else{
               d_voe_cnt = 0;
             }
+            out[nout++] = in[count++];
+            d_cpy_cnt++;
           }
           if(d_cpy_cnt == COPYMAX){
+            DEBUG<<"<Ring Queue>Copy complete, resume to search state"<<std::endl;
             enter_search();
           }
           consume_each(count);

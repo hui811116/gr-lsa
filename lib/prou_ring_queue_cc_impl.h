@@ -44,8 +44,10 @@ namespace gr {
       void enter_ring();
       void enter_copy();
 
+      bool d_debug;
+
      public:
-      prou_ring_queue_cc_impl(float thres);
+      prou_ring_queue_cc_impl(float thres, bool debug);
       ~prou_ring_queue_cc_impl();
 
       // Where all the action really happens

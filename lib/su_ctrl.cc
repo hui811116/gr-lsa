@@ -29,7 +29,6 @@
 namespace gr {
   namespace lsa {
 
-#define d_debug true
 #define DEBUG d_debug && std::cerr
 
 static const unsigned char LSA_ACK = 0x01;
@@ -45,7 +44,7 @@ static const unsigned char LSA_CTRL= 0x06;
 
     class su_ctrl_impl: public su_ctrl{
       public:
-      su_ctrl_impl():block("su_ctrl",
+      su_ctrl_impl(bool debug):block("su_ctrl",
                         gr::io_signature::make(0,0,0),
                         gr::io_signature::make(0,0,0))
       {
@@ -55,6 +54,8 @@ static const unsigned char LSA_CTRL= 0x06;
         message_port_register_out(d_msg_out);
         set_msg_handler(d_msg_in,boost::bind(&su_ctrl_impl::msg_in,this,_1));
         memcpy(d_ctrl_buf,SU_PHY,sizeof(unsigned char)*PHY_LEN);
+        d_prou_present = false;
+        d_debug = debug;
       }
       ~su_ctrl_impl(){
 
@@ -97,6 +98,11 @@ static const unsigned char LSA_CTRL= 0x06;
               d_ctrl_buf[PHY_LEN+4]= base_u8[1];
               d_ctrl_buf[PHY_LEN+5]= base_u8[0];
               blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_CTRL);  
+              if(d_prou_present){
+                // receive a clean packet from interference state
+                // reset the sensing state...
+                d_prou_present = false;
+              }
             }else{
               return ;
             }
@@ -109,6 +115,10 @@ static const unsigned char LSA_CTRL= 0x06;
           d_ctrl_buf[PHY_LEN  ] = 0xff;
           d_ctrl_buf[PHY_LEN+1] = 0x00;
           blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_SEN);
+          if(!d_prou_present){
+            DEBUG<<"<SU CTRL>Receive interference signal! send information back to TX!"<<std::endl;
+            d_prou_present = true;
+          }
         }
         else{
           return;
@@ -148,11 +158,12 @@ static const unsigned char LSA_CTRL= 0x06;
       // ---------------------------------------------------
       // |   32     |   8  |   8   |  8   |  8    |   32
       // ---------------------------------------------------
-
+      bool d_prou_present;
+      bool d_debug;
     };
     su_ctrl::sptr
-    su_ctrl::make(){
-      return gnuradio::get_initial_sptr(new su_ctrl_impl());
+    su_ctrl::make(bool debug){
+      return gnuradio::get_initial_sptr(new su_ctrl_impl(debug));
     }
   } /* namespace lsa */
 } /* namespace gr */
