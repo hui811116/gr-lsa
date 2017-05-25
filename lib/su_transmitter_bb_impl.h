@@ -131,6 +131,8 @@ namespace gr {
       unsigned char d_prev_block[64][256];     // previous block in case retransmission required
       int d_prev_npkt;                         // previous number of packets
 
+      bool d_prou_present;
+
       // helper functions
       void msg_in(pmt::pmt_t msg);
       void insert_block(const unsigned char* in, int nin);

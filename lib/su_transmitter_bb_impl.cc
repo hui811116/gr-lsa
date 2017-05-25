@@ -85,6 +85,7 @@ namespace gr {
       d_pkt_circ_cnt = 0;
       d_base_cnt=0;
       d_base_rx = -1;
+      d_prou_present = false;
     }
 
     /*
@@ -125,7 +126,10 @@ namespace gr {
       //myACK_t tmp_ack;
       myBlock_t* tmp_block;
       if(io == 2){
-        DEBUG<<"<SU TX DEBUG>msg_in:receiving positive sensing information, reset ack table"<<std::endl;
+        if(!d_prou_present){
+          d_prou_present = true;
+          DEBUG<<"<SU TX DEBUG>msg_in:receiving positive sensing information, reset ack table"<<std::endl;
+        }
         // TODO
         // do somthing
         // insert previous base block back to the begin of queue!!
@@ -151,6 +155,9 @@ namespace gr {
               // update queue buffers
               d_base_rx++; // increment acked base
               d_base_cnt++;
+              if(d_prou_present){
+                d_prou_present = false;
+              }
             }
           }
         }
