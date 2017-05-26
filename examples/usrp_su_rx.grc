@@ -1946,6 +1946,45 @@
     </param>
   </block>
   <block>
+    <key>lsa_preamble_prefixer</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(592, 464)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_preamble_prefixer_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+  </block>
+  <block>
     <key>lsa_su_ctrl</key>
     <param>
       <key>alias</key>
@@ -1969,7 +2008,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(632, 464)</value>
+      <value>(464, 460)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -5060,10 +5099,16 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_su_ctrl_0</source_block_id>
+    <source_block_id>lsa_preamble_prefixer_0</source_block_id>
     <sink_block_id>lsa_chip_mapper_0</sink_block_id>
-    <source_key>ctrl_out</source_key>
+    <source_key>out</source_key>
     <sink_key>pdu_in</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_su_ctrl_0</source_block_id>
+    <sink_block_id>lsa_preamble_prefixer_0</sink_block_id>
+    <source_key>ctrl_out</source_key>
+    <sink_key>in</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>

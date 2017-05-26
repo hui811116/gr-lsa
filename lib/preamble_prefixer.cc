@@ -32,8 +32,8 @@ namespace gr {
     
     static const unsigned char lsa_SFD = 0xE6;
     static const size_t d_reserved_len = 4;
-    static const size_t LSA_PREAMBLE_LEN = 5;
-    static const unsigned char lsa_preamble[] = {0x00,0x00,0x00,0x00,0xE6};
+    static const size_t LSA_PREAMBLE_LEN = 6;
+    static const unsigned char lsa_preamble[] = {0x00,0x00,0x00,0x00,0xE6,0x00}; // last one for length
     static const int MAXIMUM_LEN = 127;
 
   class preamble_prefixer_impl : public preamble_prefixer
@@ -73,6 +73,7 @@ namespace gr {
 
       assert(vlen> d_reserved_len && vlen <= MAXIMUM_LEN);
       memcpy(d_buf+LSA_PREAMBLE_LEN,pmt::blob_data(blob),vlen);
+      d_buf[LSA_PREAMBLE_LEN-1] = (unsigned char)vlen;
       pmt::pmt_t packet = pmt::make_blob(d_buf,vlen+LSA_PREAMBLE_LEN);
       message_port_pub(d_out_port, pmt::cons(pmt::PMT_NIL,packet));
       

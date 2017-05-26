@@ -32,13 +32,9 @@ namespace gr {
 #define DEBUG d_debug && std::cerr
 
 static const unsigned char LSA_ACK = 0x01;
-//static const unsigned char LSA_NACK= 0x00;
 static const unsigned char LSA_SEN = 0x02;
 static const unsigned char LSA_CTRL= 0x06;
 
-    static const unsigned char SU_PHY[] = {0x00,0x00,0x00,0x00,0xE6,0x00}; // including length
-    static const unsigned char SU_MAC[] = {0x00,0x00,0x00,0x00,0x00,0x00}; // q1,q2, base x4
-    static const int PHY_LEN = 6;
     static const int MAC_LEN = 6;
     static const unsigned int BASEMAX = 16777216;
 
@@ -53,7 +49,6 @@ static const unsigned char LSA_CTRL= 0x06;
         message_port_register_in(d_msg_in);
         message_port_register_out(d_msg_out);
         set_msg_handler(d_msg_in,boost::bind(&su_ctrl_impl::msg_in,this,_1));
-        memcpy(d_ctrl_buf,SU_PHY,sizeof(unsigned char)*PHY_LEN);
         d_prou_present = false;
         d_debug = debug;
       }
@@ -69,16 +64,13 @@ static const unsigned char LSA_CTRL= 0x06;
         int qsize,qidx;
         unsigned int base;
         if(pmt::eqv(key,pmt::intern("LSA_hdr")) && pmt::is_blob(value)){
-          //pmt::pmt_t k = pmt::car(msg);
-          //pmt::pmt_t v = pmt::cdr(msg);
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(value,io);
           if(io==2){
             DEBUG<<"<SU CTRL DEBUG>recieved a sensing positive tag"<<std::endl;
-            d_ctrl_buf[PHY_LEN-1]=LSA_SEN;
-            d_ctrl_buf[PHY_LEN+0]=0xff;
-            d_ctrl_buf[PHY_LEN+1]=0x00;
-            blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_SEN);
+            d_ctrl_buf[0]=0xff;
+            d_ctrl_buf[1]=0x00;
+            blob = pmt::make_blob(d_ctrl_buf,LSA_SEN);
           }else if(io==6){
             parse_pdu(qidx,qsize,base,uvec);
             DEBUG<<"<SU CTRL DEBUG>received a LSA Control frame:"
@@ -89,15 +81,14 @@ static const unsigned char LSA_CTRL= 0x06;
             if(crc_check(qidx,qsize,base)){
               DEBUG<<"<SU CTRL DEBUG>received PHY packet--block_idx="
               <<qidx<<" ,block_size="<<qsize<<" ,base="<<base<<std::endl;
-              d_ctrl_buf[PHY_LEN-1]= LSA_CTRL;
-              d_ctrl_buf[PHY_LEN]  =(unsigned char)qidx;
-              d_ctrl_buf[PHY_LEN+1]=(unsigned char)qsize;
+              d_ctrl_buf[0]  =(unsigned char)qidx;
+              d_ctrl_buf[1]=(unsigned char)qsize;
               unsigned char* base_u8 = (unsigned char*)&base;
-              d_ctrl_buf[PHY_LEN+2]= base_u8[3];
-              d_ctrl_buf[PHY_LEN+3]= base_u8[2];
-              d_ctrl_buf[PHY_LEN+4]= base_u8[1];
-              d_ctrl_buf[PHY_LEN+5]= base_u8[0];
-              blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_CTRL);  
+              d_ctrl_buf[2]= base_u8[3];
+              d_ctrl_buf[3]= base_u8[2];
+              d_ctrl_buf[4]= base_u8[1];
+              d_ctrl_buf[5]= base_u8[0];
+              blob = pmt::make_blob(d_ctrl_buf,LSA_CTRL);  
               if(d_prou_present){
                 // receive a clean packet from interference state
                 // reset the sensing state...
@@ -111,10 +102,10 @@ static const unsigned char LSA_CTRL= 0x06;
           }
         }
         else if(pmt::dict_has_key(msg,pmt::intern("LSA_sensing"))){
-          d_ctrl_buf[PHY_LEN-1] = LSA_SEN;
-          d_ctrl_buf[PHY_LEN  ] = 0xff;
-          d_ctrl_buf[PHY_LEN+1] = 0x00;
-          blob = pmt::make_blob(d_ctrl_buf,PHY_LEN+LSA_SEN);
+          //d_ctrl_buf[PHY_LEN-1] = LSA_SEN;
+          d_ctrl_buf[0] = 0xff;
+          d_ctrl_buf[1] = 0x00;
+          blob = pmt::make_blob(d_ctrl_buf,LSA_SEN);
           if(!d_prou_present){
             DEBUG<<"<SU CTRL>Receive interference signal! send information back to TX!"<<std::endl;
             d_prou_present = true;
@@ -152,11 +143,11 @@ static const unsigned char LSA_CTRL= 0x06;
       pmt::pmt_t d_msg_in;
       pmt::pmt_t d_msg_out;
       unsigned char d_ctrl_buf[256];
-      // bits field
+      //  MAC bits field
       // ---------------------------------------------------
-      // | preamble | SFD  | LEN   | qidx | qsize |  base
+      // | qidx | qsize |  base
       // ---------------------------------------------------
-      // |   32     |   8  |   8   |  8   |  8    |   32
+      // |  8   |  8    |   32
       // ---------------------------------------------------
       bool d_prou_present;
       bool d_debug;
