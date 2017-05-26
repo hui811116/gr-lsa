@@ -5042,9 +5042,9 @@
   </connection>
   <connection>
     <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>
-    <sink_block_id>lsa_su_transmitter_bb_0</sink_block_id>
+    <sink_block_id>lsa_su_ctrl_0</sink_block_id>
     <source_key>msg</source_key>
-    <sink_key>msg_in</sink_key>
+    <sink_key>ctrl_in</sink_key>
   </connection>
   <connection>
     <source_block_id>uhd_usrp_source_0</source_block_id>
