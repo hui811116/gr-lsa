@@ -34,9 +34,6 @@ namespace gr {
 
       pmt::pmt_t d_intf_tagname;
       // Nothing to declare in this block.
-      bool   d_burst_mode; // update only when signal present
-      bool   d_found_burst;
-
       bool   d_updated;
       double d_sps;
       double d_sample_num;
@@ -81,8 +78,7 @@ namespace gr {
             float init_phase,
             float max_rate_deviation,
             int osps,
-            const std::string& intf_tagname,
-            bool burst_mode);
+            const std::string& intf_tagname);
       ~modified_polyphase_time_sync_cc_impl();
 
       // Where all the action really happens

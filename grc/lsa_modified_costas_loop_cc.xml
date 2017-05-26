@@ -4,7 +4,7 @@
   <key>lsa_modified_costas_loop_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.modified_costas_loop_cc($w, $order, $use_snr,$tagname,$burst)</make>
+  <make>lsa.modified_costas_loop_cc($w, $order, $use_snr,$tagname)</make>
   
   <param>
     <name>Loop Bandwidth</name>
@@ -38,20 +38,6 @@
     <key>tagname</key>
     <value>"sensing"</value>
     <type>string</type>
-  </param>
-  <param>
-    <name>Burst mode</name>
-    <key>burst</key>
-    <value>False</value>
-    <type>bool</type>
-    <option>
-      <name>On</name>
-      <key>True</key>
-    </option>
-    <option>
-      <name>Off</name>
-      <key>False</key>
-    </option>
   </param>
 
   <sink>

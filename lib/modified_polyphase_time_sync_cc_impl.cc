@@ -40,8 +40,7 @@ namespace gr {
            float init_phase,
            float max_rate_deviation,
            int osps,
-           const std::string& intf_tagname,
-           bool burst_mode)
+           const std::string& intf_tagname)
     {
       return gnuradio::get_initial_sptr
         (new modified_polyphase_time_sync_cc_impl(sps, loop_bw, taps,
@@ -49,8 +48,7 @@ namespace gr {
              init_phase,
              max_rate_deviation,
              osps,
-             intf_tagname,
-             burst_mode));
+             intf_tagname));
     }
 
     /*
@@ -62,8 +60,7 @@ namespace gr {
            float init_phase,
            float max_rate_deviation,
            int osps,
-           const std::string& intf_tagname,
-           bool burst_mode)
+           const std::string& intf_tagname)
       : gr::block("modified_polyphase_time_sync_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
@@ -77,8 +74,6 @@ namespace gr {
       d_intf_tagname = pmt::string_to_symbol(intf_tagname);
       
       d_intf_state = false;
-      d_burst_mode = burst_mode;
-      d_found_burst = false;
       // Let scheduler adjust our relative_rate.
       //enable_update_rate(true);
       set_tag_propagation_policy(TPP_DONT);
@@ -247,9 +242,7 @@ void
       get_tags_in_window(intf_tags, 0,0,
                         d_sps*noutput_items,
                         d_intf_tagname);
-      std::vector<tag_t> ed_tags;
-      get_tags_in_window(ed_tags, 0,0,d_sps*noutput_items,pmt::intern("ed_tag"));
-
+      
       const int64_t nread = nitems_read(0);
 
       int i = 0, count = 0;
@@ -271,14 +264,6 @@ void
           if((offset >= (size_t)count) && (offset < (size_t)(count + d_sps))) {
             d_intf_state = pmt::to_bool(intf_tags[0].value);
             intf_tags.erase(intf_tags.begin());
-          }
-        }
-        if(!ed_tags.empty()){
-          size_t offset = ed_tags[0].offset - nread;
-          if((offset>= (size_t)count) && (offset<(size_t)(count+d_sps))){
-            d_found_burst = pmt::to_bool(ed_tags[0].value);
-              // signal found
-            ed_tags.erase(ed_tags.begin());
           }
         }
 
@@ -335,8 +320,7 @@ if(output_items.size() == 2) {
   error_i = out[i].imag() * diff.imag();
   d_error = (error_i + error_r) / 2.0;       // average error from I&Q channel
 
-  // for burst mode, only update when in burst!
-  if( (d_burst_mode && !d_found_burst) || (d_intf_state) ){
+  if( d_intf_state ){
     d_error = 0; //forced to zero to stop updating
   }
 

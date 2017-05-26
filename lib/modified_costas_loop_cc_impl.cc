@@ -31,15 +31,16 @@
 namespace gr {
   namespace lsa {
 
+    static const pmt::pmt_t d_voe_tag = pmt::intern("VoE_detected");
+
     modified_costas_loop_cc::sptr
     modified_costas_loop_cc::make(float loop_bw, int order, bool use_snr, 
-                                  const std::string& intf_tagname,
-                                  bool burst_mode)
+                                  const std::string& intf_tagname
+                                  )
     {
       return gnuradio::get_initial_sptr
         (new modified_costas_loop_cc_impl(loop_bw, order,use_snr,
-                                          intf_tagname,
-                                          burst_mode));
+                                          intf_tagname));
     }
 
     /*
@@ -48,20 +49,16 @@ namespace gr {
     static int ios[]  = {sizeof(gr_complex), sizeof(float), sizeof(float)};
     static std::vector<int> iosig(ios, ios + sizeof(ios)/sizeof(int));
     modified_costas_loop_cc_impl::modified_costas_loop_cc_impl(float loop_bw, int order, bool use_snr, 
-    const std::string& intf_tagname,
-    bool burst_mode)
+    const std::string& intf_tagname)
       : gr::block("modified_costas_loop_cc",
               gr::io_signature::make2(1,2, sizeof(gr_complex), sizeof(float)),
               gr::io_signature::makev(1,3,iosig)),
       blocks::control_loop(loop_bw, 1.0, -1.0),
   d_order(order), d_error(0), d_noise(1.0), d_phase_detector(NULL)
     {
-      d_burst_mode = burst_mode;
-      d_found_burst = false;
-
       d_intf_tagname = pmt::string_to_symbol(intf_tagname);
       d_intf_state = false;
-
+      set_tag_propagation_policy(TPP_DONT);
       switch(d_order) {
       case 2:
         if(use_snr)
@@ -215,17 +212,22 @@ namespace gr {
         poptr = (float*) output_items[1];
         poly_phase = (float*) output_items[2];
       }
-      const int64_t nread =nitems_read(0);
-      gr_complex nco_out;
-      std::vector<tag_t> intf_tags, ed_tags;
-      
-      get_tags_in_range(intf_tags, 0, nread, nread+noutput_items, d_intf_tagname);
-      get_tags_in_range(ed_tags, 0, nread, nread+noutput_items, pmt::intern("ed_tag"));
+      const uint64_t nread =nitems_read(0);
+      const uint64_t nwrite=nitems_written(0);
 
-      std::vector<tag_t> tags;
+      gr_complex nco_out;
+      std::vector<tag_t> intf_tags,tags,voe_tags;
+      get_tags_in_range(intf_tags, 0, nread, nread+noutput_items, d_intf_tagname);
+      get_tags_in_range(voe_tags,0,nread,nread+noutput_items,d_voe_tag);
       get_tags_in_range(tags, 0, nread,
                         nread+noutput_items,
                         pmt::intern("phase_est"));
+
+      for(int i=0;i<voe_tags.size();++i){
+        int offset = voe_tags[i].offset - nread;
+        add_item_tag(0,nwrite+offset,voe_tags[i].key,voe_tags[i].value);
+      }
+
       if(write_foptr && have_poly) {
         for(int i = 0; i < noutput_items; i++) {
           if(!tags.empty()) {
@@ -240,12 +242,6 @@ namespace gr {
             intf_tags.erase(intf_tags.begin());
             }
           }
-          if(!ed_tags.empty()){
-            if( ed_tags[0].offset-nread == i){
-              d_found_burst = pmt::to_bool(ed_tags[0].value);
-              ed_tags.erase(ed_tags.begin());
-            }
-          }
           
           nco_out = gr_expj(-d_phase);
           optr[i] = iptr[i] * nco_out;
@@ -253,7 +249,7 @@ namespace gr {
           d_error = (*this.*d_phase_detector)(optr[i]);
           d_error = gr::branchless_clip(d_error, 1.0);
 
-          if( (d_burst_mode && !d_found_burst) || (d_intf_state) ){
+          if( d_intf_state ){
               d_error = 0;
           }
 
@@ -280,17 +276,11 @@ namespace gr {
             intf_tags.erase(intf_tags.begin());
             }
           }
-          if(!ed_tags.empty()){
-            if( ed_tags[0].offset-nread == i){
-              d_found_burst = pmt::to_bool(ed_tags[0].value);
-              ed_tags.erase(ed_tags.begin());
-            }
-          }
 
           nco_out = gr_expj(-d_phase);
           optr[i] = iptr[i] * nco_out;
 
-          if( (d_burst_mode && !d_found_burst) || d_intf_state ){
+          if( d_intf_state ){
               d_error = 0;
           }
 

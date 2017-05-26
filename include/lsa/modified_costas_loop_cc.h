@@ -50,8 +50,7 @@ namespace gr {
        * creating new instances.
        */
       static sptr make(float loop_bw, int order, bool use_snr=false, 
-                       const std::string& intf_tagname="sensing",
-                       bool burst_mode=false);
+                       const std::string& intf_tagname="sensing");
     };
 
   } // namespace lsa

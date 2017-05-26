@@ -4,7 +4,7 @@
   <key>lsa_symbol_sync_receiver_cf</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.symbol_sync_receiver_cf($hdr_const,$thres,$buf_verbose,$debug)</make>
+  <make>lsa.symbol_sync_receiver_cf($hdr_const,$thres)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -23,20 +23,7 @@
     <type>int</type>
   </param>
   
-  <param>
-    <name>Internal Time</name>
-    <key>buf_verbose</key>
-    <value>False</value>
-    <type>bool</type>
-    <option>
-      <name>On</name>
-      <key>True</key>
-    </option>
-    <option>
-      <name>Off</name>
-      <key>False</key>
-    </option>
-  </param>
+  <!--
   <param>
     <name>Debug mode</name>
     <key>debug</key>
@@ -51,7 +38,7 @@
       <key>False</key>
     </option>
   </param>
-
+  -->
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type

@@ -32,7 +32,9 @@
 
 namespace gr {
   namespace lsa {
-    
+
+#define d_debug false
+#define DEBUG d_debug && std::cout
     static const unsigned int CHIPSET[16] = {
                                   3653456430,
                                   3986437410,
@@ -63,16 +65,12 @@ enum SYSTEMSTATE{
     symbol_sync_receiver_cf::sptr
     symbol_sync_receiver_cf::make(
       const gr::digital::constellation_sptr& hdr_const,
-      int threshold,
-      bool buf_verbose,
-      bool debug)
+      int threshold)
     {
       return gnuradio::get_initial_sptr
         (new symbol_sync_receiver_cf_impl(
           hdr_const,
-          threshold,
-          buf_verbose,
-          debug));
+          threshold));
     }
 
     /*
@@ -80,27 +78,21 @@ enum SYSTEMSTATE{
      */
     symbol_sync_receiver_cf_impl::symbol_sync_receiver_cf_impl(
       const gr::digital::constellation_sptr& hdr_const,
-      int threshold,
-      bool buf_verbose,
-      bool debug)
+      int threshold)
       : gr::block("symbol_sync_receiver_cf",
               gr::io_signature::make3(1, 3, sizeof(gr_complex),sizeof(float),sizeof(float)),
               gr::io_signature::make2(0, 2, sizeof(float),sizeof(float))),
-              d_timetag(pmt::intern("ctime")),
               d_msg_port(pmt::mp("msg"))
     {
       d_hdr_const = hdr_const->base();
       d_hdr_bps = hdr_const->bits_per_symbol();
-      d_time_offset_count=0;
-      d_debug = debug;
-      d_buf_verbose = buf_verbose;
+      //d_debug = debug;
       d_state = SEARCH_ZERO;
       enter_search();
       set_tag_propagation_policy(TPP_DONT);
       message_port_register_out(d_msg_port);
       // coded 
       d_threshold = (threshold<0)? 0: threshold;
-      set_max_noutput_items(8192/d_hdr_bps);
       d_current_time =0;
     }
 
@@ -168,14 +160,8 @@ enum SYSTEMSTATE{
     symbol_sync_receiver_cf_impl::msg_out()
     {
       pmt::pmt_t msg=pmt::PMT_NIL; 
-      if(d_buf_verbose){
-        msg = pmt::make_dict();
-        msg = pmt::dict_add(msg, pmt::intern("ctime"),pmt::from_long(d_current_time));
-        msg = pmt::dict_add(msg, pmt::intern("buffer_offset"),pmt::from_long(d_time_offset_count));
-      }
-      else{
-        msg = pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_out_buf,d_pkt_byte));
-      }
+      msg = pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_out_buf,d_pkt_byte));
+      // postfixing header information
       d_qidx = d_out_buf[0];
       d_qsize =d_out_buf[1];
       d_base = d_out_buf[2]<<24;
@@ -204,9 +190,9 @@ enum SYSTEMSTATE{
       const float* time = NULL;
       float *out_phase = NULL;
       float *out_time = NULL;
-      
       int nfix = (noutput_items<ninput_items[0])? noutput_items : ninput_items[0];
-
+      const uint64_t nread = nitems_read(0);
+      const uint64_t nwrite= nitems_written(0);
       bool have_sync = (input_items.size()>=3);
       bool out_sync = (output_items.size()>=2);
       if(have_sync){
@@ -223,8 +209,6 @@ enum SYSTEMSTATE{
         }
         //consume should also be moved to end
       }
-      std::vector<tag_t> time_tag;
-      get_tags_in_range(time_tag, 0, nitems_read(0),nitems_read(0)+nfix, d_timetag);
 
       //should add sensing tags
         for(int i=0;i<nfix;++i){
@@ -243,22 +227,6 @@ enum SYSTEMSTATE{
           case SEARCH_ZERO:
             while(count < nin)
             {
-              if(!time_tag.empty()){
-                int offset = time_tag[0].offset - nitems_read(0);
-                if(offset == count/d_hdr_bps){
-                  d_current_time = pmt::to_long(time_tag[0].value);
-                  d_time_offset_count =0;
-                  if(out_sync){
-                    add_item_tag(0,nitems_written(0)+offset,time_tag[0].key,time_tag[0].value);
-                  }
-                  pmt::pmt_t dict = pmt::make_dict();
-                  dict = pmt::dict_add(dict,pmt::intern("ctime"),time_tag[0].value);
-                  dict = pmt::dict_add(dict,pmt::intern("buffer_offset"),pmt::from_long(0));
-                  message_port_pub(d_msg_port,dict);
-                  time_tag.erase(time_tag.begin());
-                }
-              }
-              d_time_offset_count =((count+1)%d_hdr_bps == 0)? d_time_offset_count+1 : d_time_offset_count;
               d_data_reg = (d_data_reg<<1) | (0x01 & d_bytes_buf[count++]);
               if(d_pre_cnt >0){
                 d_chip_cnt++;
@@ -308,22 +276,6 @@ enum SYSTEMSTATE{
           break;
           case HAVE_SYNC:
           while(count <nin){
-            if(!time_tag.empty()){
-                int offset = time_tag[0].offset - nitems_read(0);
-                if(offset == count/d_hdr_bps){
-                  d_current_time = pmt::to_long(time_tag[0].value);
-                  d_time_offset_count =0;
-                  if(out_sync){
-                    add_item_tag(0,nitems_written(0)+offset,time_tag[0].key,time_tag[0].value);
-                  }
-                  pmt::pmt_t dict = pmt::make_dict();
-                  dict = pmt::dict_add(dict,pmt::intern("ctime"),time_tag[0].value);
-                  dict = pmt::dict_add(dict,pmt::intern("buffer_offset"),pmt::from_long(0));
-                  message_port_pub(d_msg_port,dict);
-                  time_tag.erase(time_tag.begin());
-                }
-              }
-              d_time_offset_count =((count+1)%d_hdr_bps == 0)? d_time_offset_count+1 : d_time_offset_count;
               d_data_reg = (d_data_reg<<1) | (0x01&d_bytes_buf[count++]);
               d_chip_cnt++;
               if(d_chip_cnt==32){
@@ -365,21 +317,6 @@ enum SYSTEMSTATE{
           break;
           case LOAD_PAYLOAD:
           while(count < nin){
-            if(!time_tag.empty()){
-                int offset = time_tag[0].offset - nitems_read(0);
-                if(offset == count/d_hdr_bps){
-                  d_current_time = pmt::to_long(time_tag[0].value);
-                  d_time_offset_count =0;
-                  if(out_sync){
-                    add_item_tag(0,nitems_written(0)+offset,time_tag[0].key,time_tag[0].value);
-                  }
-                  pmt::pmt_t dict = pmt::make_dict();
-                  dict = pmt::dict_add(dict,pmt::intern("ctime"),time_tag[0].value);
-                  dict = pmt::dict_add(dict,pmt::intern("buffer_offset"),pmt::from_long(0));
-                  message_port_pub(d_msg_port,dict);
-                  time_tag.erase(time_tag.begin());
-                }
-              }
               d_data_reg = (d_data_reg<<1) | (d_bytes_buf[count++]&0x01);
               d_chip_cnt++;
               if(d_chip_cnt==32){
@@ -411,7 +348,6 @@ enum SYSTEMSTATE{
                     enter_search();
                     break;
                   }
-                  d_time_offset_count =((count+1)%d_hdr_bps == 0)? d_time_offset_count+1 : d_time_offset_count;
                 }
               }
             }
@@ -421,9 +357,14 @@ enum SYSTEMSTATE{
           break;
         }
       }
-
+      std::vector<tag_t> tags;
+      get_tags_in_range(tags,0,nread,nread+nfix);
       if(have_sync){
         if(out_sync){
+          for(int i=0;i<tags.size();++i){
+            int offset = tags[i].offset - nread;
+            add_item_tag(0,nwrite+offset,tags[i].key,tags[i].value);
+          }
           produce(0,nfix);
           produce(1,nfix);
         }

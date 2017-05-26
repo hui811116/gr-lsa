@@ -137,9 +137,9 @@ namespace gr {
               d_voe_cnt++;
               if(d_voe_cnt >= VOELEN){
                 DEBUG<<"<RING queue>VoE greater than minmum length threshold! change state"<<std::endl;
-                if(d_debug){
-                  add_item_tag(0,nread,pmt::intern("VoE_detected"),pmt::PMT_T);
-                }
+                //if(d_debug){
+                  add_item_tag(0,nwrite,pmt::intern("VoE_detected"),pmt::PMT_T);
+                //}
                 enter_ring();
                 break;
               }

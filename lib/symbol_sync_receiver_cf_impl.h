@@ -33,14 +33,12 @@ namespace gr {
     {
      private:
       int d_state;
-      bool d_debug;
-      bool d_buf_verbose;
+      //bool d_debug;
       int d_hdr_bps;
 
       gr::digital::constellation_sptr d_hdr_const;
       long int d_current_time;
       unsigned int d_time_offset_count;
-      const pmt::pmt_t d_timetag;
       const pmt::pmt_t d_msg_port;
 
       // buffer for constellation
@@ -70,9 +68,8 @@ namespace gr {
      public:
       symbol_sync_receiver_cf_impl(
         const gr::digital::constellation_sptr& hdr_const,
-        int threshold,
-        bool buf_verbose,
-        bool debug);
+        int threshold
+        );
       ~symbol_sync_receiver_cf_impl();
 
       // Where all the action really happens
