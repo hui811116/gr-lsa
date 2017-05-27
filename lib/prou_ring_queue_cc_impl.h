@@ -33,11 +33,9 @@ namespace gr {
       const int d_mem_cap;
       int d_ring_idx;
       int d_ring_cnt;
-
       int d_state;
       int d_cpy_cnt;
       int d_voe_cnt;
-
       float d_voe_thres;
 
       void enter_search();
@@ -45,6 +43,7 @@ namespace gr {
       void enter_copy();
 
       bool d_debug;
+      uint32_t d_debug_cnt;
 
      public:
       prou_ring_queue_cc_impl(float thres, bool debug);

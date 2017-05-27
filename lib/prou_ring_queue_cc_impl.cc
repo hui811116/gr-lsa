@@ -36,7 +36,7 @@ namespace gr {
       COPY
     };
 
-    static const int VOELEN = 64;
+    static const int VOELEN = 128;
     static const int MAXLEN = (127+6)*8*8/2*4;
     static const int COPYMAX= MAXLEN *128;
 
@@ -54,12 +54,13 @@ namespace gr {
       : gr::block("prou_ring_queue_cc",
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(float)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
-              d_mem_cap(8192*4)
+              d_mem_cap(MAXLEN*8)
     {
       d_ring_mem = new gr_complex[d_mem_cap];
       enter_search();
       set_voe_threshold(thres);
       d_debug = debug;
+      d_debug_cnt =0;
     }
 
     /*
@@ -138,7 +139,7 @@ namespace gr {
               if(d_voe_cnt >= VOELEN){
                 DEBUG<<"<RING queue>VoE greater than minmum length threshold! change state"<<std::endl;
                 //if(d_debug){
-                  add_item_tag(0,nwrite,pmt::intern("VoE_detected"),pmt::PMT_T);
+                  add_item_tag(0,nwrite,pmt::intern("VoE_detected"),pmt::from_long(d_debug_cnt++));
                 //}
                 enter_ring();
                 break;

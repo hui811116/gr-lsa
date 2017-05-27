@@ -104,6 +104,7 @@ namespace gr {
       if(!tags_s.empty()){
         int offset = tags_s[0].offset - nitems_read(0);
         if(offset < nin_s){
+          //DEBUG<<"<IC Core DEBUG>Found ring tag port<0>:"<<tags_s[0].key<<" ,value="<<tags_s[0].value<<" ,at:"<<offset+d_in_mem_size<<std::endl;
           nin_s = offset;
           reset_s = true;
         }
@@ -111,6 +112,7 @@ namespace gr {
       if(!tags_p.empty()){
         int offset = tags_p[0].offset - nitems_read(1);
         if(offset < nin_p){
+          //DEBUG<<"<IC Core DEBUG>Found ring tag part<1>:"<<tags_p[0].key<<" ,value="<<tags_p[0].value<<" ,at:"<<offset+d_phase_size<<std::endl;
           nin_p = offset;
           reset_p = true;
         }
@@ -152,12 +154,13 @@ namespace gr {
         if(d_in_mem_size == d_mem_cap){
           DEBUG<<"<IC Core>signal buffer full..."<<std::endl;
         }else{
-          DEBUG <<"<IC Core>Reset signal are all ready, clear queue..."<<std::endl;
+          DEBUG <<"<IC Core>Reset signal are all ready, clear queue... sig_size:"
+          <<d_in_mem_size<<" ,phase_size:"<<d_phase_size<<std::endl;
+          nin_s++;
+          nin_p++;
         }
         // handling output
         d_in_tlist.clear();
-        nin_s++;
-        nin_p++;
         d_in_mem_idx =0;
         d_in_mem_size=0;
         d_phase_idx =0;
