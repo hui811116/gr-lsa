@@ -28,26 +28,26 @@ namespace gr {
   namespace lsa {
 
     // helper class to record tags
-    class tagObject
+    class tagObject_t
     {
       public:
        friend class interference_cancellation_core_cc_impl;
-       friend std::ostream & operator<<( std::ostream& out,const tagObject& obj)
+       friend std::ostream & operator<<( std::ostream& out,const tagObject_t& obj)
        {
          out << "index:"<<obj.d_idx<<" ,msg:"<<obj.d_msg<<std::endl;
          return out;
        }
-       tagObject(){d_idx = 0;d_msg = pmt::PMT_NIL;}
-       tagObject(const tagObject& obj){d_msg = obj.d_msg;d_idx = obj.d_idx;}
-       tagObject(int idx, pmt::pmt_t msg){d_msg = msg;d_idx = idx;}
-       ~tagObject(){}
-       bool operator >(const tagObject& o1)const {return d_idx>o1.d_idx;}
-       bool operator <(const tagObject& o1)const {return d_idx<o1.d_idx;}
-       bool operator <=(const tagObject& o1)const {return d_idx<=o1.d_idx;}
-       bool operator >=(const tagObject& o1)const {return d_idx>=o1.d_idx;}
-       const tagObject& operator* (){return *this;}
-       const tagObject& operator -=(int sub){d_idx-=sub; return *this;}
-       const tagObject& operator =(const tagObject& obj){
+       tagObject_t(){d_idx = 0;d_msg = pmt::PMT_NIL;}
+       tagObject_t(const tagObject_t& obj){d_msg = obj.d_msg;d_idx = obj.d_idx;}
+       tagObject_t(int idx, pmt::pmt_t msg){d_msg = msg;d_idx = idx;}
+       ~tagObject_t(){}
+       bool operator >(const tagObject_t& o1)const {return d_idx>o1.d_idx;}
+       bool operator <(const tagObject_t& o1)const {return d_idx<o1.d_idx;}
+       bool operator <=(const tagObject_t& o1)const {return d_idx<=o1.d_idx;}
+       bool operator >=(const tagObject_t& o1)const {return d_idx>=o1.d_idx;}
+       const tagObject_t& operator* (){return *this;}
+       const tagObject_t& operator -=(int sub){d_idx-=sub; return *this;}
+       const tagObject_t& operator =(const tagObject_t& obj){
          d_msg = obj.d_msg;
          d_idx = obj.d_idx;
        }
@@ -56,6 +56,13 @@ namespace gr {
        void set_msg(pmt::pmt_t msg){d_msg = msg;}
        void init_dict(){d_msg = pmt::make_dict();}
        void add_msg(pmt::pmt_t key,pmt::pmt_t value){d_msg = pmt::dict_add(d_msg,key,value);}
+       bool delete_msg(pmt::pmt_t key){
+         if(pmt::dict_has_key(d_msg,key)){
+          d_msg = pmt::dict_delete(d_msg,key);
+         }else{
+           return false;
+         }
+       }
        pmt::pmt_t msg()const {return d_msg;}
        void set_idx(int idx){d_idx = idx;}
        int index()const {return d_idx;}
@@ -86,12 +93,27 @@ namespace gr {
       int d_phase_size;
 
       const int d_mem_cap;
-      std::list<tagObject> d_in_tlist;
-      std::list<tagObject> d_out_tlist;
+      std::list<tagObject_t> d_in_tlist;
+      std::list<tagObject_t> d_out_tlist;
       bool d_debug;
 
+      int d_sps;
+
+      // FIXME
+      // clean up unused variables after all are done
+      //const pmt::pmt_t d_block_tag;
+      std::map<uint64_t,int32_t> d_samp_map;
+      std::map<uint64_t,int32_t> d_sync_map;
+      uint64_t d_samp_block_no;
+      uint64_t d_sync_block_no;
+      int32_t d_samp_block_idx;
+      int32_t d_sync_block_idx;
+
+      // helper function definition
+      bool tag_check();
+
      public:
-      interference_cancellation_core_cc_impl(bool debug);
+      interference_cancellation_core_cc_impl(int sps,bool debug);
       ~interference_cancellation_core_cc_impl();
 
       // Where all the action really happens

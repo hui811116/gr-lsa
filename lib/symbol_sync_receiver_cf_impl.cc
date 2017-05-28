@@ -340,7 +340,7 @@ enum SYSTEMSTATE{
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("LSA_hdr"),pmt::PMT_T);
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_index"),pmt::from_long(d_qidx));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_size"),pmt::from_long(d_qsize));
-                      add_item_tag(0,nitems_written(0)+index,pmt::intern("base"),pmt::from_long(d_base));
+                      add_item_tag(0,nitems_written(0)+index,pmt::intern("base"),pmt::from_uint64(d_base));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("pld_bytes"),pmt::from_long(d_pkt_byte));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("payload"),pmt::from_long(d_pkt_byte*8*CODE_RATE_INV/d_hdr_bps));
                     }

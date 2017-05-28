@@ -32,6 +32,7 @@ namespace gr {
   namespace lsa {
 
     static const pmt::pmt_t d_voe_tag = pmt::intern("VoE_detected");
+    static const pmt::pmt_t d_block_tag=pmt::intern("block_tag");
 
     modified_costas_loop_cc::sptr
     modified_costas_loop_cc::make(float loop_bw, int order, bool use_snr, 
@@ -216,9 +217,10 @@ namespace gr {
       const uint64_t nwrite=nitems_written(0);
 
       gr_complex nco_out;
-      std::vector<tag_t> intf_tags,tags,voe_tags;
+      std::vector<tag_t> intf_tags,tags,voe_tags, block_tags;
       get_tags_in_range(intf_tags, 0, nread, nread+noutput_items, d_intf_tagname);
       get_tags_in_range(voe_tags,0,nread,nread+noutput_items,d_voe_tag);
+      get_tags_in_range(block_tags,0,nread,nread+noutput_items,d_block_tag);
       get_tags_in_range(tags, 0, nread,
                         nread+noutput_items,
                         pmt::intern("phase_est"));
@@ -226,6 +228,10 @@ namespace gr {
       for(int i=0;i<voe_tags.size();++i){
         int offset = voe_tags[i].offset - nread;
         add_item_tag(0,nwrite+offset,voe_tags[i].key,voe_tags[i].value);
+      }
+      for(int i=0;i<block_tags.size();++i){
+        int offset = block_tags[i].offset - nread;
+        add_item_tag(0,nwrite+offset,block_tags[i].key,block_tags[i].value);
       }
 
       if(write_foptr && have_poly) {

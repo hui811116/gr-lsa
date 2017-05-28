@@ -19,8 +19,8 @@
  */
 
 
-#ifndef INCLUDED_LSA_INTERFERENCE_CANCELLATION_CORE_CC_H
-#define INCLUDED_LSA_INTERFERENCE_CANCELLATION_CORE_CC_H
+#ifndef INCLUDED_LSA_BLOCK_TAGGER_CC_H
+#define INCLUDED_LSA_BLOCK_TAGGER_CC_H
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
@@ -33,24 +33,24 @@ namespace gr {
      * \ingroup lsa
      *
      */
-    class LSA_API interference_cancellation_core_cc : virtual public gr::block
+    class LSA_API block_tagger_cc : virtual public gr::block
     {
      public:
-      typedef boost::shared_ptr<interference_cancellation_core_cc> sptr;
+      typedef boost::shared_ptr<block_tagger_cc> sptr;
 
       /*!
-       * \brief Return a shared_ptr to a new instance of lsa::interference_cancellation_core_cc.
+       * \brief Return a shared_ptr to a new instance of lsa::block_tagger_cc.
        *
-       * To avoid accidental use of raw pointers, lsa::interference_cancellation_core_cc's
+       * To avoid accidental use of raw pointers, lsa::block_tagger_cc's
        * constructor is in a private implementation
-       * class. lsa::interference_cancellation_core_cc::make is the public interface for
+       * class. lsa::block_tagger_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(int sps,bool debug);
+      static sptr make(const std::string& tagname,int block_size, bool debug);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_INTERFERENCE_CANCELLATION_CORE_CC_H */
+#endif /* INCLUDED_LSA_BLOCK_TAGGER_CC_H */
 
