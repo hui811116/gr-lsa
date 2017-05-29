@@ -108,11 +108,15 @@ namespace gr {
       std::vector<tagObject_t> d_retx_tags;
       gr_complex* d_retx_buffer;
       int d_retx_buf_size;
+      uint64_t d_retx_base;
 
       int d_cross_len;
       // helper function definition
       bool tag_check();
       bool do_interference_cancellation();
+      void extract_tagObject(int& qidx,int& qsize, 
+                             int& payload, int& sample_idx,
+                             uint64_t& base, const tagObject_t& obj);
 
      public:
       interference_cancellation_core_cc_impl(int sps, int cross_len,bool debug);

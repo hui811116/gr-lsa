@@ -191,6 +191,7 @@ namespace gr {
         return false;
       }
       DEBUG<<"<IC Core DEBUG> Tag check first stage, most possible block base:"<<max_base<<std::endl;
+      d_retx_base = max_base;
       // fixing queue size for base candidate
       std::map<int,int> qmap;
       std::map<int,int>::iterator q_it;
@@ -322,13 +323,53 @@ namespace gr {
           d_retx_buf_size+=copy_len;
         }        
       }
-      // Step 2: Find a valid tagObject from behind
-      // traverse through list in reverse order
-      std::list<tagObject_t>::reverse_iterator rit;
-      for(rit=d_in_tlist.rbegin();rit!=d_in_tlist.rend();++rit){
+      // Step 2: collect those tags matched with retransmission base
+      std::vector<tagObject_t> matched_tags;
+      std::list<tagObject_t>::iterator it;
+      int total_size;
+      for(it=d_in_tlist.begin();it!=d_in_tlist.end();++it){
+        int qsize,qidx,pld,sample_idx;
+        uint64_t base;
+        extract_tagObject(qidx,qsize,pld,sample_idx,base,*it);
+        if(base == d_retx_base && qsize == d_retx_table.size()){
+          total_size = sample_idx+1;
+          matched_tags.push_back(*it);
+        }
+      }
+      std::vector<tagObject_t>::reverse_iterator vrit = matched_tags.rbegin();
+      // Step 3: Find a valid tagObject from behind
+      // find total size to be cancelled
+      
+      // main loop
+      while(total_size >=0){
+        int qsize,qidx,pld,sample_idx;
+        uint64_t base;
+        int begin_idx;
+        if(vrit!=matched_tags.rend()){
+          // have tagObject for synchronization
+        }else{
+          // no tagObject available
+        }
         
       }
+
       return true;
+    }
+
+    void
+    interference_cancellation_core_cc_impl::extract_tagObject(
+                             int& qidx,int& qsize, 
+                             int& payload, int& sample_idx,
+                             uint64_t& base, const tagObject_t& obj)
+    {
+      pmt::pmt_t dict = obj.msg();
+      qidx = pmt::to_long(pmt::dict_ref(dict,pmt::intern("queue_index"),pmt::from_long(-1)));
+      qsize= pmt::to_long(pmt::dict_ref(dict,pmt::intern("queue_size"),pmt::from_long(-1)));
+      payload=pmt::to_long(pmt::dict_ref(dict,pmt::intern("payload"),pmt::from_long(-1)));
+      // Turn to sample based
+      payload*=d_sps;
+      sample_idx=pmt::to_long(pmt::dict_ref(dict,pmt::intern("sample_index"),pmt::from_long(-1)));
+      base = pmt::to_uint64(pmt::dict_ref(dict,pmt::intern("base"),pmt::from_uint64(0)));
     }
 
     void
