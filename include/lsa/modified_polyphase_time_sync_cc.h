@@ -52,8 +52,7 @@ namespace gr {
            unsigned int filter_size=32,
            float init_phase=0,
            float max_rate_deviation=1.5,
-           int osps=1,
-           const std::string& intf_tagname="sensing");
+           int osps=1);
     };
 
   } // namespace lsa

@@ -5,7 +5,7 @@
   <category>[lsa]</category>
   <import>import lsa</import>
   <make>lsa.modified_polyphase_time_sync_cc($sps, $loop_bw, $taps, $filter_size, 
-  $init_phase, $max_dev, $osps, $tagname)</make>
+  $init_phase, $max_dev, $osps)</make>
   
   <param>
     <name>Samples/Symbol</name>
@@ -46,12 +46,6 @@
     <value>1</value>
     <type>int</type>
   </param>
-  <param>
-    <name>Interference tag</name>
-    <key>tagname</key>
-    <value>"sensing"</value>
-    <type>string</type>
-  </param>
 
   <sink>
     <name>in</name>
@@ -63,7 +57,7 @@
     <type>complex</type>
   </source>
   <source>
-    <name>phase</name>
+    <name>time_k</name>
     <type>float</type>
     <optional>1</optional>
   </source>

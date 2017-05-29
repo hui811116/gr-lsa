@@ -4,7 +4,7 @@
   <key>lsa_interference_cancellation_core_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.interference_cancellation_core_cc($sps,$debug)</make>
+  <make>lsa.interference_cancellation_core_cc($sps,$cross_len,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -14,6 +14,11 @@
     <name>Samples/symbol</name>
     <key>sps</key>
     <value>4</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Cross length(symbol)</name>
+    <key>cross_len</key>
     <type>int</type>
   </param>
   <param>
@@ -45,7 +50,7 @@
     <type>float</type>
   </sink>
   <sink>
-    <name>time</name>
+    <name>freq</name>
     <type>float</type>
   </sink>
 

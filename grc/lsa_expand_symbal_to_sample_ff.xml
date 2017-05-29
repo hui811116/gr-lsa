@@ -4,7 +4,8 @@
   <key>lsa_expand_symbal_to_sample_ff</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.expand_symbal_to_sample_ff($sps, $nfilts)</make>
+  <make>lsa.expand_symbal_to_sample_ff($sps)</make>
+  <!--<make>lsa.expand_symbal_to_sample_ff($sps, $nfilts)</make> -->
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -15,11 +16,13 @@
     <key>sps</key>
     <type>int</type>
   </param>
+  <!--
   <param>
     <name>Number of filters</name>
     <key>nfilts</key>
     <type>int</type>
   </param>
+  -->
 
 
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -32,7 +35,7 @@
     <type>float</type>
   </sink>
   <sink>
-    <name>time</name>
+    <name>freq</name>
     <type>float</type>
   </sink>
   <!-- Make one 'source' node per output. Sub-nodes:
@@ -45,7 +48,7 @@
     <type>float</type>
   </source>
   <source>
-    <name>out time</name>
+    <name>out freq</name>
     <type>float</type>
   </source>
 </block>

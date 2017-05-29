@@ -54,7 +54,7 @@
     <optional>1</optional>
   </sink>
   <sink>
-    <name>time k</name>
+    <name>freq</name>
     <type>float</type>
     <optional>1</optional>
   </sink>
@@ -70,7 +70,7 @@
     <optional>1</optional>
   </source>
   <source>
-    <name>time k out</name>
+    <name>freq out</name>
     <type>float</type>
     <optional>1</optional>
   </source>

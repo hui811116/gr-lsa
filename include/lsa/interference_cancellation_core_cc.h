@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::interference_cancellation_core_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(int sps,bool debug);
+      static sptr make(int sps,int cross_len,bool debug);
     };
 
   } // namespace lsa

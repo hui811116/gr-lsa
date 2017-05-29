@@ -31,10 +31,11 @@ namespace gr {
      private:
       // Nothing to declare in this block.
       int d_sps;
-      int d_nfilts;
+      //int d_nfilts;
 
      public:
-      expand_symbal_to_sample_ff_impl(int sps, int nfilts);
+     expand_symbal_to_sample_ff_impl(int sps);
+      //expand_symbal_to_sample_ff_impl(int sps, int nfilts);
       ~expand_symbal_to_sample_ff_impl();
 
       // Where all the action really happens

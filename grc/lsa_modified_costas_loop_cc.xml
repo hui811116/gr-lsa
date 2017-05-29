@@ -4,7 +4,7 @@
   <key>lsa_modified_costas_loop_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.modified_costas_loop_cc($w, $order, $use_snr,$tagname)</make>
+  <make>lsa.modified_costas_loop_cc($w, $order, $use_snr)</make>
   
   <param>
     <name>Loop Bandwidth</name>
@@ -33,21 +33,10 @@
       <key>False</key>
     </option>
   </param>
-  <param>
-    <name>Interference tag</name>
-    <key>tagname</key>
-    <value>"sensing"</value>
-    <type>string</type>
-  </param>
 
   <sink>
     <name>in</name>
     <type>complex</type>
-  </sink>
-  <sink>
-    <name>poly phase</name>
-    <type>float</type>
-    <optional>1</optional>
   </sink>
   <sink>
     <name>noise</name>
@@ -65,7 +54,7 @@
     <optional>1</optional>
   </source>
   <source>
-    <name>poly phase</name>
+    <name>freq</name>
     <type>float</type>
     <optional>1</optional>
   </source>

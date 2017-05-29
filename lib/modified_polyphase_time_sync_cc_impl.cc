@@ -39,16 +39,14 @@ namespace gr {
            unsigned int filter_size,
            float init_phase,
            float max_rate_deviation,
-           int osps,
-           const std::string& intf_tagname)
+           int osps)
     {
       return gnuradio::get_initial_sptr
         (new modified_polyphase_time_sync_cc_impl(sps, loop_bw, taps,
              filter_size,
              init_phase,
              max_rate_deviation,
-             osps,
-             intf_tagname));
+             osps));
     }
 
     /*
@@ -59,8 +57,7 @@ namespace gr {
            unsigned int filter_size,
            float init_phase,
            float max_rate_deviation,
-           int osps,
-           const std::string& intf_tagname)
+           int osps)
       : gr::block("modified_polyphase_time_sync_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float))),
@@ -70,10 +67,8 @@ namespace gr {
     {
       if(taps.size() == 0)
         throw std::runtime_error("pfb_clock_sync_ccf: please specify a filter.\n");
-
-      d_intf_tagname = pmt::string_to_symbol(intf_tagname);
-      
-      d_intf_state = false;
+      //d_intf_tagname = pmt::string_to_symbol(intf_tagname);
+      //d_intf_state = false;
       // Let scheduler adjust our relative_rate.
       //enable_update_rate(true);
       set_tag_propagation_policy(TPP_DONT);
@@ -238,12 +233,12 @@ void
       get_tags_in_window(tags, 0, 0,
                         d_sps*noutput_items,
                         pmt::intern("time_est"));
-      std::vector<tag_t> intf_tags;
+      /*std::vector<tag_t> intf_tags;
       get_tags_in_window(intf_tags, 0,0,
                         d_sps*noutput_items,
-                        d_intf_tagname);
+                        d_intf_tagname);*/
       
-      const int64_t nread = nitems_read(0);
+      const uint64_t nread = nitems_read(0);
 
       int i = 0, count = 0;
       float error_r, error_i;
@@ -259,13 +254,13 @@ void
             tags.erase(tags.begin());
           }
         }
-        if(!intf_tags.empty()) {
+        /*if(!intf_tags.empty()) {
           size_t offset = intf_tags[0].offset-nread;
           if((offset >= (size_t)count) && (offset < (size_t)(count + d_sps))) {
             d_intf_state = pmt::to_bool(intf_tags[0].value);
             intf_tags.erase(intf_tags.begin());
           }
-        }
+        }*/
 
   while(d_out_idx < d_osps) {
 
@@ -320,9 +315,9 @@ if(output_items.size() == 2) {
   error_i = out[i].imag() * diff.imag();
   d_error = (error_i + error_r) / 2.0;       // average error from I&Q channel
 
-  if( d_intf_state ){
+  /*if( d_intf_state ){
     d_error = 0; //forced to zero to stop updating
-  }
+  }*/
 
         // Run the control loop to update the current phase (k) and
         // tracking rate estimates based on the error value

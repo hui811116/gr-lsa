@@ -46,7 +46,8 @@ namespace gr {
        * class. lsa::expand_symbal_to_sample_ff::make is the public interface for
        * creating new instances.
        */
-      static sptr make(int sps, int nfilts);
+       static sptr make(int sps);
+      //static sptr make(int sps, int nfilts);
     };
 
   } // namespace lsa

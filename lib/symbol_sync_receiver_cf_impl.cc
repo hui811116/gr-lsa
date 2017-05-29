@@ -187,9 +187,9 @@ enum SYSTEMSTATE{
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       const float* phase = NULL;
-      const float* time = NULL;
+      const float* freq = NULL;
       float *out_phase = NULL;
-      float *out_time = NULL;
+      float *out_freq = NULL;
       int nfix = (noutput_items<ninput_items[0])? noutput_items : ninput_items[0];
       const uint64_t nread = nitems_read(0);
       const uint64_t nwrite= nitems_written(0);
@@ -197,14 +197,14 @@ enum SYSTEMSTATE{
       bool out_sync = (output_items.size()>=2);
       if(have_sync){
         phase = (const float*) input_items[1];
-        time = (const float*) input_items[2];
+        freq = (const float*) input_items[2];
         nfix = std::min(nfix,ninput_items[1]);
         nfix = std::min(nfix,ninput_items[2]);
         if(out_sync){
           out_phase = (float *) output_items[0];
-          out_time = (float *) output_items[1];
+          out_freq = (float *) output_items[1];
           memcpy(out_phase,phase, sizeof(float)*nfix);
-          memcpy(out_time,time,sizeof(float)*nfix);  
+          memcpy(out_freq,freq,sizeof(float)*nfix);  
           // move to last line so that tagging act correctly.
         }
         //consume should also be moved to end

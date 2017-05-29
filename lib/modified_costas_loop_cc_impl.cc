@@ -35,13 +35,10 @@ namespace gr {
     static const pmt::pmt_t d_block_tag=pmt::intern("block_tag");
 
     modified_costas_loop_cc::sptr
-    modified_costas_loop_cc::make(float loop_bw, int order, bool use_snr, 
-                                  const std::string& intf_tagname
-                                  )
+    modified_costas_loop_cc::make(float loop_bw, int order, bool use_snr)
     {
       return gnuradio::get_initial_sptr
-        (new modified_costas_loop_cc_impl(loop_bw, order,use_snr,
-                                          intf_tagname));
+        (new modified_costas_loop_cc_impl(loop_bw, order,use_snr));
     }
 
     /*
@@ -49,16 +46,13 @@ namespace gr {
      */
     static int ios[]  = {sizeof(gr_complex), sizeof(float), sizeof(float)};
     static std::vector<int> iosig(ios, ios + sizeof(ios)/sizeof(int));
-    modified_costas_loop_cc_impl::modified_costas_loop_cc_impl(float loop_bw, int order, bool use_snr, 
-    const std::string& intf_tagname)
+    modified_costas_loop_cc_impl::modified_costas_loop_cc_impl(float loop_bw, int order, bool use_snr)
       : gr::block("modified_costas_loop_cc",
-              gr::io_signature::make2(1,2, sizeof(gr_complex), sizeof(float)),
+              gr::io_signature::make(1,1, sizeof(gr_complex)),
               gr::io_signature::makev(1,3,iosig)),
       blocks::control_loop(loop_bw, 1.0, -1.0),
   d_order(order), d_error(0), d_noise(1.0), d_phase_detector(NULL)
     {
-      d_intf_tagname = pmt::string_to_symbol(intf_tagname);
-      d_intf_state = false;
       set_tag_propagation_policy(TPP_DONT);
       switch(d_order) {
       case 2:
@@ -202,23 +196,21 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *iptr = (gr_complex *) input_items[0];
-      const float* plf_phase = NULL;
       gr_complex *optr = (gr_complex *) output_items[0];  
       float *poptr = NULL;
-      float *poly_phase = NULL;
+      float *foptr = NULL;
       bool write_foptr = output_items.size() >= 3;
-      bool have_poly = input_items.size() >=2;
-      if(have_poly && write_foptr){
-        plf_phase = (const float*)input_items[1];
+      if(write_foptr){
         poptr = (float*) output_items[1];
-        poly_phase = (float*) output_items[2];
+        foptr = (float*) output_items[2];
       }
+      int nin = std::min(ninput_items[0],noutput_items);
+      int nout =0 ;
       const uint64_t nread =nitems_read(0);
       const uint64_t nwrite=nitems_written(0);
 
       gr_complex nco_out;
-      std::vector<tag_t> intf_tags,tags,voe_tags, block_tags;
-      get_tags_in_range(intf_tags, 0, nread, nread+noutput_items, d_intf_tagname);
+      std::vector<tag_t> tags,voe_tags, block_tags;
       get_tags_in_range(voe_tags,0,nread,nread+noutput_items,d_voe_tag);
       get_tags_in_range(block_tags,0,nread,nread+noutput_items,d_block_tag);
       get_tags_in_range(tags, 0, nread,
@@ -234,38 +226,26 @@ namespace gr {
         add_item_tag(0,nwrite+offset,block_tags[i].key,block_tags[i].value);
       }
 
-      if(write_foptr && have_poly) {
-        for(int i = 0; i < noutput_items; i++) {
+      if(write_foptr) {
+        for(int i = 0; i < nin; i++) {
           if(!tags.empty()) {
             if( (tags[0].offset-nread) == i) {
               d_phase = (float)pmt::to_double(tags[0].value);
               tags.erase(tags.begin());
             }
           }
-          if(!intf_tags.empty()){
-            if( (intf_tags[0].offset-nread) == i) {
-            d_intf_state = pmt::to_bool(intf_tags[0].value);
-            intf_tags.erase(intf_tags.begin());
-            }
-          }
-          
           nco_out = gr_expj(-d_phase);
-          optr[i] = iptr[i] * nco_out;
-
+          optr[nout] = iptr[i] * nco_out;
           d_error = (*this.*d_phase_detector)(optr[i]);
           d_error = gr::branchless_clip(d_error, 1.0);
-
-          if( d_intf_state ){
-              d_error = 0;
-          }
-
           advance_loop(d_error);
           phase_wrap();
           frequency_limit();
-          poptr[i] = d_phase;
+          poptr[nout] = d_phase;
+          foptr[nout] = d_freq;
+          nout++;
           // direct copy
         }
-        memcpy(poly_phase, plf_phase, sizeof(float)*noutput_items);
       }
         
       else {
@@ -276,30 +256,18 @@ namespace gr {
               tags.erase(tags.begin());
             }
           }
-          if(!intf_tags.empty()){
-            if((intf_tags[0].offset-nread) == i) {
-            d_intf_state = pmt::to_bool(intf_tags[0].value);
-            intf_tags.erase(intf_tags.begin());
-            }
-          }
-
           nco_out = gr_expj(-d_phase);
-          optr[i] = iptr[i] * nco_out;
-
-          if( d_intf_state ){
-              d_error = 0;
-          }
-
+          optr[nout] = iptr[i] * nco_out;
           d_error = (*this.*d_phase_detector)(optr[i]);
           d_error = gr::branchless_clip(d_error, 1.0);
-
           advance_loop(d_error);
           phase_wrap();
           frequency_limit();
+          nout++;
         }
       }
-      consume_each(noutput_items);
-      return noutput_items;
+      consume_each(nin);
+      return nout;
     }
 
   } /* namespace lsa */
