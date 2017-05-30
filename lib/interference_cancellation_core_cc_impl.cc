@@ -279,6 +279,7 @@ namespace gr {
       d_retx_buf_size = 0;
       d_retx_tags.clear();
       d_retx_tags.resize(d_retx_table.size());
+      std::vector<int> retx_pkt_len; 
       // Step 1: Copy samples to other buffer
       const int reserved_length = d_sps*4; // magic number temporarily
       // NOTE: should reserved some samples in case timing offset
@@ -320,6 +321,7 @@ namespace gr {
           d_retx_tags[i].add_msg(pmt::intern("packet_len"),pmt::from_long(pkt_len));
           d_retx_tags[i].add_msg(pmt::intern("copy_len"),pmt::from_long(copy_len));
           d_retx_tags[i].set_idx(d_retx_buf_size);
+          retx_pkt_len.push_back(pkt_len); // nominal length
           d_retx_buf_size+=copy_len;
         }        
       }
@@ -337,22 +339,57 @@ namespace gr {
         }
       }
       std::vector<tagObject_t>::reverse_iterator vrit = matched_tags.rbegin();
+      pmt::pmt_t last_msg = vrit->msg();
+      int qidx_cnt = pmt::to_long(pmt::dict_ref(last_msg,pmt::intern("queue_index"),pmt::from_long(-1)));
+      vrit++; // move on to next tagObject...
+      gr_complex * sample_ptr = d_retx_buffer + d_retx_tags[qidx_cnt].index();
+      int copy_cnt = pmt::to_long(pmt::dict_ref(last_msg,pmt::intern("copy_len"),pmt::from_long(-1)));
       // Step 3: Find a valid tagObject from behind
       // find total size to be cancelled
-      
+      d_out_mem_idx=0;d_out_mem_size=total_size;
+      int nx_qidx,nx_qsize,nx_pld,nx_smp;
+      uint64_t nx_bs;
       // main loop
-      while(total_size >=0){
-        int qsize,qidx,pld,sample_idx;
-        uint64_t base;
-        int begin_idx;
+      while(total_size >0){
+        //int qsize,qidx,pld,sample_idx;
+        //uint64_t base;
+        // First step, find the end of next block
+        // Issues: Time sampling offset(+/-)
+        // techniques: (+) align, (-) reserved_length 
+        int begin_idx=0, begin_idx_tag=0;
+        begin_idx = total_size-retx_pkt_len[qidx_cnt];
+        // phase and frequency tracking shift registers
+        float phase, freq;
         if(vrit!=matched_tags.rend()){
-          // have tagObject for synchronization
-        }else{
-          // no tagObject available
+          // there is tagObject for synchronization    
+          extract_tagObject(nx_qidx,nx_qsize,nx_pld,nx_smp,nx_bs,*vrit);
+          begin_idx_tag = nx_smp;
+          if(abs(begin_idx-begin_idx_tag)<reserved_length){
+            vrit++;
+          }
         }
-        
+        // end index estimated by retransmission blocks
+        if(begin_idx_tag<begin_idx && (begin_idx-begin_idx_tag)<reserved_length){
+          begin_idx = begin_idx_tag;
+        }else{
+          begin_idx = std::max(begin_idx_tag,begin_idx);
+        }
+        // one block for a loop
+        int block_length = total_size-begin_idx;
+        for(int i=0;i<block_length;++i){
+          // FIXME
+          // apply phase compansation
+          d_out_mem[total_size-1-i] = d_in_mem[total_size-1-i] - sample_ptr[copy_cnt-1-i];
+        }
+        total_size-=block_length;
+        qidx_cnt=(qidx_cnt-1);
+        if(qidx_cnt<0)
+          qidx_cnt+=d_retx_table.size();
+        pmt::pmt_t tmp_msg = d_retx_tags[qidx_cnt].msg();
+        copy_cnt = pmt::to_long(pmt::dict_ref(tmp_msg,pmt::intern("copy_len"),pmt::from_long(-1)));
+        sample_ptr = d_retx_buffer + d_retx_tags[qidx_cnt].index();
       }
-
+      
       return true;
     }
 
