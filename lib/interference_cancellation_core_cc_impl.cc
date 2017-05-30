@@ -156,7 +156,6 @@ namespace gr {
           it->delete_msg(pmt::intern("block_offset"));
           it->delete_msg(pmt::intern("LSA_hdr"));
           // NOTE: we should keep index in phase memory for further phase/freq tracking
-          //it->set_idx(map_it->second+block_offset);
           it->add_msg(pmt::intern("sample_index"),pmt::from_long(map_it->second+block_offset));
         }
         it++;
@@ -187,10 +186,9 @@ namespace gr {
       }
       // base index candidate = max_base;
       if(max_cnt ==0 || max_base == MAXBASE){
-        DEBUG<<"<IC Core DEBUG>Tag check return false, No base found"<<std::endl;
+        //DEBUG<<"<IC Core DEBUG>Tag check return false, No base found"<<std::endl;
         return false;
       }
-      DEBUG<<"<IC Core DEBUG> Tag check first stage, most possible block base:"<<max_base<<std::endl;
       d_retx_base = max_base;
       // fixing queue size for base candidate
       std::map<int,int> qmap;
@@ -220,7 +218,7 @@ namespace gr {
       // queue size candidate: max_qsize;
       std::vector<tagObject_t> update_tlist;
       if(max_qsize==0 || max_cnt==0){
-        DEBUG<<"<IC Core DEBUG>Tag check return false, No valid queue_size found"<<std::endl;
+        //DEBUG<<"<IC Core DEBUG>Tag check return false, No valid queue_size found"<<std::endl;
         return false;
       }else{
         for(it = d_in_tlist.begin();it!=d_in_tlist.end();++it){
@@ -232,7 +230,6 @@ namespace gr {
           }
         }
       }
-      DEBUG<<"<IC Core DEBUG> Tag check second stage, most possible queue size:"<<max_qsize <<std::endl;
       // counting queue indexes
       // reset retx_table
       d_retx_table.clear();
@@ -249,15 +246,6 @@ namespace gr {
           }
         }
       }
-      DEBUG<<"<IC Core Debug>In tag_check(), reach end of function, retransmission count:"<<retx_cnt<<" ,desired size:"<<max_qsize<<std::endl;
-      if(retx_cnt!= max_qsize){
-        DEBUG<<"<IC Core DEBUG>Tag check result: Failed, some pkts corrupted..."<<std::endl;
-        // TODO
-        // think of a way to utilize the structure to gain interference cacnellation opportunities
-      }else{
-        DEBUG<<"<IC Core DEBUG>Tag check result: Success, all retransmission received..."<<std::endl;
-      }
-      DEBUG<<"-----------------------------------------------------------------------------"<<std::endl;
       return retx_cnt==max_qsize;
     }
 
@@ -311,18 +299,23 @@ namespace gr {
           memcpy(d_retx_buffer+d_retx_buf_size,d_in_mem+sample_idx-copy_len+1,sizeof(gr_complex)*copy_len);
           // sync phase
           float end_phase = d_phase_mem[sync_idx];
+          float avg_freq = 0.0;
           for(int j =0;j<copy_len;++j){
             d_retx_buffer[sample_idx-j]*=gr_expj(-end_phase);
             end_phase-= d_freq_mem[sync_idx-j];
             phase_wrap(end_phase);
+            avg_freq += d_freq_mem[sync_idx-j];
           }
+          avg_freq/=copy_len;
           // record tag
           d_retx_tags[i].init_dict();
           d_retx_tags[i].add_msg(pmt::intern("packet_len"),pmt::from_long(pkt_len));
           d_retx_tags[i].add_msg(pmt::intern("copy_len"),pmt::from_long(copy_len));
+          d_retx_tags[i].add_msg(pmt::intern("avg_freq"),pmt::from_float(avg_freq));
           d_retx_tags[i].set_idx(d_retx_buf_size);
           retx_pkt_len.push_back(pkt_len); // nominal length
           d_retx_buf_size+=copy_len;
+          DEBUG<<"<DO IC>Retx:"<<d_retx_tags[i];
         }        
       }
       // Step 2: collect those tags matched with retransmission base
@@ -341,55 +334,97 @@ namespace gr {
       std::vector<tagObject_t>::reverse_iterator vrit = matched_tags.rbegin();
       pmt::pmt_t last_msg = vrit->msg();
       int qidx_cnt = pmt::to_long(pmt::dict_ref(last_msg,pmt::intern("queue_index"),pmt::from_long(-1)));
-      vrit++; // move on to next tagObject...
       gr_complex * sample_ptr = d_retx_buffer + d_retx_tags[qidx_cnt].index();
       int copy_cnt = pmt::to_long(pmt::dict_ref(last_msg,pmt::intern("copy_len"),pmt::from_long(-1)));
+      int phase_idx = vrit->index();
+      int freq_idx = vrit->index();
+      float d_retx_freq = pmt::to_float(pmt::dict_ref(last_msg,pmt::intern("avg_freq"),pmt::from_float(0.0f)));
+      vrit++; // move on to next tagObject...
       // Step 3: Find a valid tagObject from behind
       // find total size to be cancelled
       d_out_mem_idx=0;d_out_mem_size=total_size;
       int nx_qidx,nx_qsize,nx_pld,nx_smp;
       uint64_t nx_bs;
+      int nx_phase_idx;
+      int nx_freq_idx;
       // main loop
+      float d_phase = d_phase_mem[phase_idx], d_freq= d_freq_mem[freq_idx];
+      bool good_track = true;
       while(total_size >0){
-        //int qsize,qidx,pld,sample_idx;
-        //uint64_t base;
-        // First step, find the end of next block
+        // First step, find the begin of current block
         // Issues: Time sampling offset(+/-)
         // techniques: (+) align, (-) reserved_length 
-        int begin_idx=0, begin_idx_tag=0;
-        begin_idx = total_size-retx_pkt_len[qidx_cnt];
-        // phase and frequency tracking shift registers
-        float phase, freq;
+        int begin_idx_tag=0;
+        int begin_idx = total_size-retx_pkt_len[qidx_cnt];
+        bool sync_failed = false;
+        bool update_phase =false;
         if(vrit!=matched_tags.rend()){
           // there is tagObject for synchronization    
           extract_tagObject(nx_qidx,nx_qsize,nx_pld,nx_smp,nx_bs,*vrit);
-          begin_idx_tag = nx_smp;
+          nx_phase_idx = vrit->index();
+          nx_freq_idx  = vrit->index();
+          begin_idx_tag = nx_smp+1;
           if(abs(begin_idx-begin_idx_tag)<reserved_length){
+            update_phase = true;
             vrit++;
+          }else if(nx_smp-begin_idx > reserved_length){
+            // ****************************************************************
+            // ISSUE:Block synchronization failure
+            // ****************************************************************
+            // This event may due to USRP overflow...
+            // Result from slow interference cancellation process...
+            // possible solution: considering reduce buffer size
+            // ****************************************************************
+            DEBUG<<"<IC Core DEBUG> Do_ic, Detect conflict tags:"<<std::endl;
+            DEBUG<<*vrit<<*(vrit-1);
+            // ****************************************************************
+            // Handling Overflow, aggressively resync to available header info and continue
+            // ----------------------------------------------------------------
+            begin_idx = nx_smp+1;
+            sync_failed = true;
           }
         }
-        // end index estimated by retransmission blocks
+        //Choose a proper begin index
         if(begin_idx_tag<begin_idx && (begin_idx-begin_idx_tag)<reserved_length){
           begin_idx = begin_idx_tag;
         }else{
           begin_idx = std::max(begin_idx_tag,begin_idx);
         }
-        // one block for a loop
+        // cancel a block
         int block_length = total_size-begin_idx;
         for(int i=0;i<block_length;++i){
-          // FIXME
           // apply phase compansation
-          d_out_mem[total_size-1-i] = d_in_mem[total_size-1-i] - sample_ptr[copy_cnt-1-i];
+          d_out_mem[total_size-1-i] = d_in_mem[total_size-1-i] - sample_ptr[copy_cnt-1-i]*gr_expj(d_phase);
+          d_phase-=d_freq;
+          phase_wrap(d_phase);
+          d_freq = (good_track)? d_freq_mem[freq_idx--] : d_freq;
+          // Second method, use average CFO estimated by averaging over retransmission packet
+          //d_freq = (good_track)? d_freq_mem[freq_idx--] : d_retx_freq;
         }
         total_size-=block_length;
-        qidx_cnt=(qidx_cnt-1);
-        if(qidx_cnt<0)
-          qidx_cnt+=d_retx_table.size();
+        if(update_phase){
+          d_phase = d_phase_mem[nx_phase_idx];
+          d_freq = d_freq_mem[nx_freq_idx];
+          good_track = true;
+        }else{
+          good_track = false;
+        }
+        if(sync_failed){
+          DEBUG<<"<IC Core DEBUG>Resync to block index:"<<nx_qidx<< " (total:"<<total_size<<")"<<std::endl;
+          qidx_cnt = nx_qidx;
+          d_phase = d_phase_mem[nx_phase_idx];
+          d_freq = d_freq_mem[nx_freq_idx];
+          good_track = true;
+          vrit++;
+        }
         pmt::pmt_t tmp_msg = d_retx_tags[qidx_cnt].msg();
         copy_cnt = pmt::to_long(pmt::dict_ref(tmp_msg,pmt::intern("copy_len"),pmt::from_long(-1)));
+        d_retx_freq =pmt::to_float(pmt::dict_ref(tmp_msg,pmt::intern("avg_freq"),pmt::from_float(0.0f)));
         sample_ptr = d_retx_buffer + d_retx_tags[qidx_cnt].index();
+        qidx_cnt--;
+        if(qidx_cnt<0)
+          qidx_cnt+=d_retx_table.size();
       }
-      
       return true;
     }
 
@@ -433,13 +468,12 @@ namespace gr {
       bool reset_s = false;
       bool reset_p = false;
       bool reset_ready = false;
-      std::vector<tag_t> tags_s;
-      std::vector<tag_t> tags_p;
-      std::vector<tag_t> hdr_tag;
-      
-      std::vector<tag_t> block_s;
-      std::vector<tag_t> block_p;
-      
+      std::vector<tag_t> tags_s;                          // collecting tags from ring queue, for reset purpose, stream 0
+      std::vector<tag_t> tags_p;                          // collecting tags from ring queue, for reset prupose, stream 1
+      std::vector<tag_t> hdr_tag;                         // collecting header tags from stream 1. should exclude ring tags
+      std::vector<tag_t> block_s;                         // collecting block tags of stream 0, for stream sync purpose
+      std::vector<tag_t> block_p;                         // collecting block tags of stream 1, for stream sync purpose
+      const uint64_t nwrite = nitems_written(0);
       get_tags_in_range(tags_s,0,nitems_read(0),nitems_read(0)+nin_s, d_ring_tag);
       get_tags_in_range(tags_p,1,nitems_read(1),nitems_read(1)+nin_p, d_ring_tag);
       if(!tags_s.empty()){
@@ -503,7 +537,7 @@ namespace gr {
         }
         hdr_tag.erase(hdr_tag.begin());
       }
-      // clean up, in case there is one object
+      // clean up, in case there is only one object in tags
       if(!tmp_obj.empty()){
         d_in_tlist.push_back(tmp_obj);
       }
@@ -515,6 +549,19 @@ namespace gr {
       d_phase_size  += nin_p;
       // reset condition checking
       if(reset_ready){
+        // checking all tags
+        if(tag_check()){
+          DEBUG<<"<IC Core DEBUG>Tag checking success, calling do_interference_cancellation()..."<<std::endl;
+          if(d_out_mem_size>0 && d_out_mem_idx!=d_out_mem_size){
+            DEBUG<<"<IC Core warning> output of IC is overwitten...("<<d_out_mem_idx<<"/"<<d_out_mem_size<<")"<<std::endl;
+          }
+          if(do_interference_cancellation()){
+            DEBUG<<"<IC Core DEBUG>Do_IC complete..."<<std::endl;
+            add_item_tag(0,nwrite,pmt::intern("ic_out"),pmt::PMT_T);
+          }else{
+            DEBUG<<"<IC Core DEBUG>Do_IC failed..."<<std::endl;
+          }
+        }
         // end of a possible ic opportunities
         if(d_in_mem_size == d_mem_cap){
           DEBUG<<"<IC Core>signal buffer full..."<<std::endl;
@@ -523,11 +570,6 @@ namespace gr {
           <<d_in_mem_size<<" ,phase_size:"<<d_phase_size<<std::endl;
           nin_s++;
           nin_p++;
-        }
-        // checking all tags
-        if(tag_check()){
-          // do interference cancellation
-          DEBUG<<"<IC Core DEBUG>Positive output of tag_check! Found a opportunities to do interference cancellation"<<std::endl;
         }
         // handling output
         d_in_tlist.clear();
@@ -539,6 +581,11 @@ namespace gr {
         d_sync_block_idx= 0;
         d_samp_map.clear();
       }
+      // output condition checking
+      nout = std::min(noutput_items, d_out_mem_size-d_out_mem_idx);
+      memcpy(out,d_out_mem+d_out_mem_idx,sizeof(gr_complex)*nout);
+      d_out_mem_idx+=nout;
+      // for GR schedualer maintenance
       consume(0,nin_s);
       consume(1,nin_p);
       consume(2,nin_p);
