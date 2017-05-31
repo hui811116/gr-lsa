@@ -372,6 +372,9 @@ enum SYSTEMSTATE{
         consume(2,nfix);
       }else{
         produce(0,0);
+        produce(1,0);
+        consume(1,0);
+        consume(2,0);
       }
       consume(0,nfix);
       // Tell runtime system how many output items we produced.
