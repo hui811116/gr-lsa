@@ -56,6 +56,8 @@
 #include "lsa/prou_ring_queue_cc.h"
 #include "lsa/interference_cancellation_core_cc.h"
 #include "lsa/block_tagger_cc.h"
+#include "lsa/su_sr_transmitter_bb.h"
+#include "lsa/su_tx_helper.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -134,3 +136,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, prou_ring_queue_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_cancellation_core_cc);
 %include "lsa/block_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, block_tagger_cc);
+%include "lsa/su_sr_transmitter_bb.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, su_sr_transmitter_bb);
+%include "lsa/su_tx_helper.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, su_tx_helper);
