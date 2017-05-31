@@ -102,7 +102,7 @@ namespace gr {
     bool
     interference_cancellation_core_cc_impl::tag_check()
     {
-      DEBUG<<"<IC Core DEBUG>tag_check begins"<<std::endl;
+      //DEBUG<<"<IC Core DEBUG>tag_check begins"<<std::endl;
       // before interference cancellation, checking all tags validity 
       // information to be checked:
       // 1. base counter (<MAXBASE)
@@ -151,12 +151,26 @@ namespace gr {
           it= d_in_tlist.erase(it);
           continue;
         }else{
+          // checking sample size
+          if(map_it->second+block_offset >=d_in_mem_size){
+            it = d_in_tlist.erase(it);
+            continue;
+          }
+          // calculating average frequency offset, for IC resync
+          float avg_freq = 0.0f;
+          int pkt_len = (qidx==0)? pld + ( (LSAPHYSYMBOLLEN+d_cross_len)*d_sps) : pld + (LSAPHYSYMBOLLEN*d_sps);
+          int sync_idx = it->index();
+          for(int j=0;j<pkt_len;++j){
+            avg_freq += d_freq_mem[sync_idx-j];
+          }
+          avg_freq/=(float)pkt_len;
           // matched stream tags
           it->delete_msg(pmt::intern("block_id"));
           it->delete_msg(pmt::intern("block_offset"));
           it->delete_msg(pmt::intern("LSA_hdr"));
           // NOTE: we should keep index in phase memory for further phase/freq tracking
           it->add_msg(pmt::intern("sample_index"),pmt::from_long(map_it->second+block_offset));
+          it->add_msg(pmt::intern("avg_freq"),pmt::from_float(avg_freq));
         }
         it++;
       }
@@ -186,7 +200,7 @@ namespace gr {
       }
       // base index candidate = max_base;
       if(max_cnt ==0 || max_base == MAXBASE){
-        //DEBUG<<"<IC Core DEBUG>Tag check return false, No base found"<<std::endl;
+        DEBUG<<"<IC Core DEBUG>Tag check return false, No base found"<<std::endl;
         return false;
       }
       d_retx_base = max_base;
@@ -217,16 +231,17 @@ namespace gr {
       }
       // queue size candidate: max_qsize;
       std::vector<tagObject_t> update_tlist;
+      std::list<tagObject_t>::reverse_iterator rit;
       if(max_qsize==0 || max_cnt==0){
-        //DEBUG<<"<IC Core DEBUG>Tag check return false, No valid queue_size found"<<std::endl;
+        DEBUG<<"<IC Core DEBUG>Tag check return false, No valid queue_size found"<<std::endl;
         return false;
       }else{
-        for(it = d_in_tlist.begin();it!=d_in_tlist.end();++it){
-          pmt::pmt_t dict = it->msg();
+        for(rit = d_in_tlist.rbegin();rit!=d_in_tlist.rend();++rit){
+          pmt::pmt_t dict = rit->msg();
           uint64_t base = pmt::to_uint64(pmt::dict_ref(dict,pmt::intern("base"),pmt::from_uint64(0)));
           int qsize = pmt::to_long(pmt::dict_ref(dict,pmt::intern("queue_size"),pmt::from_long(-1)));
           if(base == max_base && qsize == max_qsize){
-            update_tlist.push_back(*it);
+            update_tlist.push_back(*rit);
           }
         }
       }
@@ -235,7 +250,7 @@ namespace gr {
       d_retx_table.clear();
       d_retx_table.resize(max_qsize);
       int retx_cnt = 0;
-      for(int i=update_tlist.size()-1;i>=0;--i){
+      for(int i=0;i<update_tlist.size();++i){
         pmt::pmt_t dict = update_tlist[i].msg();
         int qidx = pmt::to_long(pmt::dict_ref(dict,pmt::intern("queue_index"),pmt::from_long(-1)));
         if(d_retx_table[qidx].empty()){
@@ -278,6 +293,7 @@ namespace gr {
         int pld = pmt::to_long(pmt::dict_ref(dict,pmt::intern("payload"),pmt::from_long(0)));
         int pkt_len = (pld+LSAPHYSYMBOLLEN)*d_sps;
         int copy_len= (pld+LSAPHYSYMBOLLEN)*d_sps;
+        pmt::pmt_t avg_freq = pmt::dict_ref(dict,pmt::intern("avg_freq"),pmt::from_float(0.0f));
         if(pld==0 || sample_idx<0){
           throw std::runtime_error("<IC Core DEBUG>Interference cancellation core found invalid payload length or sample idx");
         }
@@ -299,23 +315,20 @@ namespace gr {
           memcpy(d_retx_buffer+d_retx_buf_size,d_in_mem+sample_idx-copy_len+1,sizeof(gr_complex)*copy_len);
           // sync phase
           float end_phase = d_phase_mem[sync_idx];
-          float avg_freq = 0.0;
           for(int j =0;j<copy_len;++j){
             d_retx_buffer[sample_idx-j]*=gr_expj(-end_phase);
             end_phase-= d_freq_mem[sync_idx-j];
             phase_wrap(end_phase);
-            avg_freq += d_freq_mem[sync_idx-j];
           }
-          avg_freq/=copy_len;
           // record tag
           d_retx_tags[i].init_dict();
           d_retx_tags[i].add_msg(pmt::intern("packet_len"),pmt::from_long(pkt_len));
           d_retx_tags[i].add_msg(pmt::intern("copy_len"),pmt::from_long(copy_len));
-          d_retx_tags[i].add_msg(pmt::intern("avg_freq"),pmt::from_float(avg_freq));
+          d_retx_tags[i].add_msg(pmt::intern("avg_freq"),avg_freq);
           d_retx_tags[i].set_idx(d_retx_buf_size);
           retx_pkt_len.push_back(pkt_len); // nominal length
           d_retx_buf_size+=copy_len;
-          DEBUG<<"<DO IC>Retx:"<<d_retx_tags[i];
+          //DEBUG<<"<DO IC>Retx:"<<d_retx_tags[i];
         }        
       }
       // Step 2: collect those tags matched with retransmission base
@@ -580,6 +593,10 @@ namespace gr {
         d_samp_block_idx= 0;
         d_sync_block_idx= 0;
         d_samp_map.clear();
+        // FIXME
+        // Current version will force to zero
+        d_out_mem_idx =0;
+        d_out_mem_size =0;
       }
       // output condition checking
       nout = std::min(noutput_items, d_out_mem_size-d_out_mem_idx);
