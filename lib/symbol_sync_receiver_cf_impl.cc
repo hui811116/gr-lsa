@@ -192,7 +192,6 @@ enum SYSTEMSTATE{
       float *out_freq = NULL;
       int nfix = (noutput_items<ninput_items[0])? noutput_items : ninput_items[0];
       const uint64_t nread = nitems_read(0);
-      const uint64_t nwrite= nitems_written(0);
       bool have_sync = (input_items.size()>=3);
       bool out_sync = (output_items.size()>=2);
       if(have_sync){
@@ -363,7 +362,7 @@ enum SYSTEMSTATE{
         if(out_sync){
           for(int i=0;i<tags.size();++i){
             int offset = tags[i].offset - nread;
-            add_item_tag(0,nwrite+offset,tags[i].key,tags[i].value);
+            add_item_tag(0,nitems_written(0)+offset,tags[i].key,tags[i].value);
           }
           produce(0,nfix);
           produce(1,nfix);
