@@ -48,9 +48,12 @@ namespace gr {
       int d_threshold;
       unsigned int d_data_reg;
       unsigned int d_byte_cnt;
-      unsigned char d_qidx;
-      unsigned char d_qsize;
-      unsigned int d_base;
+      //unsigned char d_qidx;
+      //unsigned char d_qsize;
+      //unsigned int d_base;
+      uint16_t d_qidx;
+      uint16_t d_qsize;
+      uint16_t d_base;
       
       int d_pld_cnt;
       int d_pre_cnt;

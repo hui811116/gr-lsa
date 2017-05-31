@@ -81,13 +81,22 @@ static const unsigned char LSA_CTRL= 0x06;
             if(crc_check(qidx,qsize,base)){
               DEBUG<<"<SU CTRL DEBUG>received PHY packet--block_idx="
               <<qidx<<" ,block_size="<<qsize<<" ,base="<<base<<std::endl;
-              d_ctrl_buf[0]  =(unsigned char)qidx;
+              /*d_ctrl_buf[0]  =(unsigned char)qidx;
               d_ctrl_buf[1]=(unsigned char)qsize;
               unsigned char* base_u8 = (unsigned char*)&base;
               d_ctrl_buf[2]= base_u8[3];
               d_ctrl_buf[3]= base_u8[2];
               d_ctrl_buf[4]= base_u8[1];
-              d_ctrl_buf[5]= base_u8[0];
+              d_ctrl_buf[5]= base_u8[0];*/
+              uint8_t * qi8 = (uint8_t*) &qidx;
+              uint8_t * qs8 = (uint8_t*) &qsize;
+              uint8_t * bs8 = (uint8_t*) &base;
+              d_ctrl_buf[0] = qi8[1];
+              d_ctrl_buf[1] = qi8[0];
+              d_ctrl_buf[2] = qs8[1];
+              d_ctrl_buf[3] = qs8[0];
+              d_ctrl_buf[4] = bs8[1];
+              d_ctrl_buf[5] = bs8[0];
               blob = pmt::make_blob(d_ctrl_buf,LSA_CTRL);  
               if(d_prou_present){
                 // receive a clean packet from interference state
@@ -122,12 +131,19 @@ static const unsigned char LSA_CTRL= 0x06;
       private:
       void parse_pdu(int& qidx,int& qsize,unsigned int& base, const uint8_t* uvec)
       {
-        qidx = uvec[0];
+        qidx = uvec[0]<<8;
+        qidx|= uvec[1];
+        qsize= uvec[2]<<8;
+        qsize|=uvec[3];
+        base=0;
+        base =uvec[4]<<8;
+        base|=uvec[5];
+        /*qidx = uvec[0];
         qsize= uvec[1];
         base = uvec[2]<<24;
         base|= uvec[3]<<16;
         base|= uvec[4]<<8;
-        base|= uvec[5];
+        base|= uvec[5];*/
       }
       bool crc_check(int qidx,int qsize,unsigned int base)
       {

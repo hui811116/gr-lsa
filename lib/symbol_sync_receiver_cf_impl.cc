@@ -162,12 +162,19 @@ enum SYSTEMSTATE{
       pmt::pmt_t msg=pmt::PMT_NIL; 
       msg = pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_out_buf,d_pkt_byte));
       // postfixing header information
-      d_qidx = d_out_buf[0];
+      /*d_qidx = d_out_buf[0];
       d_qsize =d_out_buf[1];
       d_base = d_out_buf[2]<<24;
       d_base|= d_out_buf[3]<<16;
       d_base|= d_out_buf[4]<<8;
+      d_base|= d_out_buf[5];*/
+      d_qidx = d_out_buf[0]<<8;
+      d_qidx|= d_out_buf[1];
+      d_qsize= d_out_buf[2]<<8;
+      d_qsize|=d_out_buf[3];
+      d_base = d_out_buf[4];
       d_base|= d_out_buf[5];
+
       message_port_pub(d_msg_port, msg);
     }
 
@@ -339,7 +346,7 @@ enum SYSTEMSTATE{
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("LSA_hdr"),pmt::PMT_T);
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_index"),pmt::from_long(d_qidx));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_size"),pmt::from_long(d_qsize));
-                      add_item_tag(0,nitems_written(0)+index,pmt::intern("base"),pmt::from_uint64(d_base));
+                      add_item_tag(0,nitems_written(0)+index,pmt::intern("base"),pmt::from_uint64((uint64_t)d_base));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("pld_bytes"),pmt::from_long(d_pkt_byte));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("payload"),pmt::from_long(d_pkt_byte*8*CODE_RATE_INV/d_hdr_bps));
                     }
