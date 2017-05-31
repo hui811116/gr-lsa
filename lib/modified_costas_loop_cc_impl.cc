@@ -247,9 +247,8 @@ namespace gr {
           // direct copy
         }
       }
-        
       else {
-        for(int i = 0; i < noutput_items; i++) {
+        for(int i = 0; i < nin; i++) {
           if(!tags.empty()) {
             if( (tags[0].offset-nread) == i) {
               d_phase = (float)pmt::to_double(tags[0].value);
@@ -267,7 +266,16 @@ namespace gr {
         }
       }
       consume_each(nin);
-      return nout;
+      if(write_foptr){
+        produce(0,nout);
+        produce(1,nout);
+        produce(2,nout);
+      }else{
+        produce(0,nout);
+        produce(1,0);
+        produce(2,0);
+      }
+      return WORK_CALLED_PRODUCE;
     }
 
   } /* namespace lsa */
