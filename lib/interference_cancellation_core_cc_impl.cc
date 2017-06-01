@@ -36,7 +36,7 @@ namespace gr {
     static const pmt::pmt_t d_ring_tag= pmt::intern("VoE_detected");
     static const pmt::pmt_t d_block_tag= pmt::intern("block_tag");
     static const int MAXLEN = (127+6)*8*8/2*4;
-    static const int MEMCAP = MAXLEN*128;
+    static const int MEMCAP = MAXLEN*1024;
     static const uint64_t MAXBASE = 16777216;
     static const int LSAPHYLEN = 6;   // bytes: 0x00,0x00,0x00,0x00,0xe6,(0xLENGTH)
     static const int LSACODERATEINV=8;
@@ -178,32 +178,7 @@ namespace gr {
       if(d_in_tlist.empty()){
         return false;
       }
-      std::map<uint64_t,int> base_map;
-      std::map<uint64_t,int>::iterator b_it;
       int max_cnt=0;
-      uint64_t max_base = MAXBASE;
-      for(it = d_in_tlist.begin();it!=d_in_tlist.end();++it){
-        pmt::pmt_t dict = it->msg();
-        uint64_t base = pmt::to_uint64(pmt::dict_ref(dict,pmt::intern("base"),pmt::from_uint64(0)));
-        b_it = base_map.find(base);
-        if(b_it == base_map.end()){
-          base_map.insert(std::pair<uint64_t,int>(base,1));
-          if(max_cnt==0){
-            max_base=base;max_cnt =1;
-          }
-        }else{
-          base_map[b_it->first] = b_it->second+1;
-          if(b_it->second+1 > max_cnt){
-            max_cnt = b_it->second+1; max_base = b_it->first;
-          }
-        }
-      }
-      // base index candidate = max_base;
-      if(max_cnt ==0 || max_base == MAXBASE){
-        DEBUG<<"<IC Core DEBUG>Tag check return false, No base found"<<std::endl;
-        return false;
-      }
-      d_retx_base = max_base;
       // fixing queue size for base candidate
       std::map<int,int> qmap;
       std::map<int,int>::iterator q_it;
@@ -211,11 +186,10 @@ namespace gr {
       int max_qsize=0;
       for(it = d_in_tlist.begin();it!=d_in_tlist.end();++it){
         pmt::pmt_t dict = it->msg();
-        uint64_t base = pmt::to_uint64(pmt::dict_ref(dict,pmt::intern("base"),pmt::from_uint64(0)));
         int qsize;
-        if(base == max_base){
           qsize = pmt::to_long(pmt::dict_ref(dict,pmt::intern("queue_size"),pmt::from_long(-1)));
-          q_it = qmap.find(qsize);
+          if(qsize!=0){
+            q_it = qmap.find(qsize);
           if(q_it == qmap.end()){
             qmap.insert(std::pair<int,int>(qsize,1));
             if(max_cnt==0){
@@ -227,7 +201,7 @@ namespace gr {
               max_cnt = q_it->second+1; max_qsize = q_it->first;
             }
           }
-        }
+          }
       }
       // queue size candidate: max_qsize;
       std::vector<tagObject_t> update_tlist;
@@ -238,9 +212,8 @@ namespace gr {
       }else{
         for(rit = d_in_tlist.rbegin();rit!=d_in_tlist.rend();++rit){
           pmt::pmt_t dict = rit->msg();
-          uint64_t base = pmt::to_uint64(pmt::dict_ref(dict,pmt::intern("base"),pmt::from_uint64(0)));
           int qsize = pmt::to_long(pmt::dict_ref(dict,pmt::intern("queue_size"),pmt::from_long(-1)));
-          if(base == max_base && qsize == max_qsize){
+          if(qsize == max_qsize){
             update_tlist.push_back(*rit);
           }
         }
@@ -339,7 +312,7 @@ namespace gr {
         int qsize,qidx,pld,sample_idx;
         uint64_t base;
         extract_tagObject(qidx,qsize,pld,sample_idx,base,*it);
-        if(base == d_retx_base && qsize == d_retx_table.size()){
+        if( qsize == d_retx_table.size()){
           total_size = sample_idx+1;
           matched_tags.push_back(*it);
         }

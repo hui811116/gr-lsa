@@ -162,12 +162,6 @@ enum SYSTEMSTATE{
       pmt::pmt_t msg=pmt::PMT_NIL; 
       msg = pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_out_buf,d_pkt_byte));
       // postfixing header information
-      /*d_qidx = d_out_buf[0];
-      d_qsize =d_out_buf[1];
-      d_base = d_out_buf[2]<<24;
-      d_base|= d_out_buf[3]<<16;
-      d_base|= d_out_buf[4]<<8;
-      d_base|= d_out_buf[5];*/
       d_qidx = d_out_buf[0]<<8;
       d_qidx|= d_out_buf[1];
       d_qsize= d_out_buf[2]<<8;

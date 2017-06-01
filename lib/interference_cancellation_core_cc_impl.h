@@ -34,7 +34,7 @@ namespace gr {
        friend class interference_cancellation_core_cc_impl;
        friend std::ostream & operator<<( std::ostream& out,const tagObject_t& obj)
        {
-         out << "index:"<<obj.d_idx<<" ,msg:"<<obj.d_msg<<std::endl;
+         out << "index:"<<obj.d_idx<<" ,msg:"<<obj.d_msg;
          return out;
        }
        tagObject_t(){d_idx = 0;d_msg = pmt::PMT_NIL;}
@@ -108,7 +108,6 @@ namespace gr {
       std::vector<tagObject_t> d_retx_tags;
       gr_complex* d_retx_buffer;
       int d_retx_buf_size;
-      uint64_t d_retx_base;
 
       int d_cross_len;
       // helper function definition
