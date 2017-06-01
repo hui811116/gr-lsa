@@ -26,8 +26,6 @@ include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
 list(APPEND lsa_sources
     eng_det_cc_impl.cc
-    header_payload_parser_cb_impl.cc
-    su_header_prefix_impl.cc
     interference_energy_detector_cc_impl.cc
     modified_polyphase_time_sync_cc_impl.cc
     modified_costas_loop_cc_impl.cc
@@ -36,12 +34,9 @@ list(APPEND lsa_sources
     burst_tagger_cc_impl.cc
     protocol_parser_b_impl.cc 
     correlate_sync_cc_impl.cc
-    symbol_queue_receiver_cc_impl.cc
-    symbol_level_ic_cc_impl.cc
     expand_symbal_to_sample_ff_impl.cc
     symbol_sync_receiver_cf_impl.cc
     preamble_prefixer.cc
-    packet_parser_b_impl.cc
     symbol_corrector_cc_impl.cc
     control_source_b_impl.cc
     app_simple.cc
@@ -56,10 +51,8 @@ list(APPEND lsa_sources
     coarse_sync_cc_impl.cc
     stat_report.cc
     prou_packet_sink_f_impl.cc
-    length_prefixer.cc
     interference_tagger_cc_impl.cc
     su_mac.cc
-    block_phy.cc
     prou_ring_queue_cc_impl.cc
     interference_cancellation_core_cc_impl.cc
     block_tagger_cc_impl.cc
@@ -97,13 +90,6 @@ include_directories(${CPPUNIT_INCLUDE_DIRS})
 list(APPEND test_lsa_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/test_lsa.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_lsa.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_length_prefixer.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_stat_report.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_chip_mapper.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_su_ctrl.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_block_mac.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_app_simple.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_preamble_prefixer.cc
     )
 
 add_executable(test-lsa ${test_lsa_sources})

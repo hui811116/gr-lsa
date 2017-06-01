@@ -18,8 +18,6 @@
 # Boston, MA 02110-1301, USA.
 install(FILES
     lsa_eng_det_cc.xml
-    lsa_header_payload_parser_cb.xml
-    lsa_su_header_prefix.xml
     lsa_interference_energy_detector_cc.xml
     lsa_modified_polyphase_time_sync_cc.xml
     lsa_modified_costas_loop_cc.xml
@@ -28,12 +26,9 @@ install(FILES
     lsa_burst_tagger_cc.xml
     lsa_protocol_parser_b.xml 
     lsa_correlate_sync_cc.xml
-    lsa_symbol_queue_receiver_cc.xml
-    lsa_symbol_level_ic_cc.xml
     lsa_expand_symbal_to_sample_ff.xml
     lsa_symbol_sync_receiver_cf.xml
     lsa_preamble_prefixer.xml
-    lsa_packet_parser_b.xml
     lsa_symbol_corrector_cc.xml
     lsa_control_source_b.xml
     lsa_app_simple.xml
@@ -48,10 +43,8 @@ install(FILES
     lsa_coarse_sync_cc.xml
     lsa_stat_report.xml
     lsa_prou_packet_sink_f.xml
-    lsa_length_prefixer.xml
     lsa_interference_tagger_cc.xml
     lsa_su_mac.xml
-    lsa_block_phy.xml
     lsa_prou_ring_queue_cc.xml
     lsa_interference_cancellation_core_cc.xml
     lsa_block_tagger_cc.xml

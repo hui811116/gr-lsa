@@ -27,26 +27,10 @@
 
 #include "qa_lsa.h"
 
-#include "qa_preamble_prefixer.h"
-#include "qa_app_simple.h"
-#include "qa_block_mac.h"
-#include "qa_su_ctrl.h"
-#include "qa_chip_mapper.h"
-#include "qa_stat_report.h"
-#include "qa_length_prefixer.h"
-
 CppUnit::TestSuite *
 qa_lsa::suite()
 {
   CppUnit::TestSuite *s = new CppUnit::TestSuite("lsa");
-
-  s->addTest(gr::lsa::qa_preamble_prefixer::suite());
-  s->addTest(gr::lsa::qa_app_simple::suite());
-  s->addTest(gr::lsa::qa_block_mac::suite());
-  s->addTest(gr::lsa::qa_su_ctrl::suite());
-  s->addTest(gr::lsa::qa_chip_mapper::suite());
-  s->addTest(gr::lsa::qa_stat_report::suite());
-  s->addTest(gr::lsa::qa_length_prefixer::suite());
 
   return s;
 }
