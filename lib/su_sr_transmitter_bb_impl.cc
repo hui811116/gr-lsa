@@ -113,7 +113,7 @@ namespace gr {
         return;
       }
       if(d_prou_present){
-        if(qidx==0 || qsize==0 || qsize!=d_retx_size || qidx>=d_retx_size){
+        if( (qidx==0&& qsize==0) || qsize!=d_retx_size || qidx>=d_retx_size){
           return;
         }else if(d_retx_size ==0){
           return;
