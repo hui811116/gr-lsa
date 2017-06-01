@@ -82,7 +82,7 @@ namespace gr {
       void enqueue(const srArq_t& arq);
       bool dequeue(int seq);
       pmt::pmt_t check_timeout();
-      
+      bool peek_front(int& len);
       // thread functions for retransmission
       bool create_retx_queue();
       pmt::pmt_t get_retx(int idx);

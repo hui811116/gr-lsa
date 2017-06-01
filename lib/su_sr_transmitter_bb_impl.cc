@@ -76,14 +76,7 @@ namespace gr {
         assert(!d_retx_queue.empty());
         noutput_items = d_retx_queue[d_retx_cnt].blob_length();
       }else{
-        it = d_arq_queue.begin();
-        if(it!=d_arq_queue.end()){
-          if(it->timeout()){
-            if(it->retry()<LSARETRYLIM){
-              noutput_items = it->blob_length();
-            }
-          }
-        }
+        
       }
       return noutput_items ;
     }
@@ -171,6 +164,22 @@ namespace gr {
         return pmt::PMT_NIL;
       }
       return d_retx_queue[idx].msg();
+    }
+
+    bool
+    su_sr_transmitter_bb_impl::peek_front(int& len)
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      std::list<srArq_t>::iterator it;
+      it = d_arq_queue.begin();
+        if(it!=d_arq_queue.end()){
+          if(it->timeout()){
+            if(it->retry()<LSARETRYLIM){
+              len = it->blob_length();
+            }
+          }
+        }
+      return !d_arq_queue.empty();
     }
 
     void
