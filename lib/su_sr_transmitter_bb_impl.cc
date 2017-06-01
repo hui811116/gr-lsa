@@ -104,19 +104,7 @@ namespace gr {
         // alert
         if(!d_prou_present){
           // build retransmission
-          if(d_arq_queue.empty()){
-            return;
-          }else{
-            d_retx_cnt= 0;
-            d_retx_table.clear();
-            d_retx_queue.clear();
-            d_retx_size=d_arq_queue.size();
-            d_retx_table.resize(d_retx_size,false);
-            for(it=d_arq_queue.begin();it!=d_arq_queue.end();++it){
-              d_retx_queue.push_back(*it);
-            }
-          }
-          d_prou_present = true;
+          d_prou_present = create_retx_queue();
         }
         return;
       }
@@ -127,6 +115,8 @@ namespace gr {
       if(d_prou_present){
         if(qidx==0 || qsize==0 || qsize!=d_retx_size || qidx>=d_retx_size){
           return;
+        }else if(d_retx_size ==0){
+          return;
         }
         if(d_retx_table[qidx] == false){
           d_retx_cnt++;
@@ -134,9 +124,7 @@ namespace gr {
           DEBUG<<"<SU SR TX>Received a retransmission, idx:"<<qidx<<" ,retx count:"<<d_retx_cnt<<"(expected:"<<d_retx_size<<")"<<std::endl;
           if(d_retx_cnt == d_retx_size){
             d_prou_present = false;
-            d_retx_table.clear();
-            d_retx_queue.clear();
-            d_arq_queue.clear();
+            clear_queue();
             DEBUG<<"<SU SR TX>Retransmission complete! resume to clear state"<<std::endl;
           }
         }
@@ -145,52 +133,70 @@ namespace gr {
         if(qidx!=0 || qsize!=0){
           return;
         }
-        for(it = d_arq_queue.begin();it!=d_arq_queue.end();++it){
-          if(it->seq()==seqno){
-            it = d_arq_queue.erase(it);
-            DEBUG<<"<SU SR TX>ACKed a matched sequence number:"<<seqno<<" ,pending:"<<d_arq_queue.size()<<std::endl;
-            break;
-          }
+        if(dequeue(seqno)){
+          // success
+        }else{
+          // failed
         }
       }
     }
 
-    int
-    su_sr_transmitter_bb_impl::work (int noutput_items,
-                       gr_vector_int &ninput_items,
-                       gr_vector_const_void_star &input_items,
-                       gr_vector_void_star &output_items)
+    bool
+    su_sr_transmitter_bb_impl::create_retx_queue()
     {
-      const unsigned char *in = (const unsigned char *) input_items[0];
-      unsigned char *out = (unsigned char *) output_items[0];
-      int nin = ninput_items[0];
-      int nout;
+      gr::thread::scoped_lock guard(d_mutex);
       std::list<srArq_t>::iterator it;
-      pmt::pmt_t nx_msg =pmt::PMT_NIL;
-      if(d_prou_present){
-        // should do retransmission
-        assert(!d_retx_queue.empty());
-        nx_msg = d_retx_queue[d_retx_cnt].msg();
-        size_t io(0);
-        const uint8_t* uvec = pmt::u8vector_elements(nx_msg,io);
-        memcpy(out,uvec,sizeof(char)*io);
-        uint8_t* qidx = (uint8_t*) &d_retx_cnt;
-        uint8_t* qsize= (uint8_t*) &d_retx_size;
-        // filling retransmission fields
-        out[LSAPHYLEN]  = qidx[1];
-        out[LSAPHYLEN+1]= qidx[0];
-        out[LSAPHYLEN+2]= qsize[1];
-        out[LSAPHYLEN+3]= qsize[0];
-        nout = io;
-        d_retx_cnt = (d_retx_cnt+1)%d_retx_size;
-      }else{
-        // check timeout and retry count
-        it = d_arq_queue.begin();
-        while(it!=d_arq_queue.end()){
-          // only need to check the begin
-          // if the begin haven't timeout, then the latter should not timeout!
-          // retry when timeout and not reaching retry limit
-          if(it->timeout()) {
+      if(d_arq_queue.empty()){
+            return false;
+          }else{
+            d_retx_cnt= 0;
+            d_retx_idx= 0;
+            d_retx_table.clear();
+            d_retx_queue.clear();
+            d_retx_size=d_arq_queue.size();
+            d_retx_table.resize(d_retx_size,false);
+            for(it=d_arq_queue.begin();it!=d_arq_queue.end();++it){
+              d_retx_queue.push_back(*it);
+            }
+          }
+          return true;
+    }
+
+    pmt::pmt_t
+    su_sr_transmitter_bb_impl::get_retx(int idx)
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      pmt::pmt_t msg = pmt::PMT_NIL;
+      if(idx>=d_retx_queue.size()){
+        return pmt::PMT_NIL;
+      }
+      return d_retx_queue[idx].msg();
+    }
+
+    void
+    su_sr_transmitter_bb_impl::clear_queue()
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      d_arq_queue.clear();
+      d_retx_table.clear();
+      d_retx_queue.clear();
+      d_retx_cnt =0;
+      d_retx_size =0;
+    }
+    void
+    su_sr_transmitter_bb_impl::enqueue(const srArq_t& arq)
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      d_arq_queue.push_back(arq);
+    }
+    pmt::pmt_t
+    su_sr_transmitter_bb_impl::check_timeout()
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      std::list<srArq_t>::iterator it = d_arq_queue.begin();
+      pmt::pmt_t nx_msg = pmt::PMT_NIL;
+      while(it!=d_arq_queue.end()){
+        if(it->timeout()) {
             //check retry count
             if(it->inc_retry()){
               // reaching limit, should abort...
@@ -207,7 +213,58 @@ namespace gr {
           }else{
             break;
           }
+      }
+      return nx_msg;
+    }
+
+    bool
+    su_sr_transmitter_bb_impl::dequeue(int seq)
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      std::list<srArq_t>::iterator it;
+      for(it = d_arq_queue.begin();it!=d_arq_queue.end();++it){
+        if(it->seq()==seq){
+          it = d_arq_queue.erase(it);
+          DEBUG<<"<SU SR TX>ACKed a matched sequence number:"<<seq<<" ,pending:"<<d_arq_queue.size()<<std::endl;
+          return true;
         }
+      }
+      return false;
+    }
+
+    int
+    su_sr_transmitter_bb_impl::work (int noutput_items,
+                       gr_vector_int &ninput_items,
+                       gr_vector_const_void_star &input_items,
+                       gr_vector_void_star &output_items)
+    {
+      const unsigned char *in = (const unsigned char *) input_items[0];
+      unsigned char *out = (unsigned char *) output_items[0];
+      int nin = ninput_items[0];
+      int nout;
+      pmt::pmt_t nx_msg =pmt::PMT_NIL;
+      if(d_prou_present){
+        // should do retransmission
+        assert(!d_retx_queue.empty());
+        nx_msg = get_retx(d_retx_idx);
+        if(pmt::eqv(nx_msg,pmt::PMT_NIL)){
+          throw std::runtime_error("WTF");
+        }
+        size_t io(0);
+        const uint8_t* uvec = pmt::u8vector_elements(nx_msg,io);
+        memcpy(out,uvec,sizeof(char)*io);
+        uint8_t* qidx = (uint8_t*) &d_retx_idx;
+        uint8_t* qsize= (uint8_t*) &d_retx_size;
+        // filling retransmission fields
+        out[LSAPHYLEN]  = qidx[1];
+        out[LSAPHYLEN+1]= qidx[0];
+        out[LSAPHYLEN+2]= qsize[1];
+        out[LSAPHYLEN+3]= qsize[0];
+        nout = io;
+        d_retx_idx = (d_retx_idx+1)%d_retx_size;
+      }else{
+        // check timeout and retry count
+        nx_msg = check_timeout();
         if(pmt::eqv(nx_msg,pmt::PMT_NIL)){
           // transmit new message
           uint8_t* u8_idx = (uint8_t*)&d_seq;
@@ -221,7 +278,7 @@ namespace gr {
           nx_msg = pmt::make_blob(d_buf,nout);
           d_seq = (d_seq == 0xffff)? 0:d_seq; // wrap around
           srArq_t temp_arq(d_seq++,nx_msg);
-          d_arq_queue.push_back(temp_arq);
+          enqueue(temp_arq);
           memcpy(out,d_buf,sizeof(char)*(nout) );
         }else{
           // send existing message

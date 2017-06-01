@@ -68,6 +68,7 @@ namespace gr {
       std::vector<srArq_t> d_retx_queue;
       std::vector<bool> d_retx_table;
       uint16_t d_retx_cnt;
+      uint16_t d_retx_idx;
       uint16_t d_retx_size;
       uint16_t d_seq;
       const std::string& d_tagname;      
@@ -75,6 +76,17 @@ namespace gr {
       bool d_prou_present;
       unsigned char d_buf[1024];
       bool d_debug;
+
+      // thread functions for d_arq_queue;
+      void clear_queue();
+      void enqueue(const srArq_t& arq);
+      bool dequeue(int seq);
+      pmt::pmt_t check_timeout();
+      
+      // thread functions for retransmission
+      bool create_retx_queue();
+      pmt::pmt_t get_retx(int idx);
+
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
