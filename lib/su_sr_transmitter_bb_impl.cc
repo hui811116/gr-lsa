@@ -79,6 +79,7 @@ namespace gr {
           // valid
         }else{
           // invalid
+          DEBUG<<"<SU SR TX>ERROR:In retransmission state but found no pending packets"<<std::endl;
         }
       }else{
         if(peek_front(noutput_items)){
@@ -102,6 +103,8 @@ namespace gr {
       int qidx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_index"),pmt::from_long(-1)));
       int qsize = pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_size"),pmt::from_long(-1)));
       std::list<srArq_t>::iterator it;
+      //DEBUG<<"<SU SR TX>msg_in: sensing:"<<sensing<<" ,seqno="<<seqno<<" ,qidx="<<qidx<<" qsize="<<qsize<<std::endl;
+      //DEBUG<<"<System info>queue size="<<d_arq_queue.size()<<" ,state:"<<d_prou_present<<" ,current_seq:"<<d_seq<<std::endl;
       if(sensing){
         // alert
         if(!d_prou_present){
@@ -120,6 +123,9 @@ namespace gr {
         }else if(d_retx_size ==0){
           return;
         }
+        if(d_retx_table.empty()){
+          throw std::runtime_error("WTF retx");
+        }
         if(d_retx_table[qidx] == false){
           d_retx_cnt++;
           d_retx_table[qidx] = true;
@@ -137,6 +143,7 @@ namespace gr {
         }
         if(dequeue(seqno)){
           // success
+          //DEBUG<<"<SU SR TX>ACKed a matched sequence number:"<<seqno<<" ,pending:"<<d_arq_queue.size()<<std::endl;
         }else{
           // failed
         }
@@ -220,13 +227,14 @@ namespace gr {
     su_sr_transmitter_bb_impl::check_timeout()
     {
       pmt::pmt_t nx_msg = pmt::PMT_NIL;
-      gr::thread::scoped_lock guard(d_mutex);
       std::list<srArq_t>::iterator it = d_arq_queue.begin();
+      gr::thread::scoped_lock guard(d_mutex);
       while(it!=d_arq_queue.end()){
         if(it->timeout()) {
             //check retry count
             if(it->inc_retry()){
               // reaching limit, should abort...
+              DEBUG<<"<SU SR TX>timeout..."<<*it<<std::endl;
               d_arq_queue.pop_front();
               it = d_arq_queue.begin();
             }else{
@@ -251,8 +259,7 @@ namespace gr {
       gr::thread::scoped_lock guard(d_mutex);
       for(it = d_arq_queue.begin();it!=d_arq_queue.end();++it){
         if(it->seq()==seq){
-          it = d_arq_queue.erase(it);
-          DEBUG<<"<SU SR TX>ACKed a matched sequence number:"<<seq<<" ,pending:"<<d_arq_queue.size()<<std::endl;
+          it = d_arq_queue.erase(it);          
           return true;
         }
       }
@@ -272,7 +279,7 @@ namespace gr {
       pmt::pmt_t nx_msg =pmt::PMT_NIL;
       if(d_prou_present){
         // should do retransmission
-        assert(!d_retx_queue.empty());
+        //assert(!d_retx_queue.empty());
         nx_msg = get_retx(d_retx_idx);
         if(pmt::eqv(nx_msg,pmt::PMT_NIL)){
           throw std::runtime_error("WTF");
@@ -308,6 +315,7 @@ namespace gr {
           enqueue(temp_arq);
           memcpy(out,d_buf,sizeof(char)*(nout) );
         }else{
+          //DEBUG<<"<SU SR TX>Retry..."<<std::endl;
           // send existing message
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(nx_msg,io);

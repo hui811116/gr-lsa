@@ -25,15 +25,20 @@
 #include <ctime>
 #define time_t long int
 #define LSARETRYLIM 10
-#define LSATIMEOUT 2*CLOCKS_PER_SEC
+#define LSATIMEOUT 5*CLOCKS_PER_SEC
 namespace gr {
   namespace lsa {
 
     class srArq_t{
       public:
+      friend class su_sr_transmitter_bb_impl;
+      friend std::ostream & operator <<(std::ostream& out,const srArq_t& aq){
+        out << "seq:"<<aq.d_noseq<<" ,created time:"<<aq.d_time<<" ,retry:"<<aq.d_retry<<" ,blob_size:"<<pmt::blob_length(aq.d_msg);
+        return out;
+      }
       srArq_t(){ d_noseq=0; d_time = std::clock();d_retry=0;d_msg = pmt::PMT_NIL;}
       srArq_t(const srArq_t& aq){d_noseq = aq.d_noseq; d_time = aq.d_time; d_retry =aq.d_retry;d_msg = aq.d_msg;}
-      srArq_t(uint16_t noseq,pmt::pmt_t msg){d_noseq = noseq; d_time = std::clock(); d_retry = 0;d_msg= msg;}
+      srArq_t(uint16_t noseq,const pmt::pmt_t& msg){d_noseq = noseq; d_time = std::clock(); d_retry = 0;d_msg= msg;}
       ~srArq_t(){}
       const srArq_t& operator=(const srArq_t& aq){
         d_noseq = aq.d_noseq; d_time = aq.d_time; d_retry = aq.d_retry; d_msg=aq.d_msg;

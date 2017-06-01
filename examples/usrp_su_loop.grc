@@ -264,7 +264,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>2048</value>
+      <value>100</value>
     </param>
   </block>
   <block>
@@ -613,7 +613,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"name=MyB210"</value>
+      <value>"name=NicB210"</value>
     </param>
   </block>
   <block>
@@ -1028,7 +1028,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(368, 456)</value>
+      <value>(360, 452)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1370,7 +1370,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(512, 224)</value>
+      <value>(464, 236)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1596,10 +1596,6 @@
       <value></value>
     </param>
     <param>
-      <key>burst</key>
-      <value>False</value>
-    </param>
-    <param>
       <key>comment</key>
       <value></value>
     </param>
@@ -1622,10 +1618,6 @@
     <param>
       <key>id</key>
       <value>lsa_modified_costas_loop_cc_0</value>
-    </param>
-    <param>
-      <key>tagname</key>
-      <value>"sensing"</value>
     </param>
     <param>
       <key>w</key>
@@ -1653,10 +1645,6 @@
     <param>
       <key>alias</key>
       <value></value>
-    </param>
-    <param>
-      <key>burst</key>
-      <value>False</value>
     </param>
     <param>
       <key>comment</key>
@@ -1689,10 +1677,6 @@
     <param>
       <key>init_phase</key>
       <value>nfilts/2</value>
-    </param>
-    <param>
-      <key>tagname</key>
-      <value>"sensing"</value>
     </param>
     <param>
       <key>loop_bw</key>
@@ -1790,7 +1774,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(392, 388)</value>
+      <value>(264, 388)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1810,14 +1794,10 @@
     </param>
   </block>
   <block>
-    <key>lsa_su_transmitter_bb</key>
+    <key>lsa_su_sr_transmitter_bb</key>
     <param>
       <key>alias</key>
       <value></value>
-    </param>
-    <param>
-      <key>bpp</key>
-      <value>64</value>
     </param>
     <param>
       <key>comment</key>
@@ -1837,7 +1817,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(592, 432)</value>
+      <value>(624, 464)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1845,7 +1825,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>lsa_su_transmitter_bb_0</value>
+      <value>lsa_su_sr_transmitter_bb_0</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -1856,8 +1836,47 @@
       <value>0</value>
     </param>
     <param>
-      <key>tag</key>
+      <key>tagname</key>
       <value>"packet_len"</value>
+    </param>
+  </block>
+  <block>
+    <key>lsa_su_tx_helper</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(416, 392)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_su_tx_helper_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
     </param>
   </block>
   <block>
@@ -1873,10 +1892,6 @@
     <param>
       <key>affinity</key>
       <value></value>
-    </param>
-    <param>
-      <key>debug</key>
-      <value>False</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1897,10 +1912,6 @@
     <param>
       <key>id</key>
       <value>lsa_symbol_sync_receiver_cf_0</value>
-    </param>
-    <param>
-      <key>buf_verbose</key>
-      <value>False</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -1943,7 +1954,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1384, 264)</value>
+      <value>(1304, 260)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -4928,7 +4939,7 @@
   </connection>
   <connection>
     <source_block_id>blocks_stream_to_tagged_stream_0</source_block_id>
-    <sink_block_id>lsa_su_transmitter_bb_0</sink_block_id>
+    <sink_block_id>lsa_su_sr_transmitter_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -5030,15 +5041,21 @@
   </connection>
   <connection>
     <source_block_id>lsa_su_ctrl_0</source_block_id>
-    <sink_block_id>lsa_su_transmitter_bb_0</sink_block_id>
+    <sink_block_id>lsa_su_tx_helper_0</sink_block_id>
     <source_key>ctrl_out</source_key>
-    <sink_key>msg_in</sink_key>
+    <sink_key>pdu_in</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_su_transmitter_bb_0</source_block_id>
+    <source_block_id>lsa_su_sr_transmitter_bb_0</source_block_id>
     <sink_block_id>lsa_chip_mapper_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_su_tx_helper_0</source_block_id>
+    <sink_block_id>lsa_su_sr_transmitter_bb_0</sink_block_id>
+    <source_key>msg_out</source_key>
+    <sink_key>msg_in</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>
