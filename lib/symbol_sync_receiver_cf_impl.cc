@@ -198,7 +198,7 @@ enum SYSTEMSTATE{
       float *out_phase = NULL;
       float *out_freq = NULL;
       int nfix = (noutput_items<ninput_items[0])? noutput_items : ninput_items[0];
-      const uint64_t nread = nitems_read(0);
+      //const uint64_t nread = nitems_read(0);
       bool have_sync = (input_items.size()>=3);
       bool out_sync = (output_items.size()>=2);
       if(have_sync){
@@ -364,11 +364,11 @@ enum SYSTEMSTATE{
         }
       }
       std::vector<tag_t> tags;
-      get_tags_in_range(tags,0,nread,nread+nfix);
+      get_tags_in_window(tags,0,0,nfix);
       if(have_sync){
         if(out_sync){
           for(int i=0;i<tags.size();++i){
-            int offset = tags[i].offset - nread;
+            long int offset = tags[i].offset - nitems_read(0);
             add_item_tag(0,nitems_written(0)+offset,tags[i].key,tags[i].value);
           }
           produce(0,nfix);
