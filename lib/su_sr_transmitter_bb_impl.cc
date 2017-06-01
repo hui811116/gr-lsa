@@ -73,10 +73,19 @@ namespace gr {
       int noutput_items = ninput_items[0]+LSAPHYLEN+LSAMACLEN;
       std::list<srArq_t>::iterator it;
       if(d_prou_present){
-        assert(!d_retx_queue.empty());
-        noutput_items = d_retx_queue[d_retx_cnt].blob_length();
+        //assert(!d_retx_queue.empty());
+        //noutput_items = d_retx_queue[d_retx_cnt].blob_length();
+        if(retx_peek_front(noutput_items)){
+          // valid
+        }else{
+          // invalid
+        }
       }else{
-        
+        if(peek_front(noutput_items)){
+          // has something
+        }else{
+          // has nothing
+        }
       }
       return noutput_items ;
     }
@@ -137,8 +146,8 @@ namespace gr {
     bool
     su_sr_transmitter_bb_impl::create_retx_queue()
     {
-      gr::thread::scoped_lock guard(d_mutex);
       std::list<srArq_t>::iterator it;
+      gr::thread::scoped_lock guard(d_mutex);
       if(d_arq_queue.empty()){
             return false;
           }else{
@@ -158,19 +167,28 @@ namespace gr {
     pmt::pmt_t
     su_sr_transmitter_bb_impl::get_retx(int idx)
     {
-      gr::thread::scoped_lock guard(d_mutex);
       pmt::pmt_t msg = pmt::PMT_NIL;
+      gr::thread::scoped_lock guard(d_mutex);
       if(idx>=d_retx_queue.size()){
         return pmt::PMT_NIL;
       }
       return d_retx_queue[idx].msg();
     }
+    bool
+    su_sr_transmitter_bb_impl::retx_peek_front(int& len)
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      if(d_retx_size!=0){
+        len = d_retx_queue[d_retx_idx].blob_length();
+      }
+      return !d_retx_queue.empty();
+    }
 
     bool
     su_sr_transmitter_bb_impl::peek_front(int& len)
     {
-      gr::thread::scoped_lock guard(d_mutex);
       std::list<srArq_t>::iterator it;
+      gr::thread::scoped_lock guard(d_mutex);
       it = d_arq_queue.begin();
         if(it!=d_arq_queue.end()){
           if(it->timeout()){
@@ -201,9 +219,9 @@ namespace gr {
     pmt::pmt_t
     su_sr_transmitter_bb_impl::check_timeout()
     {
+      pmt::pmt_t nx_msg = pmt::PMT_NIL;
       gr::thread::scoped_lock guard(d_mutex);
       std::list<srArq_t>::iterator it = d_arq_queue.begin();
-      pmt::pmt_t nx_msg = pmt::PMT_NIL;
       while(it!=d_arq_queue.end()){
         if(it->timeout()) {
             //check retry count
@@ -229,8 +247,8 @@ namespace gr {
     bool
     su_sr_transmitter_bb_impl::dequeue(int seq)
     {
-      gr::thread::scoped_lock guard(d_mutex);
       std::list<srArq_t>::iterator it;
+      gr::thread::scoped_lock guard(d_mutex);
       for(it = d_arq_queue.begin();it!=d_arq_queue.end();++it){
         if(it->seq()==seq){
           it = d_arq_queue.erase(it);
@@ -259,18 +277,18 @@ namespace gr {
         if(pmt::eqv(nx_msg,pmt::PMT_NIL)){
           throw std::runtime_error("WTF");
         }
+        uint8_t* qidx = (uint8_t*) &d_retx_idx;
+        uint8_t* qsize= (uint8_t*) &d_retx_size;
+        d_retx_idx = (d_retx_idx+1)%d_retx_size;
         size_t io(0);
         const uint8_t* uvec = pmt::u8vector_elements(nx_msg,io);
         memcpy(out,uvec,sizeof(char)*io);
-        uint8_t* qidx = (uint8_t*) &d_retx_idx;
-        uint8_t* qsize= (uint8_t*) &d_retx_size;
         // filling retransmission fields
         out[LSAPHYLEN]  = qidx[1];
         out[LSAPHYLEN+1]= qidx[0];
         out[LSAPHYLEN+2]= qsize[1];
         out[LSAPHYLEN+3]= qsize[0];
         nout = io;
-        d_retx_idx = (d_retx_idx+1)%d_retx_size;
       }else{
         // check timeout and retry count
         nx_msg = check_timeout();

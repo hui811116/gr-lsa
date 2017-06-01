@@ -86,6 +86,7 @@ namespace gr {
       // thread functions for retransmission
       bool create_retx_queue();
       pmt::pmt_t get_retx(int idx);
+      bool retx_peek_front(int& len);
 
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
