@@ -261,8 +261,8 @@ namespace gr {
       // NOTE: should reserved some samples in case timing offset
       for(int i=0;i<d_retx_table.size();++i){
         pmt::pmt_t dict = d_retx_table[i].msg();
-        int32_t sync_idx  = d_retx_table[i].index();
-        int32_t sample_idx= pmt::to_long(pmt::dict_ref(dict,pmt::intern("sample_index"),pmt::from_long(-1)));
+        int sync_idx  = d_retx_table[i].index();
+        int sample_idx= pmt::to_long(pmt::dict_ref(dict,pmt::intern("sample_index"),pmt::from_long(-1)));
         int pld = pmt::to_long(pmt::dict_ref(dict,pmt::intern("payload"),pmt::from_long(0)));
         int pkt_len = (pld+LSAPHYSYMBOLLEN)*d_sps;
         int copy_len= (pld+LSAPHYSYMBOLLEN)*d_sps;
@@ -270,13 +270,16 @@ namespace gr {
         if(pld==0 || sample_idx<0){
           throw std::runtime_error("<IC Core DEBUG>Interference cancellation core found invalid payload length or sample idx");
         }
-        if(i==0){
+        /*if(i==0){
           // handle cross correlation samples
           pkt_len += d_cross_len*d_sps;
           copy_len += (d_cross_len*d_sps+reserved_length);
         }else{
           copy_len += reserved_length;
-        }
+        }*/
+        pkt_len += d_cross_len*d_sps;
+        copy_len += (d_cross_len*d_sps+ reserved_length);
+
         if( (sample_idx+1<copy_len) || (sync_idx+1<copy_len) ){
           DEBUG<<"<IC Core DEBUG>do_ic: samples or sync less than required size, abort..."<<std::endl;
           return false;
