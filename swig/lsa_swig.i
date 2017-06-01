@@ -11,11 +11,11 @@
 //load generated python docstrings
 %include "lsa_swig_doc.i"
 
-%{
-#include "gnuradio/digital/constellation.h"
-#include "gnuradio/filter/fir_filter.h"
+
+%include "gnuradio/digital/constellation.h"
+%include "gnuradio/filter/fir_filter.h"
 #include "gnuradio/blocks/count_bits.h"
-%}
+
 
 //#include "gnuradio/fft/fft.h"
 
