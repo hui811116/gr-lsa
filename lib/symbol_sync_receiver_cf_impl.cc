@@ -172,7 +172,7 @@ enum SYSTEMSTATE{
       d_qidx|= d_out_buf[1];
       d_qsize= d_out_buf[2]<<8;
       d_qsize|=d_out_buf[3];
-      d_base = d_out_buf[4];
+      d_base = d_out_buf[4]<<8;
       d_base|= d_out_buf[5];
 
       message_port_pub(d_msg_port, msg);

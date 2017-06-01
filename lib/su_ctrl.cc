@@ -63,7 +63,8 @@ static const unsigned char LSA_CTRL= 0x06;
         pmt::pmt_t blob;
         int qsize,qidx;
         unsigned int base;
-        if(pmt::eqv(key,pmt::intern("LSA_hdr")) && pmt::is_blob(value)){
+        if(pmt::is_blob(value)){
+          //DEBUG<<"<SU CTRL> received a blob"<<std::endl;
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(value,io);
           if(io==2){
@@ -104,6 +105,7 @@ static const unsigned char LSA_CTRL= 0x06;
                 d_prou_present = false;
               }
             }else{
+              DEBUG<<"<SU CTRL DEBUG>CRC check failed:"<<qidx<<" ,"<<qsize<<" ,"<<base<<std::endl;
               return ;
             }
           }else{
@@ -147,13 +149,12 @@ static const unsigned char LSA_CTRL= 0x06;
       }
       bool crc_check(int qidx,int qsize,unsigned int base)
       {
-        if(qidx>=qsize){
+        if(qidx!=0 && qidx>=qsize){
           return false;
         }else if(base>BASEMAX){
           return false;
-        }else{
-          return true;
         }
+        return true;
       }
 
       pmt::pmt_t d_msg_in;

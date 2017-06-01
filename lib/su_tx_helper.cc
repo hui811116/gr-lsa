@@ -98,7 +98,7 @@ namespace gr {
 
     su_tx_helper::sptr 
     su_tx_helper::make(){
-      return gnuradio::get_initial_sptr(new su_tx_helper());
+      return gnuradio::get_initial_sptr(new su_tx_helper_impl());
     }
 
   } /* namespace lsa */

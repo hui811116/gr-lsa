@@ -131,11 +131,13 @@ namespace gr {
         if(d_retx_table[qidx] == false){
           d_retx_cnt++;
           d_retx_table[qidx] = true;
+          DEBUG<<"<SU SR TX>Received a retransmission, idx:"<<qidx<<" ,retx count:"<<d_retx_cnt<<"(expected:"<<d_retx_size<<")"<<std::endl;
           if(d_retx_cnt == d_retx_size){
             d_prou_present = false;
             d_retx_table.clear();
             d_retx_queue.clear();
             d_arq_queue.clear();
+            DEBUG<<"<SU SR TX>Retransmission complete! resume to clear state"<<std::endl;
           }
         }
       }else{
@@ -146,6 +148,7 @@ namespace gr {
         for(it = d_arq_queue.begin();it!=d_arq_queue.end();++it){
           if(it->seq()==seqno){
             it = d_arq_queue.erase(it);
+            DEBUG<<"<SU SR TX>ACKed a matched sequence number:"<<seqno<<" ,pending:"<<d_arq_queue.size()<<std::endl;
             break;
           }
         }
@@ -211,6 +214,7 @@ namespace gr {
           // debugging purpose
           memcpy(d_buf+LSAPHYLEN,LSAMAC,sizeof(char)*LSAMACLEN);
           memcpy(d_buf+LSAPHYLEN+LSAMACLEN,in,sizeof(char)*nin);
+          d_buf[5] = (unsigned char)(nin+LSAMACLEN);
           d_buf[LSAPHYLEN+4] = u8_idx[1];
           d_buf[LSAPHYLEN+5] = u8_idx[0];
           nout = nin + LSAPHYLEN + LSAMACLEN;
@@ -218,6 +222,7 @@ namespace gr {
           d_seq = (d_seq == 0xffff)? 0:d_seq; // wrap around
           srArq_t temp_arq(d_seq++,nx_msg);
           d_arq_queue.push_back(temp_arq);
+          memcpy(out,d_buf,sizeof(char)*(nout) );
         }else{
           // send existing message
           size_t io(0);
