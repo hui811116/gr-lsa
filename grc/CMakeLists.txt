@@ -49,5 +49,6 @@ install(FILES
     lsa_interference_cancellation_core_cc.xml
     lsa_block_tagger_cc.xml
     lsa_su_sr_transmitter_bb.xml
-    lsa_su_tx_helper.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_su_tx_helper.xml
+    lsa_ic_critical_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

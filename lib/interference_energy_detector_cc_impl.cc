@@ -57,7 +57,7 @@ namespace gr {
       d_debug = debug;
       const size_t max_size = 32*1024;
       d_energy_reg = (float*) volk_malloc( sizeof(float)*max_size, volk_get_alignment());
-      set_tag_propagation_policy(TPP_DONT);
+      //set_tag_propagation_policy(TPP_DONT);
       v_stddev = (float*) volk_malloc(sizeof(float),volk_get_alignment());
       v_mean = (float*) volk_malloc(sizeof(float),volk_get_alignment());
     }

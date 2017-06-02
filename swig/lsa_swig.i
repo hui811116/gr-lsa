@@ -54,6 +54,7 @@
 #include "lsa/block_tagger_cc.h"
 #include "lsa/su_sr_transmitter_bb.h"
 #include "lsa/su_tx_helper.h"
+#include "lsa/ic_critical_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -125,3 +126,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, block_tagger_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_sr_transmitter_bb);
 %include "lsa/su_tx_helper.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, su_tx_helper);
+%include "lsa/ic_critical_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, ic_critical_cc);

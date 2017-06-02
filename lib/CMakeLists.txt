@@ -57,7 +57,8 @@ list(APPEND lsa_sources
     interference_cancellation_core_cc_impl.cc
     block_tagger_cc_impl.cc
     su_sr_transmitter_bb_impl.cc
-    su_tx_helper.cc )
+    su_tx_helper.cc
+    ic_critical_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

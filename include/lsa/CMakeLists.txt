@@ -54,5 +54,6 @@ install(FILES
     interference_cancellation_core_cc.h
     block_tagger_cc.h
     su_sr_transmitter_bb.h
-    su_tx_helper.h DESTINATION include/lsa
+    su_tx_helper.h
+    ic_critical_cc.h DESTINATION include/lsa
 )
