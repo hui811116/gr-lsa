@@ -233,10 +233,6 @@ void
       get_tags_in_window(tags, 0, 0,
                         d_sps*noutput_items,
                         pmt::intern("time_est"));
-      /*std::vector<tag_t> intf_tags;
-      get_tags_in_window(intf_tags, 0,0,
-                        d_sps*noutput_items,
-                        d_intf_tagname);*/
       
       const uint64_t nread = nitems_read(0);
 
@@ -254,14 +250,7 @@ void
             tags.erase(tags.begin());
           }
         }
-        /*if(!intf_tags.empty()) {
-          size_t offset = intf_tags[0].offset-nread;
-          if((offset >= (size_t)count) && (offset < (size_t)(count + d_sps))) {
-            d_intf_state = pmt::to_bool(intf_tags[0].value);
-            intf_tags.erase(intf_tags.begin());
-          }
-        }*/
-
+     
   while(d_out_idx < d_osps) {
 
     d_filtnum = (int)floor(d_k);
@@ -314,11 +303,7 @@ if(output_items.size() == 2) {
   error_r = out[i].real() * diff.real();
   error_i = out[i].imag() * diff.imag();
   d_error = (error_i + error_r) / 2.0;       // average error from I&Q channel
-
-  /*if( d_intf_state ){
-    d_error = 0; //forced to zero to stop updating
-  }*/
-
+  
         // Run the control loop to update the current phase (k) and
         // tracking rate estimates based on the error value
         // Interpolating here to update rates for ever sps.

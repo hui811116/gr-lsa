@@ -38,7 +38,7 @@ namespace gr {
 
     static const int VOELEN = 128;
     static const int MAXLEN = (127+6)*8*8/2*4;
-    static const int COPYMAX= MAXLEN *128;
+    static const int COPYMAX= MAXLEN *1024;
 
     prou_ring_queue_cc::sptr
     prou_ring_queue_cc::make(float thres, bool debug)

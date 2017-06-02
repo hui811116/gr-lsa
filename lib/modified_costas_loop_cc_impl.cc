@@ -211,10 +211,10 @@ namespace gr {
 
       gr_complex nco_out;
       std::vector<tag_t> tags,voe_tags, block_tags;
-      get_tags_in_range(voe_tags,0,nread,nread+noutput_items,d_voe_tag);
-      get_tags_in_range(block_tags,0,nread,nread+noutput_items,d_block_tag);
+      get_tags_in_range(voe_tags,0,nread,nread+nin,d_voe_tag);
+      get_tags_in_range(block_tags,0,nread,nread+nin,d_block_tag);
       get_tags_in_range(tags, 0, nread,
-                        nread+noutput_items,
+                        nread+nin,
                         pmt::intern("phase_est"));
 
       for(int i=0;i<voe_tags.size();++i){
