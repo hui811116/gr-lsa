@@ -284,6 +284,8 @@ namespace gr {
         if(pmt::eqv(nx_msg,pmt::PMT_NIL)){
           throw std::runtime_error("WTF");
         }
+        // FIXME
+        // consider a retry count to reduce retransmission time
         uint8_t* qidx = (uint8_t*) &d_retx_idx;
         uint8_t* qsize= (uint8_t*) &d_retx_size;
         d_retx_idx = (d_retx_idx+1)%d_retx_size;

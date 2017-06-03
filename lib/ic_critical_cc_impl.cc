@@ -111,10 +111,12 @@ namespace gr {
       std::list<hdr_t>::reverse_iterator rit;
       std::map<uint32_t,int> count_map;
       std::map<uint32_t,int>::iterator map_it;
+      //DEBUG<<"<IC Crit>Processing tag--"<<new_tag<<std::endl;
       if(d_retx_candidate.size()>=d_min_process){
-        DEBUG<<"<IC Crit>Processing Retransmission blocks"<<std::endl;
+        //DEBUG<<"<IC Crit>Processing Retransmission blocks"<<std::endl;
         if(d_retx_tag.empty()){
           // initialization
+          DEBUG<<"<IC Crit>Initialize retransmission collecting"<<std::endl;
           int max_qsize =0;
           int max_cnt =0;
           for(rit = d_retx_candidate.rbegin();rit!=d_retx_candidate.rend();++rit){
@@ -124,7 +126,7 @@ namespace gr {
               count_map.insert(std::pair<uint32_t,int>(tmp_qsize,1));
             }else{
               int new_cnt = map_it->second +1;
-              count_map[map_it->first] = new_cnt;
+              count_map[tmp_qsize] = new_cnt;
               if(new_cnt > max_cnt){
                 max_cnt = new_cnt;
                 max_qsize = map_it->first; 
@@ -134,17 +136,19 @@ namespace gr {
           if(max_cnt==0){
             return false;
           }
+          //DEBUG<<"<IC Crit>Retransmission queue size maximum found:"<<max_qsize<<std::endl;
           d_retx_cnt=0;
           d_retx_tag.clear();
           d_retx_block.clear();
-          d_retx_tag.resize(max_cnt);
-          d_retx_block.resize(max_cnt);
+          d_retx_tag.resize(max_qsize);
+          d_retx_block.resize(max_qsize);
           for(rit=d_retx_candidate.rbegin();rit!=d_retx_candidate.rend();++rit){
             int tmp_qsize = pmt::to_long(pmt::dict_ref(rit->msg(),pmt::intern("queue_size"),pmt::from_long(-1)));
             int tmp_qidx = pmt::to_long(pmt::dict_ref(rit->msg(),pmt::intern("queue_index"),pmt::from_long(-1)));
-            if(d_retx_tag[tmp_qidx].empty()){
+            if(tmp_qsize == max_qsize && d_retx_tag[tmp_qidx].empty()){
               d_retx_tag[tmp_qidx] = *rit;
               d_retx_cnt++;
+              //DEBUG<<"<IC Crit>Retx tags handling---add idx:"<<tmp_qidx<<" ,expected size:"<<d_retx_tag.size()<<" ,current received:"<<d_retx_cnt<<std::endl;
             }
           }
         }else{
@@ -157,9 +161,10 @@ namespace gr {
           }else if(d_retx_tag[qidx].empty()){
             d_retx_tag[qidx]=new_tag;
             d_retx_cnt++;
+            //DEBUG<<"<IC Crit>Retx tags handling---add idx:"<<qidx<<" ,expected size:"<<d_retx_tag.size()<<" ,current received:"<<d_retx_cnt<<std::endl;
           }
         }
-        if(d_retx_tag.empty() && d_retx_tag.size()==d_retx_cnt){
+        if(!d_retx_tag.empty() && d_retx_tag.size()==d_retx_cnt){
           // received all retransmission !!
           // should prepare all required information
           DEBUG<<"<IC Crit> Retransmission received, retx_size="<<d_retx_tag.size()<<std::endl;
@@ -261,7 +266,7 @@ namespace gr {
         }else if(qsize!=0 && qidx>=qsize){
           continue;
         }
-        DEBUG<<"<DEBUG> new tag--"<<i<<"--"<<new_tags[i]<<std::endl;
+        //DEBUG<<"<DEBUG> new tag--"<<i<<"--"<<new_tags[i]<<std::endl;
         switch(d_state){
           case FREE:
           d_tag_list.push_back(new_tags[i]);
@@ -323,7 +328,7 @@ namespace gr {
                 d_voe_state = true;
                 d_voe_cnt=0;
                 d_state = SUFFERING;
-                DEBUG<<"<IC Crit>Detect a interfering signal"<<std::endl;
+                DEBUG<<"<IC Crit>Detect interfering signals"<<std::endl;
               }
             }else{
               d_voe_cnt =0;
@@ -336,8 +341,9 @@ namespace gr {
               if(d_voe_cnt>=d_voe_min){
                 d_voe_state = false;
                 d_voe_cnt =0;
+                reset_retx();
                 d_state = SEARCH_RETX;
-                DEBUG<<"<IC Crit>Detect end of interference"<<std::endl;
+                DEBUG<<"<IC Crit>Detect the end of interference"<<std::endl;
               }
             }else{
               d_voe_cnt=0;
