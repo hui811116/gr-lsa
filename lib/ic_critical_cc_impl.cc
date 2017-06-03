@@ -45,10 +45,10 @@ namespace gr {
     static const int d_min_process = 16;
 
     ic_critical_cc::sptr
-    ic_critical_cc::make(float thres,bool debug)
+    ic_critical_cc::make(float thres, int cross_len, int sps,bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new ic_critical_cc_impl(thres,debug));
+        (new ic_critical_cc_impl(thres,cross_len,sps,debug));
     }
 
     /*
@@ -56,7 +56,7 @@ namespace gr {
      */
     static int ios[] = {sizeof(gr_complex),sizeof(float),sizeof(float),sizeof(float)};
     static std::vector<int> iosig(ios,ios+sizeof(ios)/sizeof(int));
-    ic_critical_cc_impl::ic_critical_cc_impl(float thres,bool debug)
+    ic_critical_cc_impl::ic_critical_cc_impl(float thres,int cross_len,int sps,bool debug)
       : gr::block("ic_critical_cc",
               gr::io_signature::makev(4, 4, iosig),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
@@ -76,6 +76,17 @@ namespace gr {
       d_voe_cnt =0;
 
       d_retx_mem = new gr_complex[d_cap];
+      d_intf_mem = new gr_complex[d_cap];
+      d_intf_idx =0;
+
+      if(cross_len<=0){
+        throw std::invalid_argument("Invalid cross length");
+      }
+      d_cross_len = cross_len;
+      if(sps<=0){
+        throw std::invalid_argument("Invalid samples per symbol");
+      }
+      d_sps = sps;
       reset_retx();
       set_threshold(thres);
       set_tag_propagation_policy(TPP_DONT);
@@ -91,6 +102,7 @@ namespace gr {
       delete [] d_phase_mem;
       delete [] d_freq_mem;
       delete [] d_retx_mem;
+      delete [] d_intf_mem;
     }
 
     void
@@ -182,6 +194,108 @@ namespace gr {
       d_retx_idx=0;
     }
 
+    bool
+    ic_critical_cc_impl::init_intf()
+    {
+      d_intf_idx =0;
+      d_intf_first_hdr=false;
+      std::list<hdr_t>::reverse_iterator rit=d_tag_list.rbegin();
+      std::list<block_t>::iterator bit_s;
+      std::list<block_t>::iterator bit_p;
+      // calculating correct block index
+      int block_offset =0;
+      while(rit!=d_tag_list.rend()){
+        pmt::pmt_t msg = rit->msg();
+        uint64_t id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("block_id"),pmt::from_uint64(0xffffffffffff)));
+        uint32_t idx= rit->index();
+        bit_s = d_smp_list.begin();
+        bit_p = d_sync_list.begin();
+        while(bit_s!=d_smp_list.end()){
+          if(bit_s->id()==id){
+            break;
+          }
+          bit_s++;
+        }
+        while(bit_p!=d_sync_list.end()){
+          if(bit_p->id()==id){
+            break;
+          }
+          bit_p++;
+        }
+        if(bit_p!=d_sync_list.end() && bit_s!=d_smp_list.end()){
+          // both sync and sample have matched block index
+          block_offset = idx;
+          break;
+        }
+        rit++;
+      }
+      if(rit==d_tag_list.rend() || bit_s==d_smp_list.end() || bit_p == d_sync_list.end()){
+        // failed
+        return false;
+      }
+      int copy_len = bit_s->index()+block_offset;
+      int copy_sync= bit_p->index()+block_offset;
+      // recored begin idx
+      while(copy_len!=d_in_idx){
+        d_intf_mem[d_intf_idx++] = d_in_mem[copy_len];
+        copy_len = (copy_len+1)%d_cap;
+      }
+      // FIXME
+      // avg freq?
+      // record clean phase?
+      while(copy_sync!=d_sync_idx){
+        copy_sync = (copy_sync+1)%d_cap;
+      }
+      return true;
+    }
+
+    bool
+    ic_critical_cc_impl::update_intf()
+    {
+      if(!d_intf_first_hdr){
+        return false;
+      }
+      std::list<hdr_t>::reverse_iterator rit = d_tag_list.rbegin();
+      std::list<block_t>::iterator bit_s,bit_p;
+      int block_offset=0;
+      while(rit!=d_tag_list.rend()){
+        pmt::pmt_t msg = rit->msg();
+        uint64_t id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("block_id"),pmt::from_uint64(0xffffffffffff)));
+        int32_t idx = rit->index();
+        bit_s = d_smp_list.begin();
+        bit_p = d_sync_list.begin();
+        while(bit_s!=d_smp_list.end()){
+          if(id==bit_s->id()){
+            break;
+          }
+          bit_s++;
+        }
+        while(bit_p!=d_sync_list.end()){
+          if(id==bit_p->id()){
+            break;
+          }
+        }
+        if(bit_s!=d_smp_list.end()&&bit_p!=d_sync_list.end()){
+          // found a matched block id
+          block_offset = idx;
+          break;
+        }
+        rit++;
+      }
+      if(bit_s==d_smp_list.end() || bit_p==d_sync_list.end() || rit == d_tag_list.rend()){
+        // failed 
+        return false;
+      }
+      // success to record a valid header after interference occur
+      d_intf_first_hdr = true;
+      // FIXME
+      // try to lock this portion and record the phase and freq
+      int copy_len = bit_p->index()+block_offset; 
+      // average of the freq
+      // and record the end phase
+      return true;
+    }
+
     void
     ic_critical_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
@@ -227,7 +341,7 @@ namespace gr {
         case FREE:
           while(count_s<nin_s){
             assert(d_voe_state == false);
-            if(voe[count_s++]>d_threshold){
+            if(voe[count_s]>d_threshold){
               d_voe_cnt++;
               if(d_voe_cnt>=d_voe_min){
                 d_voe_state = true;
@@ -237,18 +351,24 @@ namespace gr {
                 <<" ,block_idx="<<d_block_idx<<std::endl;
                 // FIXME
                 // find the closet clean header before interference occur
-                state_interrupt = true;
-                break; // jump out from loop
+                if(init_intf()){
+                  state_interrupt = true;
+                  break; // jump out from loop
+                }else{
+                  // no available header information for sync
+                }
               }
             }else{
               d_voe_cnt =0;
             }
+            count_s++;
           }
         break;
         case SUFFERING:
           while(count_s<nin_s){
+            d_intf_mem[d_intf_idx++] = in[count_s];
             assert(d_voe_state == true);
-            if(voe[count_s++]<d_threshold){
+            if(voe[count_s]<d_threshold){
               d_voe_cnt++;
               if(d_voe_cnt>=d_voe_min){
                 d_voe_state = false;
@@ -265,14 +385,21 @@ namespace gr {
             }else{
               d_voe_cnt=0;
             }
+            count_s++;
+            if(d_intf_idx==d_cap){
+              // buffer full, but still in this state
+              next_state = FREE;
+              state_interrupt = true;
+              break;
+            }
           }
         break;
         case SEARCH_RETX:
           while(count_s<nin_s){
-            // do nothing
+            d_intf_mem[d_intf_idx++] = in[count_s];
             // FIXME
             // add something to detect interference during retransmission process
-            if(!d_voe_state && voe[count_s++]>d_threshold){
+            if(!d_voe_state && voe[count_s]>d_threshold){
               d_voe_cnt++;
               if(d_voe_cnt>=d_voe_min){
                 d_voe_state = true;
@@ -280,7 +407,7 @@ namespace gr {
                 DEBUG<<"<IC Crit> Detect an interfering event during retransmission state"
                 <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
               }
-            }else if(d_voe_state && voe[count_s++]<d_threshold){
+            }else if(d_voe_state && voe[count_s]<d_threshold){
               d_voe_cnt++;
               if(d_voe_cnt>=d_voe_min){
                 d_voe_state = false;
@@ -290,6 +417,12 @@ namespace gr {
               }
             }else{
               d_voe_cnt=0;
+            }
+            count_s++;
+            if(d_intf_idx == d_cap){
+              next_state = FREE;
+              state_interrupt = true;
+              break;
             }
           }
         break;
@@ -309,11 +442,9 @@ namespace gr {
         d_block_idx++;
         // block index is generated by sample stream
       }
-      if(state_interrupt){
+      count_p = (state_interrupt)? std::min(nin_p,count_s) : nin_p;
         // when state change, phase stream should follow count_s 
         // otherwise, just consume until a block tag found
-        count_p = std::min(nin_p,count_s);
-      }
       for(int i=0;i<count_p;++i){
         d_phase_mem[d_sync_idx] = phase[i];
         d_freq_mem[d_sync_idx] = freq[i];
@@ -326,9 +457,10 @@ namespace gr {
         }
       }
       // handling tags
-      get_tags_in_window(hdr_tags,2,0,count_p);
       hdr_t tmp_hdr;
       std::vector<hdr_t> new_tags;
+      if(count_p!=0){
+        get_tags_in_window(hdr_tags,2,0,count_p);
       for(int i=0;i<hdr_tags.size();++i){
         if(!pmt::eqv(d_block_tag,hdr_tags[i].key)){
           int offset = hdr_tags[i].offset - nitems_read(2);
@@ -350,6 +482,7 @@ namespace gr {
       }
       if(!tmp_hdr.empty()){
         new_tags.push_back(tmp_hdr);
+      }
       }
       // tag size control
       for(int i=0;i<new_tags.size();++i){
@@ -379,7 +512,6 @@ namespace gr {
             }
           break;
           case SEARCH_RETX:
-            //do nothing
             if(qsize==0){
               if(!d_retx_tag.empty()){
                 // this means retransmission is end
@@ -393,6 +525,10 @@ namespace gr {
               d_do_ic = detect_ic_chance(new_tags[i]);
             }
             d_tag_list.push_back(new_tags[i]);
+            if(update_intf()){
+              //FIXME
+              // ready for one interference cancellation block
+            }
           break;
           default:
             throw std::runtime_error("undefined state");
@@ -413,6 +549,8 @@ namespace gr {
         next_state = FREE;  
       }
       d_state = next_state;
+      //DEBUG<<"<IC Crit DEBUG>tags_s="<<tags_s.empty()<<" count_s:"<<count_s<<" ,nin_s:"
+      //<<nin_s<<" tags_p="<<tags_p.empty()<<" ,count_p:"<<count_p<<" ,nin_p:"<<nin_p<<std::endl;
       if(!tags_s.empty() && count_s==nin_s && !tags_p.empty() && count_p==nin_p){
         // next block tags is ready
         uint64_t bid_s = pmt::to_uint64(tags_s[0].value);
@@ -423,6 +561,7 @@ namespace gr {
         d_sync_list.push_back(block_t(bid_p,d_sync_idx));
         d_block_idx = 0;
         d_current_block = bid_s;
+        //DEBUG<<"<IC Crit>block id found:"<<bid_s<<std::endl;
       }
       nout = d_out_size-d_out_idx;
       memcpy(out,d_out_mem,sizeof(gr_complex)*nout);

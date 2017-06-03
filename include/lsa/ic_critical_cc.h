@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::ic_critical_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(float thres,bool debug);
+      static sptr make(float thres,int cross_len,int sps,bool debug);
 
       virtual void set_threshold(float thres) =0;
       virtual float threshold()const =0;

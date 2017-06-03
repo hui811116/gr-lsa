@@ -95,6 +95,8 @@ namespace gr {
       int d_state;
 
       float d_threshold;
+      int d_cross_len;
+      int d_sps;
 
       std::list<hdr_t> d_retx_candidate;
       std::vector<hdr_t> d_retx_tag;
@@ -103,11 +105,18 @@ namespace gr {
       gr_complex* d_retx_mem;
       int d_retx_idx;
 
+      gr_complex* d_intf_mem;
+      int d_intf_idx;
+      bool d_intf_first_hdr;
+
       bool detect_ic_chance(const hdr_t& new_tag);
       void reset_retx();
 
+      bool init_intf();
+      bool update_intf();
+
      public:
-      ic_critical_cc_impl(float thres,bool d_debug);
+      ic_critical_cc_impl(float thres,int cross_len,int sps,bool d_debug);
       ~ic_critical_cc_impl();
 
       void set_threshold(float thres);
