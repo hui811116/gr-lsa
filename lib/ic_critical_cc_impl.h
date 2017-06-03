@@ -72,6 +72,38 @@ namespace gr {
        unsigned int d_idx;
     };
 
+    class intf_t{
+      public:
+       friend class ic_critical_cc_impl;
+       friend std::ostream& operator<<(std::ostream& out,const intf_t& intf){
+         out<<"total size:"<<intf.d_size<<" ,begin tag:"<<intf.d_begin<<" ,end tag:"<<intf.d_end;
+         return out;
+       }
+       intf_t(){d_sig=NULL;d_size=0;d_begin = hdr_t();d_end=hdr_t();}
+       intf_t(const intf_t& intf){d_sig=intf.d_sig;d_size=intf.d_size;d_begin=intf.d_begin;d_end=intf.d_end;}
+       ~intf_t(){}
+       const intf_t& operator=(const intf_t& intf){
+         d_sig=intf.d_sig;
+         d_size=intf.d_size;
+         d_begin=intf.d_begin;
+         d_end=intf.d_end;
+         return *this;
+       }
+       void set_ptr(gr_complex* ptr){d_sig = ptr;}
+       void set_size(size_t size){d_size = size;}
+       void set_begin(const hdr_t& begin){d_begin = begin;}
+       void set_end(const hdr_t& end){d_end = end;}
+       const intf_t& operator*(){return *this;}
+       const hdr_t& begin()const {return d_begin;}
+       const hdr_t& end()const {return d_end;}
+       size_t size()const{return d_size;}
+      private:
+       gr_complex* d_sig;
+       size_t d_size;
+       hdr_t d_begin;
+       hdr_t d_end;
+    };
+
     class ic_critical_cc_impl : public ic_critical_cc
     {
      private:
