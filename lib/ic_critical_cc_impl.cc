@@ -25,6 +25,8 @@
 #include <gnuradio/io_signature.h>
 #include "ic_critical_cc_impl.h"
 #include <volk/volk.h>
+#include <gnuradio/expj.h>
+#include <gnuradio/math.h>
 
 namespace gr {
   namespace lsa {
@@ -33,6 +35,7 @@ namespace gr {
 #define PHYLEN 6
 #define MAXLEN (127+PHYLEN)*8*8/2*4
 #define MAXCAP 128*MAXLEN
+#define TWO_PI M_PI*2.0f
 
   enum VOESTATE{
     FREE,
@@ -45,6 +48,13 @@ namespace gr {
     static const int d_max_pending =256;
     static const int d_min_process = 16;
     static const int LSAPHYSYMBOLLEN = 48/2;
+
+    inline void phase_wrap(float& phase){
+      while(phase>=TWO_PI)
+        phase-=TWO_PI;
+      while(phase<=-TWO_PI)
+        phase+=TWO_PI;
+    }
 
     ic_critical_cc::sptr
     ic_critical_cc::make(float thres, int cross_len, int sps,bool debug)
@@ -160,9 +170,11 @@ namespace gr {
             int tmp_qsize = pmt::to_long(pmt::dict_ref(rit->msg(),pmt::intern("queue_size"),pmt::from_long(-1)));
             int tmp_qidx = pmt::to_long(pmt::dict_ref(rit->msg(),pmt::intern("queue_index"),pmt::from_long(-1)));
             if(tmp_qsize == max_qsize && d_retx_tag[tmp_qidx].empty()){
-              d_retx_tag[tmp_qidx] = *rit;
-              d_retx_cnt++;
-              //DEBUG<<"<IC Crit>Retx tags handling---add idx:"<<tmp_qidx<<" ,expected size:"<<d_retx_tag.size()<<" ,current received:"<<d_retx_cnt<<std::endl;
+              hdr_t tmp_tag = *rit;
+              if(check_and_copy_retx(tmp_tag)){
+                d_retx_tag[tmp_qidx] = tmp_tag;
+                d_retx_cnt++;
+              }
             }
           }
         }else{
@@ -173,9 +185,11 @@ namespace gr {
           if(qsize!=d_retx_tag.size()){
             return false;
           }else if(d_retx_tag[qidx].empty()){
-            d_retx_tag[qidx]=new_tag;
-            d_retx_cnt++;
-            //DEBUG<<"<IC Crit>Retx tags handling---add idx:"<<qidx<<" ,expected size:"<<d_retx_tag.size()<<" ,current received:"<<d_retx_cnt<<std::endl;
+            hdr_t tmp_tag = new_tag;
+            if(check_and_copy_retx(tmp_tag)){
+              d_retx_tag[qidx]=tmp_tag;
+              d_retx_cnt++;
+            }
           }
         }
         if(!d_retx_tag.empty() && d_retx_tag.size()==d_retx_cnt){
@@ -186,6 +200,85 @@ namespace gr {
         }
       }
       return false;
+    }
+
+    bool
+    ic_critical_cc_impl::check_and_copy_retx(hdr_t& tag)
+    {
+      pmt::pmt_t msg = tag.msg();
+      uint64_t block_id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("block_id"),pmt::from_uint64(0xffffffffffff)));
+      int block_offset = tag.index();
+      int payload = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
+      int pkt_nominal = (payload+d_cross_len + LSAPHYSYMBOLLEN)*d_sps;
+      const int reserved_length = 8*d_sps;
+      std::list<block_t>::reverse_iterator bit_s = d_smp_list.rbegin(),bit_p = d_sync_list.rbegin();
+      while(bit_s!=d_smp_list.rend()){
+        if(bit_s->id()==block_id){
+          break;
+        }
+        bit_s++;
+      }
+      while(bit_p!=d_sync_list.rend()){
+        if(bit_p->id()==block_id){
+          break;
+        }
+        bit_p++;
+      }
+      if(bit_s == d_smp_list.rend() || bit_p == d_sync_list.rend()){
+        return false;
+      }
+      int begin = d_in_idx;
+      int end = (d_in_idx==0)? d_cap-1: d_in_idx-1;
+      if(end<begin)
+        end+=d_cap;
+      int index_check = (bit_s->index()<begin)? bit_s->index()+d_cap : bit_s->index();
+      index_check+=block_offset;
+      if( (index_check -pkt_nominal < begin) || (index_check+reserved_length>end) ){
+        return false;
+      }
+      int begin_p = d_sync_idx;
+      int end_p = (d_sync_idx==0)? d_cap-1 : d_sync_idx-1;
+      if(end_p<begin_p)
+        end_p+=d_cap;
+      int sync_idx_check = (bit_p->index()<begin_p)? bit_p->index() +d_cap : bit_p->index();
+      sync_idx_check += block_offset;
+      if( (sync_idx_check-pkt_nominal < begin_p)|| (sync_idx_check+reserved_length>end_p) ){
+        return false;
+      }
+      // valid retransmission size
+      // NOTE: can add additional check
+      // VoE of freq tracking signal
+      // float mean, stddev
+      // volk()...
+      int samp_idx = index_check - pkt_nominal;
+      samp_idx = (samp_idx>=d_cap)? samp_idx-d_cap : samp_idx;
+      int sync_idx = sync_idx_check -pkt_nominal;
+      sync_idx = (sync_idx>=d_cap)? sync_idx-d_cap : sync_idx;
+      float init_phase = d_phase_mem[sync_idx];
+      float init_freq = d_freq_mem[sync_idx];
+      int copy_len = pkt_nominal+reserved_length;
+      int samp_iter = samp_idx;
+      int sync_iter = sync_idx;
+      int retx_idx_begin = d_retx_idx;
+      if(d_retx_idx+copy_len>=d_cap){
+        throw std::runtime_error("<IC Crit>Fatal Error: Retransmission buffer is too small to acquire all retransmission....");
+      }
+      for(int i=0;i<copy_len;++i){
+        d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-init_phase);
+        init_phase+=init_freq;
+        phase_wrap(init_phase);
+        init_freq = d_freq_mem[sync_iter++];
+        samp_iter%=d_cap;
+        sync_iter%=d_cap;
+      }
+      tag.set_index(retx_idx_begin);
+      tag.add_msg(pmt::intern("copy_len"),pmt::from_long(copy_len));
+      tag.add_msg(pmt::intern("packet_len"),pmt::from_long(pkt_nominal));
+      // tag.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
+      // tag.add_msg(pmt::intern("freq_std"),pmt::from_float(std));
+      tag.delete_msg(pmt::intern("queue_index"));
+      tag.delete_msg(pmt::intern("queue_size"));
+      return true;
     }
 
     void
@@ -249,31 +342,30 @@ namespace gr {
         //DEBUG<<"<IC Crit>new_intf::no available front tag found, end function"<<std::endl;
         return false;
       }
-      // push to true begin
-      //DEBUG<<"<IC Crit DEBUG>Init: tag found--"<<*rit<<std::endl;
       // but notice the wrap around point!!
-      int current_begin = (d_in_idx+1 == d_cap)? 0 : d_in_idx+1;
-      int current_end = d_in_idx;
+      int current_begin = d_in_idx;
+      int current_end = (d_in_idx==0)? d_cap-1 : d_in_idx-1;
       if(current_begin>current_end){
         current_end+=d_cap;
       }
       int samp_base = (bit_s->index()<current_begin)? bit_s->index()+d_cap : bit_s->index();
       if(samp_base + block_offset-pkt_nominal<current_begin){
-        //DEBUG<<"<IC Crit>new_intf:: the begin of packet already been removed(sample)...end function"<<std::endl;
         return false;
       }
       int samp_idx = bit_s->index()+block_offset - pkt_nominal;
+      int length_check = samp_base + block_offset- pkt_nominal;
+      if(length_check+d_intf_idx >=d_cap){
+        return false;
+      }
       int intf_begin = d_intf_idx;
       samp_idx = (samp_idx<0)? samp_idx+d_cap: samp_idx;
-      int debug_count=0;
       while(samp_idx!=d_in_idx){
         d_intf_mem[d_intf_idx++] = d_in_mem[samp_idx++];
         samp_idx %= d_cap;
-        debug_count++;
       }
       // for phase stream
-      current_begin = (d_sync_idx+1 == d_cap)? 0 : d_sync_idx+1;
-      current_end = d_sync_idx;
+      current_begin = d_sync_idx;
+      current_end = (d_sync_idx==0)? d_cap-1 : d_sync_idx-1;
       if(current_begin>current_end){
         current_end+=d_cap;
       }
@@ -340,12 +432,11 @@ namespace gr {
       }
       if(bit_s==d_smp_list.end() || bit_p==d_sync_list.end() || rit == d_tag_list.rend()){
         // failed
-        DEBUG<<"<IC Crit>update_intf::no available end tag found, end function"<<std::endl;
+        //DEBUG<<"<IC Crit>update_intf::no available end tag found, end function"<<std::endl;
         return false;
       }
       block_offset = idx;
       int intf_samp_check = bit_s->index();
-      DEBUG<<"<Ic Crit DEBUG>index for end tags--in:"<<d_in_idx<<" ,block_offset:"<<idx<<" ,block_idx:"<<intf_samp_check<<std::endl;
       int end_idx_corrected;
       if(intf_samp_check>d_in_idx){
         intf_samp_check-=d_cap;
@@ -358,14 +449,12 @@ namespace gr {
         residual = intf_samp_check+block_offset - d_in_idx;
         end_idx_corrected = d_intf_idx + residual-1;
       }else{
-        DEBUG<<"<IC Crit>update_intf:: not already stored nor will be stored in current samples...end function"<<std::endl;
+        //DEBUG<<"<IC Crit>update_intf:: not already stored nor will be stored in current samples...end function"<<std::endl;
         return false;
       }
-      DEBUG<<"<IC Crit>update intf--res::"<<residual<<" ,end_idx:"<<end_idx_corrected<<std::endl;
-
       // success to record a valid header after interference occur
-      int current_begin = (d_sync_idx+1==d_cap)? 0 : d_sync_idx+1;
-      int current_end = d_sync_idx;
+      int current_begin = d_sync_idx;
+      int current_end = (d_sync_idx==0)? d_cap-1 : d_sync_idx-1;
       if(current_begin>current_end){
         current_end+=d_cap;
       }
@@ -397,7 +486,7 @@ namespace gr {
       d_current_intf_tag.set_end(end_idx_corrected);
       // average of the freq
       // and record the end phase
-      
+      DEBUG<<"Interfering tag added:"<<d_current_intf_tag<<std::endl;
       return true;
     }
 
@@ -405,6 +494,64 @@ namespace gr {
     ic_critical_cc_impl::do_ic()
     {
       // ic core here.
+      std::map<uint64_t,int> base_map;
+      std::map<uint64_t,int>::iterator map_it;
+      uint64_t base;
+      for(int i=0;i<d_retx_tag.size();++i){
+        pmt::pmt_t msg = d_retx_tag[i].msg();
+        base = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_uint64(0xffffffffffff)));
+        base_map.insert(std::pair<uint64_t,int>(base,i));
+      }
+      for(int i=0;i<d_intf_stack.size();++i){
+        hdr_t front = d_intf_stack[i].front();
+        //hdr_t back = d_intf_stack.back();
+        int intf_begin = d_intf_stack[i].begin();
+        int intf_end = d_intf_stack[i].end();
+        pmt::pmt_t front_msg = front.msg();
+        uint64_t front_base = pmt::to_uint64(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_uint64(0xfffffffffffe)));
+        map_it = base_map.find(front_base);
+        if(map_it==base_map.end()){
+          DEBUG<<"\033[32m"<<"<IC Crit DEBUG>Intf tag <"<<i<<">find no matched base, ignore"<<"\033[0m"<<std::endl;
+          continue;
+        }
+        int retx_id = map_it->second;
+        int retx_idx = d_retx_tag[retx_id].index();
+        pmt::pmt_t retx_msg = d_retx_tag[retx_id].msg();
+        int pkt_len = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("packet_len"),pmt::from_long(0)));
+        int pkt_cnt=0;
+        float init_phase = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("phase_init"),pmt::from_float(0)));
+        float freq_mean = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("freq_mean"),pmt::from_float(0)));
+        int intf_cnt = intf_begin;
+        
+        while(intf_cnt<intf_end){
+          //NOTE: sync to interfering signal
+          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
+          init_phase+=freq_mean;
+          phase_wrap(init_phase);
+          pkt_cnt++;
+          if(pkt_cnt==pkt_len){
+            // Update Retransmission 
+            retx_id = (retx_id+1)%d_retx_tag.size();
+            retx_msg = d_retx_tag[retx_id].msg();
+            pkt_len = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("packet_len"),pmt::from_long(0)));
+            pkt_cnt=0;
+            // NOTE: maybe the freq est in retransmission helps?
+            // freq_mean
+          }
+          if(d_out_size==d_cap){
+            DEBUG<<"\033[32m"
+            <<"<IC Crit DEBUG>Warning: output size reach capacity, reset index and size, some samples may be overwritten"
+            <<"\033[0m"<<std::endl;
+            d_out_idx=0;
+            d_out_size=0;
+          }
+        }
+        
+        // creat output object?
+      }
+      // retransmission are all ready
+      // stored in d_retx_tag, d_retx_mem
+      // pmt::intern("copy_len"), pmt::intern("packet_len")
       /*
       DEBUG<<"<IC Crit DEBUG>Do_ic"<<std::endl;
       for(int i=0;i<d_intf_stack.size();++i){
@@ -462,6 +609,15 @@ namespace gr {
       switch(d_state){
         case FREE:
           for(count_s=0;count_s<nin_s;++count_s){
+            // ring queue
+            d_in_mem[d_in_idx++] = in[count_s];
+            d_in_idx %=d_cap;
+            if(it1!=d_smp_list.end()){
+              if(d_in_idx == it1->index()){
+                // wrap around detected
+                it1 = d_smp_list.erase(it1);
+              }
+            }
             assert(d_voe_state == false);
             if(voe[count_s]>d_threshold){
               d_voe_cnt++;
@@ -469,14 +625,14 @@ namespace gr {
                 d_voe_state = true;
                 d_voe_cnt=0;
                 next_state = SUFFERING;
-                DEBUG<<"<IC Crit>Detect interfering signals, block_id="<<d_current_block
-                <<" ,block_idx="<<d_block_idx<<std::endl;
-                DEBUG<<"Initialize interference object..."<<std::endl;
+                DEBUG<<"\033[33m"<<"<IC Crit>Detect interfering signals"<<"\033[0m"
+                <<", block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
                 init_intf();
                 if(new_intf()){ 
-                  state_interrupt = true;
-                  break; // jump out from loop
+                  //DEBUG<<"Initialize an interference object..."<<std::endl;
                 }
+                state_interrupt = true;
+                break; // jump out from loop
               }
             }else{
               d_voe_cnt =0;
@@ -485,6 +641,25 @@ namespace gr {
         break;
         case SUFFERING:
           for(count_s=0;count_s <nin_s;++count_s){
+            // ring queue
+            d_in_mem[d_in_idx++] = in[count_s];
+            d_in_idx %=d_cap;
+            if(it1!=d_smp_list.end()){
+              if(d_in_idx == it1->index()){
+                // wrap around detected
+                it1 = d_smp_list.erase(it1);
+              }
+            }
+            // intf queue
+            d_intf_mem[d_intf_idx++] = in[count_s];
+            if(d_intf_idx==d_cap){
+              DEBUG<<"\033[32m"<<"<IC Crit DEBUG> Additional interfering signal may cause overflow"<<"\033[0m"<<std::endl;
+              state_interrupt = true;
+              next_state = FREE;
+              d_voe_cnt =0;
+              d_voe_state = false;
+              break;
+            }
             assert(d_voe_state == true);
             if(voe[count_s]<d_threshold){
               d_voe_cnt++;
@@ -493,8 +668,8 @@ namespace gr {
                 d_voe_cnt =0;
                 reset_retx();
                 next_state = SEARCH_RETX;
-                DEBUG<<"<IC Crit>Detect the end of interference , block_id="<<d_current_block
-                <<" ,block_idx="<<d_block_idx<<std::endl;
+                DEBUG<<"\033[33m"<<"<IC Crit>Detect the end of interference"<<"\033[0m"
+                <<" , block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
                 state_interrupt = true;
                 break; // jump out from loop
               }
@@ -505,18 +680,36 @@ namespace gr {
         break;
         case SEARCH_RETX:
           for(count_s =0;count_s<nin_s;++count_s){
+            //ring queue
+            d_in_mem[d_in_idx++] = in[count_s];
+            d_in_idx %=d_cap;
+            if(it1!=d_smp_list.end()){
+              if(d_in_idx == it1->index()){
+                // wrap around detected
+                it1 = d_smp_list.erase(it1);
+              }
+            }
+            // intf queue
+            if(!d_current_intf_tag.empty() && d_current_intf_tag.back_tag_empty()){
+              d_intf_mem[d_intf_idx++] = in[count_s];
+              if(d_intf_idx==d_cap){
+                DEBUG<<"\033[32m"<<"<IC Crit DEBUG> Additional interfering signal may cause overflow, clear tag..."<<"\033[0m"<<std::endl;
+                d_intf_idx = d_current_intf_tag.begin();
+                d_current_intf_tag.clear();
+              }
+            }
             // add something to detect interference during retransmission process
             if(!d_voe_state && voe[count_s]>d_threshold){
               d_voe_cnt++;
               if(d_voe_cnt>=d_voe_min){
                 d_voe_state = true;
                 d_voe_cnt =0;
-                DEBUG<<"<IC Crit> Detect an interfering event during retransmission state"
+                DEBUG<<"\033[33m"<<"<IC Crit> Detect an interfering event during retransmission state"<<"\033[0m"
                   <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
                 if(d_current_intf_tag.empty()){
                   //already store at least one intf_t
                   if(new_intf()){
-                    DEBUG<<"<IC Crit> new intferference object Created"<<std::endl;
+                    //DEBUG<<"\033[35m"<<"<IC Crit> new intferference object Created"<<"\033[0m"<<std::endl;
                   }
                 }
               }
@@ -525,7 +718,7 @@ namespace gr {
               if(d_voe_cnt>=d_voe_min){
                 d_voe_state = false;
                 d_voe_cnt=0;
-                DEBUG<<"<Ic Crit> Interfering event during retransmission ends"
+                DEBUG<<"\033[33m"<<"<Ic Crit> Interfering event during retransmission ends"<<"\033[0m"
                 <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
               }
             }else{
@@ -537,17 +730,18 @@ namespace gr {
           throw std::runtime_error("Undefined state");
         break;
       }
-      for(int i=0;i<count_s;++i){
-        d_in_mem[d_in_idx++] = in[i];
-        d_in_idx%=d_cap;
-        if(it1!=d_smp_list.end()){
-          if(d_in_idx == it1->index()){
+      count_p = (state_interrupt)? std::min(nin_p,count_s) : nin_p;
+      for(int i=0;i<count_p;++i){
+        d_phase_mem[d_sync_idx] = phase[i];
+        d_freq_mem[d_sync_idx] = freq[i];
+        d_sync_idx = (d_sync_idx+1)%d_cap;
+        if(it2!=d_sync_list.end()){
+          if(d_sync_idx == it2->index()){
             // wrap around detected
-            it1 = d_smp_list.erase(it1);
+            it2 = d_sync_list.erase(it2);
           }
         }
       }
-      count_p = (state_interrupt)? std::min(nin_p,count_s) : nin_p;
         // when state change, phase stream should follow count_s 
         // otherwise, just consume until a block tag found
       // handling tags
@@ -582,7 +776,9 @@ namespace gr {
         new_tags.push_back(tmp_hdr);
       }
       }
-      int intf_count = count_s;
+      // FIXME
+      // not necessary anymore
+      int residual = count_p;
       // tag size control
       for(int i=0;i<new_tags.size();++i){
         int qidx = pmt::to_long(pmt::dict_ref(new_tags[i].msg(),pmt::intern("queue_index"),pmt::from_long(-1)));
@@ -616,7 +812,6 @@ namespace gr {
                 // this means retransmission is end
                 // declare retransmission failed
                 d_tag_list.clear();
-                DEBUG<<"<IC Crit>Retransmission failed! (clear tag found)"<<std::endl;
                 // reset retransmission information
                 d_reset_retx = true;
               }
@@ -624,25 +819,15 @@ namespace gr {
               d_do_ic = detect_ic_chance(new_tags[i]);
             }
             d_tag_list.push_back(new_tags[i]);
-            if(update_intf(intf_count)){
+            if(update_intf(residual)){
               // ready for one interference cancellation block
-              for(int x=0;x<intf_count;++x){
-                d_intf_mem[d_intf_idx++] = in[x];
-                if(intf_count+d_intf_idx>=d_cap){
-                  // this may cause overflow, should abort
-                  DEBUG<<"\033[32m"<<"<IC Crit>extra IC samples may cause buffer overflow, abort ic object"<<"\033[0m"<<std::endl;
-                  d_intf_idx = d_current_intf_tag.begin();
-                  d_current_intf_tag.clear();
-                  break;
-                }
-              }
               //hdr_t tmpEnd = d_current_intf_tag.back();
               //int tmp_end_idx = tmpEnd.index()-d_block_idx;
               //tmpEnd.add_msg(pmt::intern("phase_end"),pmt::from_float(phase[tmp_end_idx]));
               if(!d_current_intf_tag.empty())
                 d_intf_stack.push_back(d_current_intf_tag);
               d_current_intf_tag.clear();
-              DEBUG<<"<IC Crit>Interference object complete!"<<std::endl;
+              DEBUG<<"\033[35m"<<"<IC Crit>Interference object complete!"<<"\033[0m"<<std::endl;
             }
           break;
           default:
@@ -650,28 +835,9 @@ namespace gr {
           break;
         }
       }
+      // increment block index
       for(int i=0;i<count_p;++i){
-        d_phase_mem[d_sync_idx] = phase[i];
-        d_freq_mem[d_sync_idx] = freq[i];
-        d_sync_idx = (d_sync_idx+1)%d_cap;
-        if(it2!=d_sync_list.end()){
-          if(d_sync_idx == it2->index()){
-            // wrap around detected
-            it2 = d_sync_list.erase(it2);
-          }
-        }
         d_block_idx++;
-      }
-      if(!d_current_intf_tag.front_tag_empty() && d_current_intf_tag.back_tag_empty()){
-        for(int k=0;k<count_s;++k){
-          d_intf_mem[d_intf_idx++] = in[k];
-          if(d_intf_idx==d_cap){
-            DEBUG<<"\033[32m"<<"<IC Crit>Additional ic samples may cause overflow...abort"<<"\033[0m"<<std::endl;
-            next_state = FREE;
-            d_current_intf_tag.clear();
-            break;
-          }
-        }
       }
       if(d_do_ic){
         // do ic
@@ -680,12 +846,16 @@ namespace gr {
         reset_retx();
         d_tag_list.clear();
         next_state = FREE;
+        d_voe_cnt =0;
+        d_voe_state = false;
       }
       if(d_reset_retx){
         //
         DEBUG<<"\033[31m"<<"<IC Crit>Reset RETX, due to failure"<<"\033[0m"<<std::endl;
         reset_retx();
-        next_state = FREE;  
+        next_state = FREE;
+        d_voe_cnt =0;
+        d_voe_state = false;
       }
       d_state = next_state;
       if(!tags_s.empty() && count_s==nin_s && !tags_p.empty() && count_p==nin_p){
@@ -698,7 +868,6 @@ namespace gr {
         d_sync_list.push_back(block_t(bid_p,d_sync_idx));
         d_block_idx = 0;
         d_current_block = bid_s;
-        //DEBUG<<"<IC Crit>block id found:"<<bid_s<<std::endl;
       }
       nout = d_out_size-d_out_idx;
       memcpy(out,d_out_mem,sizeof(gr_complex)*nout);

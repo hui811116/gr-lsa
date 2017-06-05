@@ -77,7 +77,8 @@ namespace gr {
       public:
        friend class ic_critical_cc_impl;
        friend std::ostream& operator<<(std::ostream& out,const intf_t& intf){
-         out<<"total size:"<<intf.d_end_idx-intf.d_begin_idx+1<<std::endl
+         out<<"total size:"<<intf.d_end_idx-intf.d_begin_idx+1
+         <<" ,begin_idx:"<<intf.d_begin_idx<<" ,end_idx:"<<intf.d_end_idx<<std::endl
          <<" ,front tag:"<<intf.d_front<<std::endl
          <<" ,back tag:"<<intf.d_back;
          return out;
@@ -166,6 +167,7 @@ namespace gr {
 
       bool detect_ic_chance(const hdr_t& new_tag);
       void reset_retx();
+      bool check_and_copy_retx(hdr_t& tag);
 
       void init_intf();
       bool new_intf();
