@@ -62,6 +62,7 @@ namespace gr {
        const hdr_t& operator*(){return *this;}
        pmt::pmt_t msg()const{return d_msg;}
        unsigned int index()const{return d_idx;}
+       void delete_msg(pmt::pmt_t k){d_msg = pmt::dict_delete(d_msg,k);}
        void add_msg(pmt::pmt_t k, pmt::pmt_t v){d_msg = pmt::dict_add(d_msg,k,v);}
        void set_index(unsigned int idx){d_idx = idx;}
        void init(){d_msg = pmt::make_dict();}
@@ -76,32 +77,52 @@ namespace gr {
       public:
        friend class ic_critical_cc_impl;
        friend std::ostream& operator<<(std::ostream& out,const intf_t& intf){
-         out<<"total size:"<<intf.d_size<<" ,begin tag:"<<intf.d_begin<<" ,end tag:"<<intf.d_end;
+         out<<"total size:"<<intf.d_end_idx-intf.d_begin_idx+1<<std::endl
+         <<" ,front tag:"<<intf.d_front<<std::endl
+         <<" ,back tag:"<<intf.d_back;
          return out;
        }
-       intf_t(){d_sig=NULL;d_size=0;d_begin = hdr_t();d_end=hdr_t();}
-       intf_t(const intf_t& intf){d_sig=intf.d_sig;d_size=intf.d_size;d_begin=intf.d_begin;d_end=intf.d_end;}
+       intf_t(){d_begin_idx=0;d_end_idx=0;d_front = hdr_t();d_front=hdr_t();}
+       intf_t(const intf_t& intf){
+         d_begin_idx = intf.d_begin_idx;
+         d_end_idx=intf.d_end_idx;
+         d_front=intf.d_front;
+         d_back=intf.d_back;}
        ~intf_t(){}
        const intf_t& operator=(const intf_t& intf){
-         d_sig=intf.d_sig;
-         d_size=intf.d_size;
-         d_begin=intf.d_begin;
-         d_end=intf.d_end;
+         d_begin_idx = intf.d_begin_idx;
+         d_end_idx = intf.d_end_idx;
+         d_front=intf.d_front;
+         d_back=intf.d_back;
          return *this;
        }
-       void set_ptr(gr_complex* ptr){d_sig = ptr;}
-       void set_size(size_t size){d_size = size;}
-       void set_begin(const hdr_t& begin){d_begin = begin;}
-       void set_end(const hdr_t& end){d_end = end;}
+       void set_front(const hdr_t& front){d_front = front;}
+       void set_back(const hdr_t& back){d_back = back;}
+       void set_begin(int idx){d_begin_idx = idx; if(d_end_idx<idx){d_end_idx = idx;}}
+       void set_end(int idx){d_end_idx = idx;if(d_begin_idx>idx)d_begin_idx=idx;}
+       void clear(){d_end_idx=0;d_begin_idx=0;d_front.reset();d_back.reset();}
+       int begin()const{return d_begin_idx;}
+       int end()const{return d_end_idx;}
        const intf_t& operator*(){return *this;}
-       const hdr_t& begin()const {return d_begin;}
-       const hdr_t& end()const {return d_end;}
-       size_t size()const{return d_size;}
+       const hdr_t& front()const {return d_front;}
+       const hdr_t& back()const {return d_back;}
+       void increment(){d_end_idx++;}
+       size_t size()const{
+         if(d_end_idx==0 || d_end_idx==d_begin_idx){
+           // if not complete, return 0
+           return 0;
+         }else{
+           return d_end_idx-d_begin_idx+1;
+         }
+       }
+       bool empty()const{return d_end_idx==0 && d_begin_idx==0 && d_front.empty() && d_back.empty();}
+       bool front_tag_empty()const{return d_front.empty();}
+       bool back_tag_empty()const{return d_back.empty();}
       private:
-       gr_complex* d_sig;
-       size_t d_size;
-       hdr_t d_begin;
-       hdr_t d_end;
+       int d_end_idx;
+       int d_begin_idx;
+       hdr_t d_front;
+       hdr_t d_back;
     };
 
     class ic_critical_cc_impl : public ic_critical_cc
@@ -139,13 +160,18 @@ namespace gr {
 
       gr_complex* d_intf_mem;
       int d_intf_idx;
-      bool d_intf_first_hdr;
+      std::vector<intf_t> d_intf_stack;
+      float* d_intf_freq;
+      intf_t d_current_intf_tag;
 
       bool detect_ic_chance(const hdr_t& new_tag);
       void reset_retx();
 
-      bool init_intf();
-      bool update_intf();
+      void init_intf();
+      bool new_intf();
+      bool update_intf(int& residual);
+
+      void do_ic();
 
      public:
       ic_critical_cc_impl(float thres,int cross_len,int sps,bool d_debug);
