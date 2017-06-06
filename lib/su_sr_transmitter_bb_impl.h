@@ -92,6 +92,9 @@ namespace gr {
       bool create_retx_queue();
       pmt::pmt_t get_retx(int idx);
       bool retx_peek_front(int& len);
+      bool check_retx_table(int idx);
+      bool update_retx_table(int idx);
+      void reset_retx_retry();
 
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);

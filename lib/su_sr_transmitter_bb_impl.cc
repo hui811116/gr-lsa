@@ -34,6 +34,7 @@ namespace gr {
     static int LSAMACLEN = 6;
     static unsigned char LSAPHY[] = {0x00,0x00,0x00,0x00,0xE6,0x00};
     static unsigned char LSAMAC[] = {0x00,0x00,0x00,0x00,0x00,0x00};  // 2,2,2
+    static int d_retx_retry_limit = 20;
 
     su_sr_transmitter_bb::sptr
     su_sr_transmitter_bb::make(const std::string& tagname, bool debug)
@@ -72,14 +73,12 @@ namespace gr {
     {
       int noutput_items = ninput_items[0]+LSAPHYLEN+LSAMACLEN;
       std::list<srArq_t>::iterator it;
-      if(d_prou_present){
-        //assert(!d_retx_queue.empty());
-        //noutput_items = d_retx_queue[d_retx_cnt].blob_length();
+      if(d_prou_present){        
         if(retx_peek_front(noutput_items)){
           // valid
         }else{
           // invalid
-          DEBUG<<"<SU SR TX>ERROR:In retransmission state but found no pending packets"<<std::endl;
+          DEBUG<<"<SU SR TX>"<<"\033[33;1m"<<"ERROR:In retransmission state but found no pending packets"<<"\033[0m"<<std::endl;
         }
       }else{
         if(peek_front(noutput_items)){
@@ -103,13 +102,15 @@ namespace gr {
       int qidx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_index"),pmt::from_long(-1)));
       int qsize = pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_size"),pmt::from_long(-1)));
       std::list<srArq_t>::iterator it;
-      //DEBUG<<"<SU SR TX>msg_in: sensing:"<<sensing<<" ,seqno="<<seqno<<" ,qidx="<<qidx<<" qsize="<<qsize<<std::endl;
-      //DEBUG<<"<System info>queue size="<<d_arq_queue.size()<<" ,state:"<<d_prou_present<<" ,current_seq:"<<d_seq<<std::endl;
       if(sensing){
         // alert
         if(!d_prou_present){
           // build retransmission
           d_prou_present = create_retx_queue();
+        }else if(d_retx_cnt!=0){
+          // already passed sensing delay
+          // reset retry count due to additional interference detection
+          reset_retx_retry();
         }
         return;
       }
@@ -126,14 +127,12 @@ namespace gr {
         if(d_retx_table.empty()){
           throw std::runtime_error("WTF retx");
         }
-        if(d_retx_table[qidx] == false){
-          d_retx_cnt++;
-          d_retx_table[qidx] = true;
+        if(update_retx_table(qidx)){
           DEBUG<<"<SU SR TX>Received a retransmission, idx:"<<qidx<<" ,retx count:"<<d_retx_cnt<<"(expected:"<<d_retx_size<<")"<<std::endl;
-          if(d_retx_cnt == d_retx_size){
+          if(d_retx_cnt >= d_retx_size){
             d_prou_present = false;
             clear_queue();
-            DEBUG<<"<SU SR TX>Retransmission complete! resume to clear state"<<std::endl;
+            DEBUG<<"<SU SR TX>"<<"\033[31;1m"<<"Retransmission complete! resume to clear state"<<"\033[0m"<<std::endl;
           }
         }
       }else{
@@ -143,10 +142,18 @@ namespace gr {
         }
         if(dequeue(seqno)){
           // success
-          //DEBUG<<"<SU SR TX>ACKed a matched sequence number:"<<seqno<<" ,pending:"<<d_arq_queue.size()<<std::endl;
         }else{
           // failed
         }
+      }
+    }
+
+    void
+    su_sr_transmitter_bb_impl::reset_retx_retry()
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      for(int i=0;i<d_retx_queue.size();++i){
+        d_retx_queue[i].set_retry(0);
       }
     }
 
@@ -165,7 +172,9 @@ namespace gr {
             d_retx_size=d_arq_queue.size();
             d_retx_table.resize(d_retx_size,false);
             for(it=d_arq_queue.begin();it!=d_arq_queue.end();++it){
-              d_retx_queue.push_back(*it);
+              srArq_t tmp = *it;
+              tmp.set_retry(0);
+              d_retx_queue.push_back(tmp);
             }
           }
           return true;
@@ -234,7 +243,7 @@ namespace gr {
             //check retry count
             if(it->inc_retry()){
               // reaching limit, should abort...
-              DEBUG<<"<SU SR TX>timeout..."<<*it<<std::endl;
+              DEBUG<<"<SU SR TX>"<<"\033[32;1m"<<"timeout..."<<*it<<"\033[0m"<<std::endl;
               d_arq_queue.pop_front();
               it = d_arq_queue.begin();
             }else{
@@ -266,6 +275,25 @@ namespace gr {
       return false;
     }
 
+    bool
+    su_sr_transmitter_bb_impl::check_retx_table(int idx)
+    {
+      assert(idx<d_retx_table.size());
+      gr::thread::scoped_lock guard(d_mutex);
+      return d_retx_table[idx];
+    }
+    bool
+    su_sr_transmitter_bb_impl::update_retx_table(int idx){
+      assert(idx<d_retx_table.size());
+      gr::thread::scoped_lock guard(d_mutex);
+      if(d_retx_table[idx]==false){
+        d_retx_cnt++;
+        d_retx_table[idx] = true;
+        return true;
+      }
+      return false;
+    }
+
     int
     su_sr_transmitter_bb_impl::work (int noutput_items,
                        gr_vector_int &ninput_items,
@@ -285,6 +313,19 @@ namespace gr {
           throw std::runtime_error("WTF");
         }
         // FIXME
+        if(d_retx_cnt!=0){
+          // already passed sensing delay
+          d_retx_queue[d_retx_idx].inc_retry();
+          if(d_retx_queue[d_retx_idx].retry()>d_retx_retry_limit 
+             && (check_retx_table(d_retx_idx)==false) ){
+              if(update_retx_table(d_retx_idx)){
+                DEBUG<<"<SU SR TX>"<<"\033[32;1m"<<"Retransmission achieve retry limit, forced true..."<<"\033[0m"<<std::endl;
+              }
+              /*if(d_retx_cnt>=d_retx_size){
+                d_prou_present = false;
+              }*/
+          }
+        }
         // consider a retry count to reduce retransmission time
         uint8_t* qidx = (uint8_t*) &d_retx_idx;
         uint8_t* qsize= (uint8_t*) &d_retx_size;
