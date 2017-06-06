@@ -295,7 +295,7 @@ enum SYSTEMSTATE{
           break;
         }
       }
-      consume_each (count);
+      consume_each (nin);
 
       // Tell runtime system how many output items we produced.
       return 0;
