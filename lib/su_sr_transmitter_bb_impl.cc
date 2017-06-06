@@ -95,7 +95,7 @@ namespace gr {
     {
       // should be filtered to save complexity of this block
       // only input dict with valid messages
-      assert(pmt::is_dict());
+      //assert(pmt::is_dict());
       // if is sensing information, lock current queue and change state
       bool sensing = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("LSA_sensing"),pmt::PMT_F));
       int seqno = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));

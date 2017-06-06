@@ -30,7 +30,7 @@ namespace gr {
 
     static const pmt::pmt_t d_voe_tag= pmt::intern("voe_tag");
     static const int MINLEN = 32;
-    static const uint32_t MINGAP = 1024;
+    static const uint32_t MINGAP = 128*64/2*4;
 
     interference_tagger_cc::sptr
     interference_tagger_cc::make(const float& voe_thres)
