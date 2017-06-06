@@ -55,6 +55,7 @@
 #include "lsa/su_sr_transmitter_bb.h"
 #include "lsa/su_tx_helper.h"
 #include "lsa/ic_critical_cc.h"
+#include "lsa/su_packet_sink_c.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -128,3 +129,6 @@ GR_SWIG_BLOCK_MAGIC2(lsa, su_sr_transmitter_bb);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_tx_helper);
 %include "lsa/ic_critical_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, ic_critical_cc);
+
+%include "lsa/su_packet_sink_c.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, su_packet_sink_c);

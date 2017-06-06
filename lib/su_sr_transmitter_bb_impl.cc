@@ -184,7 +184,7 @@ namespace gr {
     su_sr_transmitter_bb_impl::get_retx(int idx)
     {
       pmt::pmt_t msg = pmt::PMT_NIL;
-      gr::thread::scoped_lock guard(d_mutex);
+      //gr::thread::scoped_lock guard(d_mutex);
       if(idx>=d_retx_queue.size()){
         return pmt::PMT_NIL;
       }
@@ -193,7 +193,7 @@ namespace gr {
     bool
     su_sr_transmitter_bb_impl::retx_peek_front(int& len)
     {
-      gr::thread::scoped_lock guard(d_mutex);
+      //gr::thread::scoped_lock guard(d_mutex);
       if(d_retx_size!=0){
         len = d_retx_queue[d_retx_idx].blob_length();
       }
@@ -229,7 +229,7 @@ namespace gr {
     void
     su_sr_transmitter_bb_impl::enqueue(const srArq_t& arq)
     {
-      gr::thread::scoped_lock guard(d_mutex);
+      //gr::thread::scoped_lock guard(d_mutex);
       d_arq_queue.push_back(arq);
     }
     pmt::pmt_t
@@ -278,13 +278,17 @@ namespace gr {
     bool
     su_sr_transmitter_bb_impl::check_retx_table(int idx)
     {
-      assert(idx<d_retx_table.size());
-      gr::thread::scoped_lock guard(d_mutex);
+      if(idx>=d_retx_table.size()){
+        throw std::runtime_error("WTF...");
+      }
+      //gr::thread::scoped_lock guard(d_mutex);
       return d_retx_table[idx];
     }
     bool
     su_sr_transmitter_bb_impl::update_retx_table(int idx){
-      assert(idx<d_retx_table.size());
+      if(idx>=d_retx_table.size()){
+        throw std::runtime_error("WTF......");
+      }
       gr::thread::scoped_lock guard(d_mutex);
       if(d_retx_table[idx]==false){
         d_retx_cnt++;

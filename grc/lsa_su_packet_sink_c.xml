@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<block>
+  <name>LSA Packet Sink</name>
+  <key>lsa_su_packet_sink_c</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.su_packet_sink_c($hdr_const,$thres)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Header Constellation</name>
+    <key>hdr_const</key>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Threshold</name>
+    <key>thres</key>
+    <value>10</value>
+    <type>int</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>msg</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+</block>
