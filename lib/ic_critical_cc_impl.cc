@@ -869,9 +869,14 @@ namespace gr {
         d_block_idx = 0;
         d_current_block = bid_s;
       }
-      nout = d_out_size-d_out_idx;
+      nout = std::min(d_out_size-d_out_idx,noutput_items);
+
       memcpy(out,d_out_mem,sizeof(gr_complex)*nout);
       d_out_idx += nout;
+      if(d_out_idx == d_out_size){
+        d_out_idx=0;
+        d_out_size=0;
+      }
 
       consume(0,count_s);
       consume(1,count_s);
