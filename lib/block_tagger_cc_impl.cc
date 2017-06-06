@@ -81,15 +81,13 @@ namespace gr {
       const uint64_t nread = nitems_read(0);
       const uint64_t nwrite= nitems_written(0);
       for(int i=0;i<nin;++i){
-        out[nout++] = in[i];
         if(d_block_cnt%d_block_size==0){
           d_block_cnt = 0;
           add_item_tag(0,nread+i,d_block_tag,pmt::from_uint64(d_block_no++),d_src_id);
         }
+        out[nout++] = in[i];
         d_block_cnt++;
-        
       }
-
       consume_each (nin);
       return nout;
     }
