@@ -194,7 +194,7 @@ enum SYSTEMSTATE{
       float *out_phase = NULL;
       float *out_freq = NULL;
       int nfix = (noutput_items<ninput_items[0])? noutput_items : ninput_items[0];
-      nfix = std::min(nfix,d_cap/d_hdr_bps);
+      nfix = std::min(nfix,(int)d_cap/d_hdr_bps);
       //const uint64_t nread = nitems_read(0);
       bool have_sync = (input_items.size()>=3);
       bool out_sync = (output_items.size()>=2);
