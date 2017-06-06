@@ -76,7 +76,7 @@ enum SYSTEMSTATE{
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
               gr::io_signature::make(0, 0, 0)),
               d_msg_port(pmt::mp("msg")),
-              d_cap(8192)
+              d_cap(8192*2)
     {
       d_hdr_const = hdr_const->base();
       d_hdr_bps = hdr_const->bits_per_symbol();
@@ -159,7 +159,7 @@ enum SYSTEMSTATE{
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      int nin = std::min(ninput_items[0],d_cap);
+      int nin = std::min(ninput_items[0],d_cap/d_hdr_bps);
       for(int i=0;i<nin;++i){
         unsigned char temp =d_hdr_const->decision_maker(&in[i]);
           for(int j =0;j<d_hdr_bps;++j){
@@ -280,8 +280,8 @@ enum SYSTEMSTATE{
                   }
                   d_symbol_cnt++;
                   if(d_symbol_cnt/2 >= d_pkt_byte){
-                    message_port_pub(d_msg_port,
-                    pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_buf,d_pkt_byte)));
+                    pmt::pmt_t msg = pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_buf,d_pkt_byte));
+                    message_port_pub(d_msg_port,msg);
                     // reason: header may be intact
                     enter_search();
                     break;

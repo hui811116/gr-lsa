@@ -22,6 +22,7 @@
 #define INCLUDED_LSA_SU_PACKET_SINK_C_IMPL_H
 
 #include <lsa/su_packet_sink_c.h>
+#include <gnuradio/digital/constellation.h>
 
 namespace gr {
   namespace lsa {

@@ -33,7 +33,6 @@ namespace gr {
     {
      private:
       int d_state;
-      //bool d_debug;
       int d_hdr_bps;
 
       gr::digital::constellation_sptr d_hdr_const;
@@ -42,15 +41,14 @@ namespace gr {
       const pmt::pmt_t d_msg_port;
 
       // buffer for constellation
-      unsigned char d_bytes_buf[8192];
+      const size_t d_cap;
+      unsigned char* d_bytes_buf;
       unsigned char d_out_buf[256];
       // coded version
       int d_threshold;
       unsigned int d_data_reg;
       unsigned int d_byte_cnt;
-      //unsigned char d_qidx;
-      //unsigned char d_qsize;
-      //unsigned int d_base;
+      
       uint16_t d_qidx;
       uint16_t d_qsize;
       uint16_t d_base;

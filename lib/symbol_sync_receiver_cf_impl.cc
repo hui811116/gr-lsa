@@ -82,11 +82,12 @@ enum SYSTEMSTATE{
       : gr::block("symbol_sync_receiver_cf",
               gr::io_signature::make3(1, 3, sizeof(gr_complex),sizeof(float),sizeof(float)),
               gr::io_signature::make2(0, 2, sizeof(float),sizeof(float))),
-              d_msg_port(pmt::mp("msg"))
+              d_msg_port(pmt::mp("msg")),
+              d_cap(8192*2)
     {
       d_hdr_const = hdr_const->base();
       d_hdr_bps = hdr_const->bits_per_symbol();
-      //d_debug = debug;
+      d_bytes_buf = new unsigned char[d_cap];
       d_state = SEARCH_ZERO;
       enter_search();
       set_tag_propagation_policy(TPP_DONT);
@@ -101,6 +102,7 @@ enum SYSTEMSTATE{
      */
     symbol_sync_receiver_cf_impl::~symbol_sync_receiver_cf_impl()
     {
+      delete[] d_bytes_buf;
     }
 
     // coded modules
@@ -192,6 +194,7 @@ enum SYSTEMSTATE{
       float *out_phase = NULL;
       float *out_freq = NULL;
       int nfix = (noutput_items<ninput_items[0])? noutput_items : ninput_items[0];
+      nfix = std::min(nfix,d_cap/d_hdr_bps);
       //const uint64_t nread = nitems_read(0);
       bool have_sync = (input_items.size()>=3);
       bool out_sync = (output_items.size()>=2);
