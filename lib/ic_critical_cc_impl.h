@@ -131,6 +131,7 @@ namespace gr {
      private:
       gr_complex* d_in_mem;
       gr_complex* d_out_mem;
+      gr_complex* d_comp_mem;
       int d_in_idx;
       int d_out_size;
       int d_out_idx;

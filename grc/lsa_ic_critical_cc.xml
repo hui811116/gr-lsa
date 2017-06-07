@@ -73,4 +73,8 @@
     <name>out</name>
     <type>complex</type>
   </source>
+  <source>
+    <name>comp</name>
+    <type>complex</type>
+  </source>
 </block>

@@ -72,12 +72,13 @@ namespace gr {
     ic_critical_cc_impl::ic_critical_cc_impl(float thres,int cross_len,int sps,bool debug)
       : gr::block("ic_critical_cc",
               gr::io_signature::makev(4, 4, iosig),
-              gr::io_signature::make(1, 1, sizeof(gr_complex))),
+              gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(gr_complex))),
               d_cap(MAXCAP)
     {
       d_debug = debug;
       d_in_mem = new gr_complex[d_cap];
       d_out_mem= new gr_complex[d_cap];
+      d_comp_mem = new gr_complex[d_cap];
       d_phase_mem = new float[d_cap];
       d_freq_mem= new float[d_cap];
       d_in_idx = 0;
@@ -117,6 +118,7 @@ namespace gr {
       delete [] d_freq_mem;
       delete [] d_retx_mem;
       delete [] d_intf_mem;
+      delete [] d_comp_mem;
       volk_free(d_intf_freq);
     }
 
@@ -543,6 +545,9 @@ namespace gr {
           if(retx_idx>=d_cap){
             throw std::runtime_error("retx idx exceed maximum, boom");
           }
+          // for DEMO
+          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(init_phase);
+
           d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
           init_phase+=freq_mean;
           phase_wrap(init_phase);
@@ -590,6 +595,8 @@ namespace gr {
       const float* phase= (const float*) input_items[2];
       const float* freq = (const float*) input_items[3];
       gr_complex *out = (gr_complex *) output_items[0];
+      // For DEMO
+      gr_complex *demo= (gr_complex *) output_items[1];
       int nout = 0;
       int nin_s = std::min(ninput_items[0],ninput_items[1]);
       int nin_p = std::min(ninput_items[2],ninput_items[3]);
@@ -878,6 +885,8 @@ namespace gr {
       }
       nout = std::min(d_out_size-d_out_idx,noutput_items);
       memcpy(out,d_out_mem+d_out_idx,sizeof(gr_complex)*nout);
+      // For DEMO
+      memcpy(demo,d_comp_mem+d_out_idx,sizeof(gr_complex)*nout);
       d_out_idx += nout;
       if(d_out_idx == d_out_size){
         d_out_idx=0;
