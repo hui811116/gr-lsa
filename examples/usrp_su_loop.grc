@@ -93,6 +93,60 @@
     </param>
     <param>
       <key>_coordinate</key>
+      <value>(32, 308)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>ac_bits</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[int(cross_ac[i],2) for i in range(0,len(cross_ac))]</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(32, 244)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>ac_bpsk</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[2*ac_bits[i]-1 for i in range(0,len(ac_bits))]</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
       <value>(1304, 736)</value>
     </param>
     <param>
@@ -265,87 +319,6 @@
     <param>
       <key>value</key>
       <value>100</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(24, 380)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_bytes</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(cross_ac[i:i+8],2) for i in range(0,len(cross_ac),8)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(24, 308)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_points</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[mod.points()[pre_sym[i]] for i in range(0,len(pre_sym))]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(24, 244)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_sym</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(cross_ac[i:i+bps],2) for i in range(0,len(cross_ac),bps)]</value>
     </param>
   </block>
   <block>
@@ -981,7 +954,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(104, 600)</value>
+      <value>(984, 468)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1083,7 +1056,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1008, 408)</value>
+      <value>(192, 612)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1107,11 +1080,11 @@
     </param>
     <param>
       <key>packet_len</key>
-      <value>len(pre_bytes)</value>
+      <value>len(ac_bpsk)</value>
     </param>
     <param>
       <key>type</key>
-      <value>byte</value>
+      <value>complex</value>
     </param>
     <param>
       <key>vlen</key>
@@ -1138,7 +1111,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(976, 480)</value>
+      <value>(192, 544)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1150,11 +1123,11 @@
     </param>
     <param>
       <key>type</key>
-      <value>byte</value>
+      <value>complex</value>
     </param>
     <param>
       <key>c</key>
-      <value>8</value>
+      <value>8*8/bps</value>
     </param>
     <param>
       <key>lengthtagname</key>
@@ -1193,7 +1166,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1296, 440)</value>
+      <value>(488, 592)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1205,7 +1178,7 @@
     </param>
     <param>
       <key>type</key>
-      <value>byte</value>
+      <value>complex</value>
     </param>
     <param>
       <key>lengthtagname</key>
@@ -1252,7 +1225,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(784, 400)</value>
+      <value>(24, 604)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1272,7 +1245,7 @@
     </param>
     <param>
       <key>type</key>
-      <value>byte</value>
+      <value>complex</value>
     </param>
     <param>
       <key>repeat</key>
@@ -1288,7 +1261,7 @@
     </param>
     <param>
       <key>vector</key>
-      <value>pre_bytes</value>
+      <value>ac_bpsk</value>
     </param>
   </block>
   <block>
@@ -1315,7 +1288,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(304, 600)</value>
+      <value>(1176, 468)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1394,7 +1367,7 @@
     </param>
     <param>
       <key>symbols</key>
-      <value>pre_points</value>
+      <value>ac_bpsk</value>
     </param>
     <param>
       <key>mark_delay</key>
@@ -1547,7 +1520,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(568, 600)</value>
+      <value>(728, 596)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2656,7 +2629,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1136, 584)</value>
+      <value>(1232, 588)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -3427,7 +3400,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(888, 568)</value>
+      <value>(1008, 572)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -4951,17 +4924,17 @@
     <source_block_id>blocks_stream_to_tagged_stream_1</source_block_id>
     <sink_block_id>blocks_tagged_stream_mux_0</sink_block_id>
     <source_key>0</source_key>
-    <sink_key>0</sink_key>
+    <sink_key>1</sink_key>
   </connection>
   <connection>
     <source_block_id>blocks_tagged_stream_multiply_length_0</source_block_id>
     <sink_block_id>blocks_tagged_stream_mux_0</sink_block_id>
     <source_key>0</source_key>
-    <sink_key>1</sink_key>
+    <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>blocks_tagged_stream_mux_0</source_block_id>
-    <sink_block_id>blocks_repack_bits_bb_0</sink_block_id>
+    <sink_block_id>interp_fir_filter_xxx_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -4973,7 +4946,7 @@
   </connection>
   <connection>
     <source_block_id>digital_chunks_to_symbols_xx_0</source_block_id>
-    <sink_block_id>interp_fir_filter_xxx_0</sink_block_id>
+    <sink_block_id>blocks_tagged_stream_multiply_length_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -5009,7 +4982,7 @@
   </connection>
   <connection>
     <source_block_id>lsa_chip_mapper_bb_0</source_block_id>
-    <sink_block_id>blocks_tagged_stream_multiply_length_0</sink_block_id>
+    <sink_block_id>blocks_repack_bits_bb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
