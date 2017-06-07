@@ -234,7 +234,7 @@ namespace gr {
         end+=d_cap;
       int index_check = (bit_s->index()<begin)? bit_s->index()+d_cap : bit_s->index();
       index_check+=block_offset;
-      if( (index_check -pkt_nominal < begin) || (index_check+reserved_length>end) ){
+      if( (index_check-pkt_nominal+1 < begin) || (index_check+reserved_length-1>end) ){
         return false;
       }
       int begin_p = d_sync_idx;
@@ -243,7 +243,7 @@ namespace gr {
         end_p+=d_cap;
       int sync_idx_check = (bit_p->index()<begin_p)? bit_p->index() +d_cap : bit_p->index();
       sync_idx_check += block_offset;
-      if( (sync_idx_check-pkt_nominal < begin_p)|| (sync_idx_check+reserved_length>end_p) ){
+      if( (sync_idx_check-pkt_nominal+1 < begin_p)|| (sync_idx_check+reserved_length-1>end_p) ){
         return false;
       }
       // valid retransmission size
@@ -251,9 +251,9 @@ namespace gr {
       // VoE of freq tracking signal
       // float mean, stddev
       // volk()...
-      int samp_idx = index_check - pkt_nominal;
+      int samp_idx = index_check - pkt_nominal+1;
       samp_idx = (samp_idx>=d_cap)? samp_idx-d_cap : samp_idx;
-      int sync_idx = sync_idx_check -pkt_nominal;
+      int sync_idx = sync_idx_check -pkt_nominal+1;
       sync_idx = (sync_idx>=d_cap)? sync_idx-d_cap : sync_idx;
       float init_phase = d_phase_mem[sync_idx];
       float init_freq = d_freq_mem[sync_idx];
@@ -351,12 +351,13 @@ namespace gr {
         current_end+=d_cap;
       }
       int samp_base = (bit_s->index()<current_begin)? bit_s->index()+d_cap : bit_s->index();
-      if(samp_base + block_offset-pkt_nominal<current_begin){
+      if(samp_base + block_offset-pkt_nominal+1<current_begin){
         //DEBUG<<"<IC Crit>new_intf::signal already removed..."<<std::endl;
         return false;
       }
-      int samp_idx = bit_s->index()+block_offset - pkt_nominal;
-      int length_check = current_end - samp_base + block_offset- pkt_nominal +1;
+      int samp_idx = bit_s->index()+block_offset - pkt_nominal+1;
+      // +1-1 cancel the last term
+      int length_check = current_end - (samp_base + block_offset- pkt_nominal) ;
       if(length_check+d_intf_idx >=d_cap){
         DEBUG<<"<IC Crit>loading history will make buffer overflow"<<std::endl;
         return false;
@@ -373,9 +374,9 @@ namespace gr {
       if(current_begin>current_end){
         current_end+=d_cap;
       }
-      int sync_idx = bit_p->index()+block_offset - pkt_nominal;
+      int sync_idx = bit_p->index()+block_offset - pkt_nominal+1;
       int sync_base = (bit_p->index()<current_begin)? bit_p->index()+d_cap : bit_p->index();
-      if(sync_base + block_offset -pkt_nominal<current_begin){
+      if( (sync_base + block_offset -pkt_nominal+1) <current_begin){
         //DEBUG<<"<IC Crit>new_intf:: the begin of packet already been removed(sync)...end function"<<std::endl;
         return false;
       }
@@ -449,8 +450,8 @@ namespace gr {
         // sample already stored in intf_buffer
         residual = 0;
         end_idx_corrected = d_intf_idx-1;
-      }else if( (intf_samp_check+block_offset) <= (d_in_idx+residual) ){
-        residual = intf_samp_check+block_offset - d_in_idx;
+      }else if( (intf_samp_check+block_offset) <= (d_in_idx-1+residual) ){
+        residual = intf_samp_check+block_offset - (d_in_idx-1)+1;
         end_idx_corrected = d_intf_idx + residual-1;
       }else{
         DEBUG<<"<IC Crit>update_intf:: not already stored nor will be stored in current samples...end function"<<std::endl;
@@ -463,9 +464,9 @@ namespace gr {
         current_end+=d_cap;
       }
       int sync_base = (bit_p->index()<current_begin)? bit_p->index()+d_cap:bit_p->index();
-      int sync_idx = bit_p->index()+block_offset - nominal_pkt;
+      int sync_idx = bit_p->index()+block_offset - nominal_pkt+1;
       sync_idx = (sync_idx<0)? sync_idx+d_cap:sync_idx;
-      if(sync_base+block_offset-nominal_pkt<current_begin){
+      if( (sync_base+block_offset-nominal_pkt+1) <current_begin){
         sync_idx = current_begin;
       }
       int count =0;
