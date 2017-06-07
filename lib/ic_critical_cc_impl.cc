@@ -267,12 +267,16 @@ namespace gr {
         throw std::runtime_error("<IC Crit>Fatal Error: Retransmission buffer is too small to acquire all retransmission....");
       }
       for(int i=0;i<copy_len;++i){
-        d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-init_phase);
-        init_phase+=init_freq;
-        phase_wrap(init_phase);
-        init_freq = d_freq_mem[sync_iter++];
+        d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-d_phase_mem[sync_iter++]);
+        //d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-init_phase);
+        //init_phase+=init_freq;
+        //phase_wrap(init_phase);
+        //init_freq = d_freq_mem[sync_iter++];
         samp_iter%=d_cap;
         sync_iter%=d_cap;
+        if(d_retx_idx == d_cap){
+          throw std::runtime_error("<IC Crit DEBUG>Fatal error: retransmission size is not enough... abort");
+        }
       }
       tag.set_index(retx_idx_begin);
       tag.add_msg(pmt::intern("copy_len"),pmt::from_long(copy_len));
@@ -281,6 +285,7 @@ namespace gr {
       // tag.add_msg(pmt::intern("freq_std"),pmt::from_float(std));
       tag.delete_msg(pmt::intern("queue_index"));
       tag.delete_msg(pmt::intern("queue_size"));
+      tag.delete_msg(pmt::intern("block_id"));
       return true;
     }
 
@@ -376,6 +381,8 @@ namespace gr {
       if(current_begin>current_end){
         current_end+=d_cap;
       }
+      float end_phase = d_phase_mem[bit_p->index()+block_offset];
+      //float end_freq = d_freq_mem[bit_p->index()+block_offset];
       int sync_idx = bit_p->index()+block_offset - pkt_nominal+1;
       int sync_base = (bit_p->index()<current_begin)? bit_p->index()+d_cap : bit_p->index();
       if( (sync_base + block_offset -pkt_nominal+1) <current_begin){
@@ -385,6 +392,10 @@ namespace gr {
       float clean_phase  = d_phase_mem[sync_idx];
       int count =0;
       while(sync_idx!=d_sync_idx){
+        // FOR DEBUG
+        //if(count<d_intf_idx){
+          //d_intf_mem[count]*= gr_expj(-d_phase_mem[sync_idx]);
+        //}
         d_intf_freq[count++] = d_freq_mem[sync_idx++];
         sync_idx%=d_cap;
       }
@@ -396,6 +407,8 @@ namespace gr {
       new_front.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
       new_front.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
       new_front.add_msg(pmt::intern("phase_init"),pmt::from_float(clean_phase));
+      new_front.add_msg(pmt::intern("phase_end"),pmt::from_float(end_phase));
+      //new_front.add_msg(pmt::intern("freq_end"),pmt::from_float(end_freq));
       // record clean phase?
       d_current_intf_tag.set_begin(intf_begin);
       d_current_intf_tag.set_front(new_front);
@@ -469,8 +482,14 @@ namespace gr {
       int sync_idx = bit_p->index()+block_offset - nominal_pkt+1;
       sync_idx = (sync_idx<0)? sync_idx+d_cap:sync_idx;
       if( (sync_base+block_offset-nominal_pkt+1) <current_begin){
-        sync_idx = current_begin;
+        //sync_idx = current_begin;
+        return false;
       }
+      
+      //float end_phase = d_phase_mem[bit_p->index()+block_offset];
+      //float begin_phase = d_phase_mem[sync_idx];
+      //float end_freq = d_freq_mem[sync_idx];
+
       int count =0;
       while(sync_idx!=d_sync_idx){
         d_intf_freq[count++] = d_freq_mem[sync_idx++];
@@ -485,6 +504,9 @@ namespace gr {
       hdr_t new_back = *rit;
       new_back.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
       new_back.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
+      //new_back.add_msg(pmt::intern("phase_init"),pmt::from_float(begin_phase));
+      //new_back.add_msg(pmt::intern("phase_end"),pmt::from_float(end_phase));
+      //new_back.add_msg(pmt::intern("freq_end"),pmt::from_float(end_freq));
       d_current_intf_tag.set_back(new_back);
       // NOTE:
       // due to difficulty in handling state transition and header tags
@@ -493,8 +515,8 @@ namespace gr {
       d_current_intf_tag.set_end(end_idx_corrected);
       // average of the freq
       // and record the end phase
-      DEBUG<<"Interfering tag added:"<<std::endl
-      <<d_current_intf_tag<<std::endl;
+      //DEBUG<<"Interfering tag added:"<<std::endl
+      //<<d_current_intf_tag<<std::endl;
       return true;
     }
 
@@ -532,6 +554,8 @@ namespace gr {
         int retx_id = map_it->second;
         int retx_idx = d_retx_tag[retx_id].index();
         pmt::pmt_t retx_msg = d_retx_tag[retx_id].msg();
+        DEBUG<<"<IC Crit DEBUG>First retransmission tag:"<<d_retx_tag[retx_id]<<std::endl;
+
         int pkt_len = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("packet_len"),pmt::from_long(0)));
         int pkt_cnt=0;
         float init_phase = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("phase_init"),pmt::from_float(0)));
@@ -546,15 +570,20 @@ namespace gr {
             throw std::runtime_error("retx idx exceed maximum, boom");
           }
           // for DEMO
-          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(init_phase);
-
+          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(-init_phase);
+          //d_comp_mem[d_out_size] = d_retx_mem[retx_idx];
           d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
+          // FOR DEBUG
+          //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++];
+          //retx_idx++;
+          //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++];
           init_phase+=freq_mean;
           phase_wrap(init_phase);
           pkt_cnt++;
           if(pkt_cnt==pkt_len){
             // Update Retransmission 
             retx_id = (retx_id+1)%d_retx_tag.size();
+            retx_idx = d_retx_tag[retx_id].index();
             retx_msg = d_retx_tag[retx_id].msg();
             pkt_len = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("packet_len"),pmt::from_long(0)));
             pkt_cnt=0;
@@ -862,6 +891,11 @@ namespace gr {
         next_state = FREE;
         d_voe_cnt =0;
         d_voe_state = false;
+        if(d_out_size!=0){
+          add_item_tag(0,nitems_written(0),pmt::intern("ic_out"),pmt::PMT_T);
+          add_item_tag(1,nitems_written(1),pmt::intern("ic_out"),pmt::PMT_T);
+        }
+          
       }
       if(d_reset_retx){
         //
