@@ -146,10 +146,10 @@ namespace gr {
       std::list<hdr_t> d_tag_list;
       bool d_debug;
       bool d_voe_state;
-      int d_voe_cnt;
+      //int d_voe_cnt;
       int d_state;
 
-      float d_threshold;
+      //float d_threshold;
       int d_cross_len;
       int d_sps;
 
@@ -166,6 +166,8 @@ namespace gr {
       float* d_intf_freq;
       intf_t d_current_intf_tag;
 
+      std::vector<tag_t> d_voe_tags;
+
       bool detect_ic_chance(const hdr_t& new_tag);
       void reset_retx();
       bool check_and_copy_retx(hdr_t& tag);
@@ -176,12 +178,13 @@ namespace gr {
 
       void do_ic();
 
+      void update_voe_state(int idx);
      public:
-      ic_critical_cc_impl(float thres,int cross_len,int sps,bool d_debug);
+      ic_critical_cc_impl(int cross_len,int sps,bool d_debug);
       ~ic_critical_cc_impl();
 
-      void set_threshold(float thres);
-      float threshold()const;
+      //void set_threshold(float thres);
+      //float threshold()const;
       
       // Where all the action really happens
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);

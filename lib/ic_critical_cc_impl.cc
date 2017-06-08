@@ -45,6 +45,7 @@ namespace gr {
   };
 
     static const pmt::pmt_t d_block_tag = pmt::intern("block_tag");
+    static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
     static const int d_voe_min = 128;
     static const int d_max_pending =256;
     static const int d_min_process = 16;
@@ -58,20 +59,20 @@ namespace gr {
     }
 
     ic_critical_cc::sptr
-    ic_critical_cc::make(float thres, int cross_len, int sps,bool debug)
+    ic_critical_cc::make(int cross_len, int sps,bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new ic_critical_cc_impl(thres,cross_len,sps,debug));
+        (new ic_critical_cc_impl(cross_len,sps,debug));
     }
 
     /*
      * The private constructor
      */
-    static int ios[] = {sizeof(gr_complex),sizeof(float),sizeof(float),sizeof(float)};
+    static int ios[] = {sizeof(gr_complex),sizeof(float),sizeof(float)};
     static std::vector<int> iosig(ios,ios+sizeof(ios)/sizeof(int));
-    ic_critical_cc_impl::ic_critical_cc_impl(float thres,int cross_len,int sps,bool debug)
+    ic_critical_cc_impl::ic_critical_cc_impl(int cross_len,int sps,bool debug)
       : gr::block("ic_critical_cc",
-              gr::io_signature::makev(4, 4, iosig),
+              gr::io_signature::makev(3, 3, iosig),
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(gr_complex))),
               d_cap(MAXCAP)
     {
@@ -87,7 +88,7 @@ namespace gr {
       d_out_size =0;
       d_state = FREE;
       d_voe_state = false;
-      d_voe_cnt =0;
+      //d_voe_cnt =0;
 
       d_retx_mem = new gr_complex[d_cap];
       d_intf_mem = new gr_complex[d_cap];
@@ -103,8 +104,8 @@ namespace gr {
       }
       d_sps = sps;
       reset_retx();
-      set_threshold(thres);
-      set_tag_propagation_policy(TPP_DONT);
+      //set_threshold(thres);
+      //set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -122,7 +123,7 @@ namespace gr {
       volk_free(d_intf_freq);
     }
 
-    void
+    /*void
     ic_critical_cc_impl::set_threshold(float thres)
     {
       d_threshold = thres;
@@ -131,7 +132,7 @@ namespace gr {
     ic_critical_cc_impl::threshold()const
     {
       return d_threshold;
-    }
+    }*/
 
     bool
     ic_critical_cc_impl::detect_ic_chance(const hdr_t& new_tag)
@@ -615,6 +616,23 @@ namespace gr {
         // creat output object?
       }
     }
+    void
+    ic_critical_cc_impl::update_voe_state(int idx)
+    {
+      const uint64_t nread = nitems_read(0);
+      while(d_voe_tags.empty()){
+        int offset = d_voe_tags[0].offset - nread;
+        if(offset == idx){
+          d_voe_state = pmt::to_bool(d_voe_tags[0].value);
+          d_voe_tags.erase(d_voe_tags.begin());
+          break;
+        }else if(idx>offset){
+          throw std::runtime_error("WTF...idx>offset");
+        }else{
+          break;
+        }
+      }
+    }
 
     void
     ic_critical_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
@@ -631,7 +649,7 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      const float* voe = (const float*) input_items[1];
+      //const float* voe = (const float*) input_items[1];
       const float* phase= (const float*) input_items[2];
       const float* freq = (const float*) input_items[3];
       gr_complex *out = (gr_complex *) output_items[0];
@@ -645,8 +663,10 @@ namespace gr {
       std::vector<tag_t> tags_s;
       std::vector<tag_t> tags_p;
       std::vector<tag_t> hdr_tags;
+      d_voe_tags.clear(); //
       get_tags_in_window(tags_s,0,0,nin_s,d_block_tag);
       get_tags_in_window(tags_p,2,0,nin_p,d_block_tag);
+      get_tags_in_window(d_voe_tags,0,0,nin_s,d_voe_tag); //
       if(!tags_s.empty()){
         nin_s = tags_s[0].offset-nitems_read(0);
       }
@@ -672,11 +692,8 @@ namespace gr {
               }
             }
             assert(d_voe_state == false);
-            if(voe[count_s]>d_threshold){
-              d_voe_cnt++;
-              if(d_voe_cnt>=d_voe_min){
-                d_voe_state = true;
-                d_voe_cnt=0;
+            update_voe_state(count_s);
+            if(d_voe_state){
                 next_state = SUFFERING;
                 DEBUG<<"\033[33m"<<"<IC Crit>Detect interfering signals"<<"\033[0m"
                 <<", block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
@@ -686,9 +703,6 @@ namespace gr {
                 }
                 state_interrupt = true;
                 break; // jump out from loop
-              }
-            }else{
-              d_voe_cnt =0;
             }
           }
         break;
@@ -709,26 +723,20 @@ namespace gr {
               DEBUG<<"\033[32m"<<"<IC Crit DEBUG> Additional interfering signal may cause overflow"<<"\033[0m"<<std::endl;
               state_interrupt = true;
               next_state = FREE;
-              d_voe_cnt =0;
+              //d_voe_cnt =0;
               d_voe_state = false;
               break;
             }
             assert(d_voe_state == true);
-            if(voe[count_s]<d_threshold){
-              d_voe_cnt++;
-              if(d_voe_cnt>=d_voe_min){
-                d_voe_state = false;
-                d_voe_cnt =0;
+            update_voe_state(count_s);
+              if(!d_voe_state){
                 reset_retx();
                 next_state = SEARCH_RETX;
                 DEBUG<<"\033[33m"<<"<IC Crit>Detect the end of interference"<<"\033[0m"
                 <<" , block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
                 state_interrupt = true;
                 break; // jump out from loop
-              }
-            }else{
-              d_voe_cnt=0;
-            }
+              }  
           }
         break;
         case SEARCH_RETX:
@@ -752,11 +760,9 @@ namespace gr {
               }
             }
             // add something to detect interference during retransmission process
-            if(!d_voe_state && voe[count_s]>d_threshold){
-              d_voe_cnt++;
-              if(d_voe_cnt>=d_voe_min){
-                d_voe_state = true;
-                d_voe_cnt =0;
+            bool prev_state = d_voe_state;
+            update_voe_state(count_s);
+            if(!d_voe_state && prev_state){
                 DEBUG<<"\033[33m"<<"<IC Crit> Detect an interfering event during retransmission state"<<"\033[0m"
                   <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
                 if(d_current_intf_tag.empty()){
@@ -765,17 +771,9 @@ namespace gr {
                     DEBUG<<"\033[35m"<<"<IC Crit> new intferference object Created"<<"\033[0m"<<std::endl;
                   }
                 }
-              }
-            }else if(d_voe_state && voe[count_s]<d_threshold){
-              d_voe_cnt++;
-              if(d_voe_cnt>=d_voe_min){
-                d_voe_state = false;
-                d_voe_cnt=0;
+            }else if(d_voe_state && !prev_state){
                 DEBUG<<"\033[33m"<<"<Ic Crit> Interfering event during retransmission ends"<<"\033[0m"
                 <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
-              }
-            }else{
-              d_voe_cnt=0;
             }
           }
         break;
@@ -900,7 +898,7 @@ namespace gr {
         reset_retx();
         d_tag_list.clear();
         next_state = FREE;
-        d_voe_cnt =0;
+        //d_voe_cnt =0;
         d_voe_state = false;
         if(d_out_size!=0){
           add_item_tag(0,nitems_written(0),pmt::intern("ic_out"),pmt::PMT_T);
@@ -913,7 +911,7 @@ namespace gr {
         DEBUG<<"\033[31m"<<"<IC Crit>Reset RETX, due to failure"<<"\033[0m"<<std::endl;
         reset_retx();
         next_state = FREE;
-        d_voe_cnt =0;
+        //d_voe_cnt =0;
         d_voe_state = false;
       }
       d_state = next_state;
@@ -939,9 +937,8 @@ namespace gr {
       }
 
       consume(0,count_s);
-      consume(1,count_s);
+      consume(1,count_p);
       consume(2,count_p);
-      consume(3,count_p);
       return nout;
     }
 
