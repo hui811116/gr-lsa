@@ -199,6 +199,10 @@ namespace gr {
           // received all retransmission !!
           // should prepare all required information
           DEBUG<<"<IC Crit> Retransmission received, retx_size="<<d_retx_tag.size()<<std::endl;
+          //for(int i =0;i<d_retx_tag.size();++i){
+            //DEBUG<<d_retx_tag[i]<<std::endl;
+          //}
+          //DEBUG<<"------------------------------------------"<<std::endl;
           return true;
         }
       }
@@ -456,25 +460,28 @@ namespace gr {
         return false;
       }
       block_offset = idx;
+      int current_begin = d_in_idx;
+      int current_end = (d_in_idx==0)? d_cap-1 : d_in_idx-1;
+      current_end = (current_end<current_begin)? current_end+d_cap: current_end;
       int intf_samp_check = bit_s->index();
       int end_idx_corrected;
-      if(intf_samp_check>d_in_idx){
-        intf_samp_check-=d_cap;
+      if(intf_samp_check<current_begin){
+        intf_samp_check+=d_cap;
       }
-      if(intf_samp_check+block_offset < d_in_idx){
-        // sample already stored in intf_buffer
-        residual = 0;
+      if(intf_samp_check+block_offset<=current_end){
+        //already stored
+        residual =0;
         end_idx_corrected = d_intf_idx-1;
-      }else if( (intf_samp_check+block_offset) <= (d_in_idx-1+residual) ){
-        residual = intf_samp_check+block_offset - (d_in_idx-1)+1;
-        end_idx_corrected = d_intf_idx + residual-1;
+      }else if(intf_samp_check+block_offset-current_end+1<=residual){
+        residual = intf_samp_check + block_offset -current_end+1;
+        end_idx_corrected = d_intf_idx+residual-1;
       }else{
         DEBUG<<"<IC Crit>update_intf:: not already stored nor will be stored in current samples...end function"<<std::endl;
         return false;
       }
       // success to record a valid header after interference occur
-      int current_begin = d_sync_idx;
-      int current_end = (d_sync_idx==0)? d_cap-1 : d_sync_idx-1;
+      current_begin = d_sync_idx;
+      current_end = (d_sync_idx==0)? d_cap-1 : d_sync_idx-1;
       if(current_begin>current_end){
         current_end+=d_cap;
       }
@@ -485,11 +492,9 @@ namespace gr {
         //sync_idx = current_begin;
         return false;
       }
-      
       //float end_phase = d_phase_mem[bit_p->index()+block_offset];
       //float begin_phase = d_phase_mem[sync_idx];
       //float end_freq = d_freq_mem[sync_idx];
-
       int count =0;
       while(sync_idx!=d_sync_idx){
         d_intf_freq[count++] = d_freq_mem[sync_idx++];
@@ -561,6 +566,9 @@ namespace gr {
         float init_phase = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("phase_init"),pmt::from_float(0)));
         float freq_mean = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("freq_mean"),pmt::from_float(0)));
         int intf_cnt = intf_begin;
+
+        int debug_retx_id = (retx_id+1)%d_retx_tag.size();
+        int debug_retx_idx = d_retx_tag[debug_retx_id].index();
         while(intf_cnt<intf_end){
           //NOTE: sync to interfering signal
           if(intf_cnt>=d_cap){
@@ -570,7 +578,8 @@ namespace gr {
             throw std::runtime_error("retx idx exceed maximum, boom");
           }
           // for DEMO
-          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(-init_phase);
+          d_comp_mem[d_out_size] = d_retx_mem[debug_retx_idx++]-d_retx_mem[retx_idx];
+          //d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(-init_phase);
           //d_comp_mem[d_out_size] = d_retx_mem[retx_idx];
           d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
           // FOR DEBUG
@@ -589,6 +598,8 @@ namespace gr {
             pkt_cnt=0;
             // NOTE: maybe the freq est in retransmission helps?
             // freq_mean
+            debug_retx_id = (retx_id+1)%d_retx_tag.size();
+            debug_retx_idx= d_retx_tag[debug_retx_id].index();
             //DEBUG<<"Update retx: index="<<retx_id<<" pkt_nominal="<<pkt_len<<std::endl
             //<<"msg:"<<retx_msg<<std::endl;
           }

@@ -22,9 +22,6 @@
 #define INCLUDED_LSA_CORRELATE_SYNC_CC_IMPL_H
 
 #include <lsa/correlate_sync_cc.h>
-#include <gnuradio/filter/fft_filter.h>
-
-using namespace gr::filter;
 
 namespace gr {
   namespace lsa {
@@ -32,29 +29,17 @@ namespace gr {
     class correlate_sync_cc_impl : public correlate_sync_cc
     {
      private:
-      // Nothing to declare in this block.
-      kernel::fft_filter_ccc *d_filter;
-
-      gr_complex *d_corr;
-      float *d_corr_mag;
-      float *d_eng;
-      float *d_norm_corr;
-      float d_samples_eng;
+      const int d_cap;
+      gr_complex d_samples_eng;
       std::vector<gr_complex> d_samples;
-
       float d_threshold;
-      float d_thres_log;
-      float d_eng_log;
      public:
-      correlate_sync_cc_impl(const std::vector<gr_complex>& samples,
-        float threshold);
+      correlate_sync_cc_impl(const std::vector<gr_complex>& samples,float threshold);
       ~correlate_sync_cc_impl();
-
       void set_threshold(float thres);
-
+      float threshold()const;
       // Where all the action really happens
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);
-
       int general_work(int noutput_items,
            gr_vector_int &ninput_items,
            gr_vector_const_void_star &input_items,

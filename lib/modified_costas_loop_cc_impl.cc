@@ -31,7 +31,7 @@
 namespace gr {
   namespace lsa {
 
-    static const pmt::pmt_t d_voe_tag = pmt::intern("VoE_detected");
+    static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
     static const pmt::pmt_t d_block_tag=pmt::intern("block_tag");
 
     modified_costas_loop_cc::sptr

@@ -5,6 +5,7 @@
   <category>[lsa]</category>
   <import>import lsa</import>
   <make>lsa.correlate_sync_cc($samples,$thres)</make>
+  <callback>set_threshold($thres)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -18,8 +19,8 @@
   <param>
     <name>Threshold</name>
     <key>thres</key>
-    <value>0.7</value>
-    <type>real</type>
+    <value>0.75</value>
+    <type>float</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -43,7 +44,7 @@
   </source>
   <source>
     <name>corr</name>
-    <type>float</type>
+    <type>complex</type>
     <optional>1</optional>
   </source>
 </block>

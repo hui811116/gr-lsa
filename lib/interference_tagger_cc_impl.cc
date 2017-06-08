@@ -29,7 +29,7 @@ namespace gr {
   namespace lsa {
 
     static const pmt::pmt_t d_voe_tag= pmt::intern("voe_tag");
-    static const int MINLEN = 32;
+    static const int MINLEN = 64;
     static const uint32_t MINGAP = 128*64/2*4;
 
     interference_tagger_cc::sptr
@@ -97,7 +97,6 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      //const float* in_eng = (const float*) input_items[1];
       const float* in_voe = (const float*) input_items[1];
       gr_complex *out = (gr_complex *) output_items[0];
       int nin = std::min(std::min(noutput_items, ninput_items[0]),ninput_items[1]);
@@ -114,8 +113,8 @@ namespace gr {
               if(d_duration_cnt>=MINGAP){
                 d_duration_cnt = 0;
                 report_interference();
-                add_item_tag(0,nwrite+i,d_voe_tag,pmt::PMT_T);
               }
+              add_item_tag(0,nwrite+i,d_voe_tag,pmt::PMT_T);
               d_intf_cnt =0;
               d_intf_state= true;
             }
@@ -132,8 +131,8 @@ namespace gr {
               d_intf_state = false;
               if(d_duration_cnt>=MINGAP){
                 d_duration_cnt =0;
-                add_item_tag(0,nwrite+i,d_voe_tag,pmt::PMT_F);
               }
+              add_item_tag(0,nwrite+i,d_voe_tag,pmt::PMT_F);
             }
           }
           else{

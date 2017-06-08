@@ -48,6 +48,8 @@ namespace gr {
        */
       static sptr make(const std::vector<gr_complex>& samples,
         float threshold);
+      virtual void set_threshold(float threshold)=0;
+      virtual float threshold()const =0;
     };
 
   } // namespace lsa

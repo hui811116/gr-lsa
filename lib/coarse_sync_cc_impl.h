@@ -32,17 +32,22 @@ namespace gr {
       int d_state;
       int d_auto_cnt;
       int d_copy_cnt;
-      int d_sps;
+      int d_delay;
       float d_threshold;
+      float d_phase;
       const int d_valid_len;
       const int d_mingap;
       const int d_maxlen;
       const pmt::pmt_t d_cfo_key;
       float d_coarse_cfo;
-      const pmt::pmt_t d_out_port;
+      // voe tag state
+      bool d_voe_state;
+      std::vector<tag_t> d_tags;
+
+      void update_tag_state(int idx);
 
      public:
-      coarse_sync_cc_impl(float threshold, int sps);
+      coarse_sync_cc_impl(float threshold, int delay);
       ~coarse_sync_cc_impl();
 
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);

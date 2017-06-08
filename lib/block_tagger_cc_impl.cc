@@ -50,7 +50,7 @@ namespace gr {
       if(block_size<0){
         throw std::invalid_argument("block size cannot be negative");
       }
-      //set_tag_propagation_policy(TPP_DONT);
+      set_tag_propagation_policy(TPP_DONT);
       d_debug = debug;
       d_block_cnt =0;
     }
@@ -78,15 +78,23 @@ namespace gr {
       gr_complex *out = (gr_complex *) output_items[0];
       int nin = std::min(ninput_items[0],noutput_items);
       int nout=0;
-      const uint64_t nread = nitems_read(0);
+      std::vector<tag_t> tags;
+      get_tags_in_window(tags,0,0,nin);
       const uint64_t nwrite= nitems_written(0);
       for(int i=0;i<nin;++i){
         if(d_block_cnt%d_block_size==0){
           d_block_cnt = 0;
-          add_item_tag(0,nread+i,d_block_tag,pmt::from_uint64(d_block_no++),d_src_id);
+          add_item_tag(0,nwrite+i,d_block_tag,pmt::from_uint64(d_block_no++),d_src_id);
         }
         out[nout++] = in[i];
         d_block_cnt++;
+      }
+      for(int i=0;i<tags.size();++i){
+        int offset = tags[i].offset - nitems_read(0);
+        if(offset>=nout){
+          break;
+        }
+        add_item_tag(0,nwrite+offset,tags[i].key,tags[i].value,d_src_id);
       }
       consume_each (nin);
       return nout;

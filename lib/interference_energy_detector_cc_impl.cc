@@ -103,17 +103,16 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      float ed_test;
+      //float ed_test;
       float var =0;
       float* voe_out   = (float*)output_items[1];
       int nin = std::min(ninput_items[0]-d_blocklength,noutput_items);
-      const uint64_t nread = nitems_read(0);
       memcpy(out, in, sizeof(gr_complex) * nin);
       volk_32fc_magnitude_squared_32f(d_energy_reg, in, nin+d_blocklength);
       for(int i=0;i<nin;++i){
         volk_32f_stddev_and_mean_32f_x2(v_stddev, v_mean, d_energy_reg+i,d_blocklength);
         var = pow(*(v_stddev),2);
-        ed_test = std::accumulate(d_energy_reg+i,d_energy_reg+i+d_blocklength-1,0.0)/(float)d_blocklength;
+        //ed_test = std::accumulate(d_energy_reg+i,d_energy_reg+i+d_blocklength-1,0.0)/(float)d_blocklength;
         voe_out[i] = var;
       }
       consume_each (nin);

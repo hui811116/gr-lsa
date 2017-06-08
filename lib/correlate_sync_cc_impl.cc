@@ -26,11 +26,11 @@
 #include "correlate_sync_cc_impl.h"
 #include <volk/volk.h>
 #include <gnuradio/math.h>
-#include <cmath>
-#include <numeric>
 
 namespace gr {
   namespace lsa {
+
+    static int MINGAP = (64+12*8*8)/2*4;
 
     correlate_sync_cc::sptr
     correlate_sync_cc::make(
@@ -50,35 +50,20 @@ namespace gr {
       float threshold)
       : gr::block("correlate_sync_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(float)))
+              gr::io_signature::make2(1, 2, sizeof(gr_complex), sizeof(gr_complex))),
+              d_cap(24*1024)
     {
-      const size_t nitems = 24*1024;
-      set_max_noutput_items(nitems);
-      d_corr = (gr_complex *)volk_malloc(sizeof(gr_complex)*nitems, volk_get_alignment());
-      d_corr_mag = (float *)volk_malloc(sizeof(float)*nitems, volk_get_alignment());
-      d_eng = (float*) volk_malloc(sizeof(float)*nitems,volk_get_alignment());
-      d_norm_corr = new float[nitems];
+      set_max_noutput_items(d_cap);
       // Create time-reversed conjugate of symbols
+      if(samples.size()==0){
+        throw std::runtime_error("Empty preamble, abort");
+      }
       d_samples = samples;
-      float sample_eng = 0;
-      for(size_t i=0; i < d_samples.size(); i++) {
-          d_samples[i] = conj(d_samples[i]);
-          sample_eng += norm(d_samples[i]);
-      }
-      if(sample_eng < 1e-10){
-        throw std::runtime_error("correlation samples energy cannot be zero");
-      }
-      d_samples_eng = sample_eng;
-      d_eng_log = logf(sample_eng);
-
-      std::reverse(d_samples.begin(), d_samples.end());
-
-      //set_mark_delay(mark_delay);
-      set_threshold(threshold);
-
-      // Correlation filter
-      d_filter = new kernel::fft_filter_ccc(1, d_samples);
-      set_history(d_filter->ntaps());
+      // calculate samples energy
+      volk_32fc_x2_conjugate_dot_prod_32fc(&d_samples_eng, samples.data(), samples.data(), samples.size());
+      set_threshold(threshold); 
+      set_history(samples.size());
+      set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -86,11 +71,6 @@ namespace gr {
      */
     correlate_sync_cc_impl::~correlate_sync_cc_impl()
     {
-      delete d_filter;
-      delete d_norm_corr;
-      volk_free(d_corr);
-      volk_free(d_corr_mag);
-      volk_free(d_eng);
     }
 
     void
@@ -100,7 +80,11 @@ namespace gr {
         throw std::runtime_error("Threshold should be normalized to [0,1]");
       }
       d_threshold = thres;
-      d_thres_log = logf(d_threshold);
+    }
+    float
+    correlate_sync_cc_impl::threshold()const
+    {
+      return d_threshold;
     }
 
 
@@ -108,11 +92,11 @@ namespace gr {
     correlate_sync_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      for(int i=0;i<ninput_items_required.size();++i)
-      {
+      for(int i=0;i<ninput_items_required.size();++i){
         ninput_items_required[i] = noutput_items + history();
       }
     }
+    
 
     int
     correlate_sync_cc_impl::general_work (int noutput_items,
@@ -122,44 +106,45 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      gr_complex *corr = d_corr;
-      float* corr_mag = d_norm_corr;
+      gr_complex *corr = NULL;
+      int nin = std::min(std::min(ninput_items[0]-(int)history(),noutput_items), d_cap) ;
+      int count =0;
+      int nout =nin;
       bool have_corr = (output_items.size()>=2);
       if(have_corr){
-        corr_mag = (float*) output_items[1];
+        corr = (gr_complex*) output_items[1];
       }
-      memcpy(out,in,sizeof(gr_complex)* noutput_items);
-   
-      d_filter->filter(noutput_items, in, corr);
-      volk_32fc_magnitude_32f(corr_mag, corr, noutput_items);
-      volk_32fc_magnitude_squared_32f(d_eng,in,noutput_items + history());
-
-      float eng_acc=0.0;
-      float detection = 0;
+      memcpy(out,in,sizeof(gr_complex)* nin);
+      // calculate cross correlation
+      gr_complex corrval;
+      gr_complex eng;
+      gr_complex corr_norm;
       float phase;
-      for(int i=0;i<noutput_items;++i){
-        eng_acc=std::accumulate(d_eng+i,d_eng+i+d_samples.size()-1,0.0);
-        if(2*logf(corr_mag[i])>logf(eng_acc)+d_eng_log){
-          continue;
+      std::vector<tag_t> tags;
+      get_tags_in_window(tags,0,0,nin);
+      for(count=0;count<nin;++count){
+        volk_32fc_x2_conjugate_dot_prod_32fc(&corrval, in+count, d_samples.data(), d_samples.size());
+        volk_32fc_x2_conjugate_dot_prod_32fc(&eng, in+count, in+count, d_samples.size());
+        // To prevent overflow
+        corr_norm = corrval / (std::sqrt(eng*d_samples_eng)+gr_complex(1e-6,0));
+        if(have_corr){
+          corr[count] = corr_norm;
         }
-        detection = logf(corr_mag[i]) - 0.5*logf(eng_acc);
-        if(detection >= d_thres_log + 0.5*d_eng_log){
-          phase = fast_atan2f(corr[i].imag(),corr[i].real());
-          add_item_tag(0,nitems_written(0)+i,pmt::intern("corr_est"),pmt::PMT_T);
-          add_item_tag(0,nitems_written(0)+i,pmt::intern("phase_est"),pmt::from_float(phase));
+        if(std::abs(corr_norm)>=d_threshold){
+          // detect a possible preamble
+          phase = fast_atan2f(corrval.imag(),corrval.real());
+          add_item_tag(0, nitems_written(0)+count,pmt::intern("phase_est"),pmt::from_float(phase));
           if(have_corr){
-            add_item_tag(1,nitems_written(1)+i,pmt::intern("corr_est"),pmt::PMT_T);
+            add_item_tag(1,nitems_written(1)+count,pmt::intern("phase_est"),pmt::from_float(phase));
           }
         }
-
       }
-      
-      // Tell runtime system how many input items we consumed on
-      // each input stream.
-      consume_each (noutput_items);
-
-      // Tell runtime system how many output items we produced.
-      return noutput_items;
+      for(int i=0;i<tags.size();++i){
+        int offset = tags[i].offset - nitems_read(0);
+        add_item_tag(0,nitems_written(0)+offset,tags[i].key,tags[i].value);
+      }
+      consume_each (count);
+      return nout;
     }
 
   } /* namespace lsa */
