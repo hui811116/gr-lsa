@@ -1526,8 +1526,8 @@
       <value></value>
     </param>
     <param>
-      <key>cross_len</key>
-      <value>len(ac_qpsk)</value>
+      <key>cross_word</key>
+      <value>preamble</value>
     </param>
     <param>
       <key>debug</key>
@@ -2344,7 +2344,7 @@
     </param>
     <param>
       <key>gui_hint</key>
-      <value>tab0@2</value>
+      <value>tab0@0</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2707,7 +2707,7 @@
     </param>
     <param>
       <key>gui_hint</key>
-      <value>tab0@2</value>
+      <value>tab0@0</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -3433,7 +3433,7 @@
     </param>
     <param>
       <key>gui_hint</key>
-      <value>tab0@3</value>
+      <value>tab0@2</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -3796,7 +3796,7 @@
     </param>
     <param>
       <key>gui_hint</key>
-      <value>tab0@4</value>
+      <value>tab0@3</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -4199,15 +4199,15 @@
     </param>
     <param>
       <key>label2</key>
-      <value>Interference Cancellation</value>
-    </param>
-    <param>
-      <key>label3</key>
       <value>Autocorrelation</value>
     </param>
     <param>
-      <key>label4</key>
+      <key>label3</key>
       <value>Cross correlation</value>
+    </param>
+    <param>
+      <key>label4</key>
+      <value></value>
     </param>
     <param>
       <key>label5</key>
@@ -4231,7 +4231,7 @@
     </param>
     <param>
       <key>num_tabs</key>
-      <value>5</value>
+      <value>4</value>
     </param>
   </block>
   <block>

@@ -62,10 +62,10 @@ namespace gr {
     }
 
     ic_critical_cc::sptr
-    ic_critical_cc::make(int cross_len, int sps,bool debug)
+    ic_critical_cc::make(const std::vector<gr_complex>& cross_word, int sps,bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new ic_critical_cc_impl(cross_len,sps,debug));
+        (new ic_critical_cc_impl(cross_word,sps,debug));
     }
 
     /*
@@ -73,11 +73,12 @@ namespace gr {
      */
     static int ios[] = {sizeof(gr_complex),sizeof(float),sizeof(float)};
     static std::vector<int> iosig(ios,ios+sizeof(ios)/sizeof(int));
-    ic_critical_cc_impl::ic_critical_cc_impl(int cross_len,int sps,bool debug)
+    ic_critical_cc_impl::ic_critical_cc_impl(const std::vector<gr_complex>& cross_word,int sps,bool debug)
       : gr::block("ic_critical_cc",
               gr::io_signature::makev(3, 3, iosig),
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(gr_complex))),
-              d_cap(MAXCAP)
+              d_cap(MAXCAP),
+              d_cross_word(cross_word)
     {
       d_debug = debug;
       d_in_mem = new gr_complex[d_cap];
@@ -91,24 +92,21 @@ namespace gr {
       d_out_size =0;
       d_state = FREE;
       d_voe_state = false;
-      //d_voe_cnt =0;
-
       d_retx_mem = new gr_complex[d_cap];
       d_intf_mem = new gr_complex[d_cap];
       d_intf_idx =0;
       d_intf_freq = (float*) volk_malloc(sizeof(float)*d_cap,volk_get_alignment());
 
-      if(cross_len<=0){
-        throw std::invalid_argument("Invalid cross length");
+      if(cross_word.empty()){
+        throw std::invalid_argument("Invalid cross_word");
       }
-      d_cross_len = cross_len;
+      
+      d_cross_len = cross_word.size();
       if(sps<=0){
         throw std::invalid_argument("Invalid samples per symbol");
       }
       d_sps = sps;
       reset_retx();
-      //set_threshold(thres);
-      //set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -125,17 +123,6 @@ namespace gr {
       delete [] d_comp_mem;
       volk_free(d_intf_freq);
     }
-
-    /*void
-    ic_critical_cc_impl::set_threshold(float thres)
-    {
-      d_threshold = thres;
-    }
-    float
-    ic_critical_cc_impl::threshold()const
-    {
-      return d_threshold;
-    }*/
 
     bool
     ic_critical_cc_impl::detect_ic_chance(const hdr_t& new_tag)
@@ -203,10 +190,6 @@ namespace gr {
           // received all retransmission !!
           // should prepare all required information
           DEBUG<<"<IC Crit> Retransmission received, retx_size="<<d_retx_tag.size()<<std::endl;
-          //for(int i =0;i<d_retx_tag.size();++i){
-            //DEBUG<<d_retx_tag[i]<<std::endl;
-          //}
-          //DEBUG<<"------------------------------------------"<<std::endl;
           return true;
         }
       }
@@ -276,10 +259,6 @@ namespace gr {
       }
       for(int i=0;i<copy_len;++i){
         d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-d_phase_mem[sync_iter++]);
-        //d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-init_phase);
-        //init_phase+=init_freq;
-        //phase_wrap(init_phase);
-        //init_freq = d_freq_mem[sync_iter++];
         samp_iter%=d_cap;
         sync_iter%=d_cap;
         if(d_retx_idx == d_cap){
@@ -390,7 +369,6 @@ namespace gr {
         current_end+=d_cap;
       }
       float end_phase = d_phase_mem[bit_p->index()+block_offset];
-      //float end_freq = d_freq_mem[bit_p->index()+block_offset];
       int sync_idx = bit_p->index()+block_offset - pkt_nominal+1;
       int sync_base = (bit_p->index()<current_begin)? bit_p->index()+d_cap : bit_p->index();
       if( (sync_base + block_offset -pkt_nominal+1) <current_begin){
@@ -400,10 +378,6 @@ namespace gr {
       float clean_phase  = d_phase_mem[sync_idx];
       int count =0;
       while(sync_idx!=d_sync_idx){
-        // FOR DEBUG
-        //if(count<d_intf_idx){
-          //d_intf_mem[count]*= gr_expj(-d_phase_mem[sync_idx]);
-        //}
         d_intf_freq[count++] = d_freq_mem[sync_idx++];
         sync_idx%=d_cap;
       }
@@ -416,7 +390,6 @@ namespace gr {
       new_front.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
       new_front.add_msg(pmt::intern("phase_init"),pmt::from_float(clean_phase));
       new_front.add_msg(pmt::intern("phase_end"),pmt::from_float(end_phase));
-      //new_front.add_msg(pmt::intern("freq_end"),pmt::from_float(end_freq));
       // record clean phase?
       d_current_intf_tag.set_begin(intf_begin);
       d_current_intf_tag.set_front(new_front);
@@ -493,12 +466,8 @@ namespace gr {
       int sync_idx = bit_p->index()+block_offset - nominal_pkt+1;
       sync_idx = (sync_idx<0)? sync_idx+d_cap:sync_idx;
       if( (sync_base+block_offset-nominal_pkt+1) <current_begin){
-        //sync_idx = current_begin;
         return false;
       }
-      //float end_phase = d_phase_mem[bit_p->index()+block_offset];
-      //float begin_phase = d_phase_mem[sync_idx];
-      //float end_freq = d_freq_mem[sync_idx];
       int count =0;
       while(sync_idx!=d_sync_idx){
         d_intf_freq[count++] = d_freq_mem[sync_idx++];
@@ -513,9 +482,6 @@ namespace gr {
       hdr_t new_back = *rit;
       new_back.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
       new_back.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
-      //new_back.add_msg(pmt::intern("phase_init"),pmt::from_float(begin_phase));
-      //new_back.add_msg(pmt::intern("phase_end"),pmt::from_float(end_phase));
-      //new_back.add_msg(pmt::intern("freq_end"),pmt::from_float(end_freq));
       d_current_intf_tag.set_back(new_back);
       // NOTE:
       // due to difficulty in handling state transition and header tags
@@ -524,8 +490,6 @@ namespace gr {
       d_current_intf_tag.set_end(end_idx_corrected);
       // average of the freq
       // and record the end phase
-      //DEBUG<<"Interfering tag added:"<<std::endl
-      //<<d_current_intf_tag<<std::endl;
       return true;
     }
 
@@ -641,7 +605,6 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[SAMPLE_PORT];
-      //const float* voe = (const float*) input_items[1];
       const float* phase= (const float*) input_items[PHASE_PORT];
       const float* freq = (const float*) input_items[FREQ_PORT];
       gr_complex *out = (gr_complex *) output_items[0];
@@ -715,7 +678,6 @@ namespace gr {
               DEBUG<<"\033[32m"<<"<IC Crit DEBUG> Additional interfering signal may cause overflow"<<"\033[0m"<<std::endl;
               state_interrupt = true;
               next_state = FREE;
-              //d_voe_cnt =0;
               d_voe_state = false;
               break;
             }

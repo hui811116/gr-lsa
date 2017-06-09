@@ -4,25 +4,18 @@
   <key>lsa_ic_critical_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.ic_critical_cc($cross_len,$sps,$debug)</make>
+  <make>lsa.ic_critical_cc($cross_word,$sps,$debug)</make>
   <!--<callback>set_threshold($thres)</callback>-->
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
-  <!--
   <param>
-    <name>Threshold</name>
-    <key>thres</key>
-    <value>-50</value>
-    <type>float</type>
-  </param>
-  -->
-  <param>
-    <name>Cross Length</name>
-    <key>cross_len</key>
-    <type>int</type>
+    <name>Cross Word</name>
+    <key>cross_word</key>
+    <value>[]</value>
+    <type>complex_vector</type>
   </param>
   <param>
     <name>Samples per symbol</name>
