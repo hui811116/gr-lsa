@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<block>
+  <name>Throughput Report</name>
+  <key>lsa_throughput_report</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.throughput_report($ms,$hisLen)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Period</name>
+    <key>ms</key>
+    <value>2000</value>
+    <type>float</type>
+  </param>
+  <param>
+    <name>History Length</name>
+    <key>hisLen</key>
+    <value>64</value>
+    <type>int</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>pkt_in</name>
+    <type>message</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>tp_out</name>
+    <type>message</type>
+  </source>
+</block>

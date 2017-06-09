@@ -56,11 +56,11 @@
 #include "lsa/su_tx_helper.h"
 #include "lsa/ic_critical_cc.h"
 #include "lsa/su_packet_sink_c.h"
+#include "lsa/throughput_report.h"
 %}
 
 %include "lsa/eng_det_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, eng_det_cc);
-
 %include "lsa/interference_energy_detector_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_energy_detector_cc);
 %include "lsa/modified_polyphase_time_sync_cc.h"
@@ -83,7 +83,6 @@ GR_SWIG_BLOCK_MAGIC2(lsa, expand_symbal_to_sample_ff);
 GR_SWIG_BLOCK_MAGIC2(lsa, symbol_sync_receiver_cf);
 %include "lsa/preamble_prefixer.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, preamble_prefixer);
-
 %include "lsa/symbol_corrector_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, symbol_corrector_cc);
 %include "lsa/control_source_b.h"
@@ -112,7 +111,6 @@ GR_SWIG_BLOCK_MAGIC2(lsa, coarse_sync_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, stat_report);
 %include "lsa/prou_packet_sink_f.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, prou_packet_sink_f);
-
 %include "lsa/interference_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_tagger_cc);
 %include "lsa/su_mac.h"
@@ -129,6 +127,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, su_sr_transmitter_bb);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_tx_helper);
 %include "lsa/ic_critical_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, ic_critical_cc);
-
 %include "lsa/su_packet_sink_c.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, su_packet_sink_c);
+%include "lsa/throughput_report.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, throughput_report);

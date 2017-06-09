@@ -59,7 +59,8 @@ list(APPEND lsa_sources
     su_sr_transmitter_bb_impl.cc
     su_tx_helper.cc
     ic_critical_cc_impl.cc
-    su_packet_sink_c_impl.cc )
+    su_packet_sink_c_impl.cc
+    throughput_report.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

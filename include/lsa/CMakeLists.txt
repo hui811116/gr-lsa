@@ -56,5 +56,6 @@ install(FILES
     su_sr_transmitter_bb.h
     su_tx_helper.h
     ic_critical_cc.h
-    su_packet_sink_c.h DESTINATION include/lsa
+    su_packet_sink_c.h
+    throughput_report.h DESTINATION include/lsa
 )
