@@ -37,6 +37,9 @@ namespace gr {
 #define MAXLEN (127+PHYLEN)*8*8/2*4
 #define MAXCAP 256*MAXLEN
 #define TWO_PI M_PI*2.0f
+#define SAMPLE_PORT 0
+#define PHASE_PORT 1
+#define FREQ_PORT 2
 
   enum VOESTATE{
     FREE,
@@ -619,8 +622,8 @@ namespace gr {
     void
     ic_critical_cc_impl::update_voe_state(int idx)
     {
-      const uint64_t nread = nitems_read(0);
-      while(d_voe_tags.empty()){
+      const uint64_t nread = nitems_read(SAMPLE_PORT);
+      while(!d_voe_tags.empty()){
         int offset = d_voe_tags[0].offset - nread;
         if(offset == idx){
           d_voe_state = pmt::to_bool(d_voe_tags[0].value);
@@ -648,30 +651,30 @@ namespace gr {
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
-      const gr_complex *in = (const gr_complex *) input_items[0];
+      const gr_complex *in = (const gr_complex *) input_items[SAMPLE_PORT];
       //const float* voe = (const float*) input_items[1];
-      const float* phase= (const float*) input_items[2];
-      const float* freq = (const float*) input_items[3];
+      const float* phase= (const float*) input_items[PHASE_PORT];
+      const float* freq = (const float*) input_items[FREQ_PORT];
       gr_complex *out = (gr_complex *) output_items[0];
       // For DEMO
       gr_complex *demo= (gr_complex *) output_items[1];
       int nout = 0;
-      int nin_s = std::min(ninput_items[0],ninput_items[1]);
-      int nin_p = std::min(ninput_items[2],ninput_items[3]);
+      int nin_s = ninput_items[SAMPLE_PORT];
+      int nin_p = std::min(ninput_items[PHASE_PORT],ninput_items[FREQ_PORT]);
       bool d_do_ic = false;
       bool d_reset_retx=false;
       std::vector<tag_t> tags_s;
       std::vector<tag_t> tags_p;
       std::vector<tag_t> hdr_tags;
       d_voe_tags.clear(); //
-      get_tags_in_window(tags_s,0,0,nin_s,d_block_tag);
-      get_tags_in_window(tags_p,2,0,nin_p,d_block_tag);
-      get_tags_in_window(d_voe_tags,0,0,nin_s,d_voe_tag); //
+      get_tags_in_window(tags_s,SAMPLE_PORT,0,nin_s,d_block_tag);
+      get_tags_in_window(tags_p,PHASE_PORT,0,nin_p,d_block_tag);
+      get_tags_in_window(d_voe_tags,SAMPLE_PORT,0,nin_s,d_voe_tag); //
       if(!tags_s.empty()){
-        nin_s = tags_s[0].offset-nitems_read(0);
+        nin_s = tags_s[0].offset-nitems_read(SAMPLE_PORT);
       }
       if(!tags_p.empty()){
-        nin_p = tags_p[0].offset-nitems_read(2);
+        nin_p = tags_p[0].offset-nitems_read(PHASE_PORT);
       }
       // state based method
       int count_s=0;
@@ -799,10 +802,10 @@ namespace gr {
       hdr_t tmp_hdr;
       std::vector<hdr_t> new_tags;
       if(count_p!=0){
-        get_tags_in_window(hdr_tags,2,0,count_p);
+        get_tags_in_window(hdr_tags,PHASE_PORT,0,count_p);
       for(int i=0;i<hdr_tags.size();++i){
         if(!pmt::eqv(d_block_tag,hdr_tags[i].key)){
-          int offset = hdr_tags[i].offset - nitems_read(2);
+          int offset = hdr_tags[i].offset - nitems_read(PHASE_PORT);
           if(tmp_hdr.index() == (offset + d_block_idx) ){
             tmp_hdr.add_msg(hdr_tags[i].key,hdr_tags[i].value);
           }else{
@@ -936,9 +939,9 @@ namespace gr {
         d_out_size=0;
       }
 
-      consume(0,count_s);
-      consume(1,count_p);
-      consume(2,count_p);
+      consume(SAMPLE_PORT,count_s);
+      consume(PHASE_PORT,count_p);
+      consume(FREQ_PORT,count_p);
       return nout;
     }
 
