@@ -564,15 +564,11 @@ namespace gr {
         int retx_idx = d_retx_tag[retx_id].index();
         pmt::pmt_t retx_msg = d_retx_tag[retx_id].msg();
         DEBUG<<"<IC Crit DEBUG>First retransmission tag:"<<d_retx_tag[retx_id]<<std::endl;
-
         int pkt_len = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("packet_len"),pmt::from_long(0)));
         int pkt_cnt=0;
         float init_phase = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("phase_init"),pmt::from_float(0)));
         float freq_mean = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("freq_mean"),pmt::from_float(0)));
         int intf_cnt = intf_begin;
-
-        int debug_retx_id = (retx_id+1)%d_retx_tag.size();
-        int debug_retx_idx = d_retx_tag[debug_retx_id].index();
         while(intf_cnt<intf_end){
           //NOTE: sync to interfering signal
           if(intf_cnt>=d_cap){
@@ -582,14 +578,11 @@ namespace gr {
             throw std::runtime_error("retx idx exceed maximum, boom");
           }
           // for DEMO
-          d_comp_mem[d_out_size] = d_retx_mem[debug_retx_idx++]-d_retx_mem[retx_idx];
-          //d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(-init_phase);
-          //d_comp_mem[d_out_size] = d_retx_mem[retx_idx];
-          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
+          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt];
+          //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
           // FOR DEBUG
           //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++];
-          //retx_idx++;
-          //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++];
+          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++];
           init_phase+=freq_mean;
           phase_wrap(init_phase);
           pkt_cnt++;
@@ -602,10 +595,6 @@ namespace gr {
             pkt_cnt=0;
             // NOTE: maybe the freq est in retransmission helps?
             // freq_mean
-            debug_retx_id = (retx_id+1)%d_retx_tag.size();
-            debug_retx_idx= d_retx_tag[debug_retx_id].index();
-            //DEBUG<<"Update retx: index="<<retx_id<<" pkt_nominal="<<pkt_len<<std::endl
-            //<<"msg:"<<retx_msg<<std::endl;
           }
           if(d_out_size==d_cap){
             DEBUG<<"\033[32m"
