@@ -46,7 +46,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>top_block</value>
+      <value>usrp_cpm_tx</value>
     </param>
     <param>
       <key>max_nouts</key>
@@ -93,7 +93,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(200, 356)</value>
+      <value>(208, 356)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -116,11 +116,38 @@
     </param>
     <param>
       <key>_enabled</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(208, 412)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>dev_id</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>"addr=192.168.10.3"</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
       <value>True</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(128, 356)</value>
+      <value>(336, 356)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -151,7 +178,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(0, 352)</value>
+      <value>(0, 360)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -222,7 +249,61 @@
     </param>
     <param>
       <key>value</key>
-      <value>4e6</value>
+      <value>2e6</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(128, 356)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>tx_subdev</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>"A:0"</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(128, 412)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>tx_subdev</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>"A:A"</value>
     </param>
   </block>
   <block>
@@ -410,7 +491,7 @@
     </param>
     <param>
       <key>period</key>
-      <value>180</value>
+      <value>3000</value>
     </param>
   </block>
   <block>
@@ -912,45 +993,6 @@
     </param>
   </block>
   <block>
-    <key>lsa_length_prefixer</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(552, 96)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>lsa_length_prefixer_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-  </block>
-  <block>
     <key>lsa_preamble_prefixer</key>
     <param>
       <key>alias</key>
@@ -970,7 +1012,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(720, 96)</value>
+      <value>(648, 96)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1720,7 +1762,7 @@
     </param>
     <param>
       <key>sd_spec0</key>
-      <value>A:A</value>
+      <value>tx_subdev</value>
     </param>
     <param>
       <key>time_source0</key>
@@ -1901,9 +1943,9 @@
   </connection>
   <connection>
     <source_block_id>blocks_random_pdu_0</source_block_id>
-    <sink_block_id>lsa_length_prefixer_0</sink_block_id>
+    <sink_block_id>lsa_preamble_prefixer_0</sink_block_id>
     <source_key>pdus</source_key>
-    <sink_key>pdu_in</sink_key>
+    <sink_key>in</sink_key>
   </connection>
   <connection>
     <source_block_id>blocks_repack_bits_bb_0</source_block_id>
@@ -1940,12 +1982,6 @@
     <sink_block_id>blocks_pdu_to_tagged_stream_0</sink_block_id>
     <source_key>pdu_out</source_key>
     <sink_key>pdus</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_length_prefixer_0</source_block_id>
-    <sink_block_id>lsa_preamble_prefixer_0</sink_block_id>
-    <source_key>pdu_out</source_key>
-    <sink_key>in</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_preamble_prefixer_0</source_block_id>

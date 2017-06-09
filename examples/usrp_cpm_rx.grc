@@ -46,7 +46,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>top_block</value>
+      <value>usrp_cpm_tx</value>
     </param>
     <param>
       <key>max_nouts</key>
@@ -93,7 +93,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 220)</value>
+      <value>(464, 84)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -116,11 +116,38 @@
     </param>
     <param>
       <key>_enabled</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(464, 28)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>dev_id</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>"addr=192.168.10.3"</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
       <value>True</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 276)</value>
+      <value>(96, 76)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -151,7 +178,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 328)</value>
+      <value>(8, 136)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -206,11 +233,65 @@
     </param>
     <param>
       <key>_enabled</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(608, 84)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>rx_subdev</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>"A:B"</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(608, 28)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>rx_subdev</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>"A:0"</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
       <value>True</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 164)</value>
+      <value>(8, 76)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1719,7 +1800,7 @@
     </param>
     <param>
       <key>sd_spec0</key>
-      <value>A:B</value>
+      <value>rx_subdev</value>
     </param>
     <param>
       <key>time_source0</key>
