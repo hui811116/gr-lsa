@@ -554,10 +554,10 @@ namespace gr {
             throw std::runtime_error("retx idx exceed maximum, boom");
           }
           // for DEMO
-          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt];
+          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt++];
           //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
           // FOR DEBUG
-          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++];
+          d_out_mem[d_out_size++] = d_retx_mem[retx_idx++];
           //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++];
           init_phase+=freq_mean;
           phase_wrap(init_phase);
@@ -646,6 +646,17 @@ namespace gr {
       }
       if(!tags_p.empty()){
         nin_p = tags_p[0].offset-nitems_read(PHASE_PORT);
+      }
+      if(!tags_s.empty() && !tags_p.empty()){
+        // next block tags is ready
+        uint64_t bid_s = pmt::to_uint64(tags_s[0].value);
+        uint64_t bid_p = pmt::to_uint64(tags_p[0].value);
+        nin_s++;
+        nin_p++;
+        d_smp_list.push_back(block_t(bid_s,d_in_idx));
+        d_sync_list.push_back(block_t(bid_p,d_sync_idx));
+        d_block_idx = 0;
+        d_current_block = bid_s;
       }
       // state based method
       int count_s=0;
@@ -888,22 +899,7 @@ namespace gr {
         d_voe_state = false;
       }
       d_state = next_state;
-      if(!tags_s.empty() && count_s==nin_s && !tags_p.empty() && count_p==nin_p){
-        // next block tags is ready
-        uint64_t bid_s = pmt::to_uint64(tags_s[0].value);
-        uint64_t bid_p = pmt::to_uint64(tags_p[0].value);
-        count_s++;
-        count_p++;
-        d_smp_list.push_back(block_t(bid_s,d_in_idx));
-        d_sync_list.push_back(block_t(bid_p,d_sync_idx));
-        d_block_idx = 0;
-        d_current_block = bid_s;
-        //std::cout<<"<DEBUG IC> block id found:"<<bid_s<<" found2:"<<bid_p<<std::endl;
-        //std::cout<<"d_in_idx:"<<d_in_idx<<" ,d_sync_idx:"<<d_sync_idx<<" ,d_intf_idx"<<d_intf_idx<<std::endl;
-        //std::cout<<"count_s:"<<count_s<<" ,count_p:"<<count_p<<std::endl;
-        //std::cout<<"ninput_items[0]:"<<ninput_items[0]<<" ninput_items[1]:"<<ninput_items[1]
-        //<<" ,ninput_items[2]:"<<ninput_items[2]<<std::endl;
-      }
+      
       nout = std::min(d_out_size-d_out_idx,noutput_items);
       memcpy(out,d_out_mem+d_out_idx,sizeof(gr_complex)*nout);
       // For DEMO
