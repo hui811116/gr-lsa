@@ -100,13 +100,14 @@ namespace gr {
       if(cross_word.empty()){
         throw std::invalid_argument("Invalid cross_word");
       }
-      
+      // sample based
       d_cross_len = cross_word.size();
       if(sps<=0){
         throw std::invalid_argument("Invalid samples per symbol");
       }
       d_sps = sps;
       reset_retx();
+      set_tag_propagation_policy(TPP_DONT);
     }
 
     /*
@@ -203,7 +204,7 @@ namespace gr {
       uint64_t block_id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("block_id"),pmt::from_uint64(0xffffffffffff)));
       int block_offset = tag.index();
       int payload = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
-      int pkt_nominal = (payload+d_cross_len + LSAPHYSYMBOLLEN)*d_sps;
+      int pkt_nominal = (payload + LSAPHYSYMBOLLEN)*d_sps+d_cross_len;
       const int reserved_length = 8*d_sps;
       std::list<block_t>::reverse_iterator bit_s = d_smp_list.rbegin(),bit_p = d_sync_list.rbegin();
       while(bit_s!=d_smp_list.rend()){
@@ -258,7 +259,8 @@ namespace gr {
         throw std::runtime_error("<IC Crit>Fatal Error: Retransmission buffer is too small to acquire all retransmission....");
       }
       for(int i=0;i<copy_len;++i){
-        d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-d_phase_mem[sync_iter++]);
+        d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++];
+        //d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-d_phase_mem[sync_iter++]);
         samp_iter%=d_cap;
         sync_iter%=d_cap;
         if(d_retx_idx == d_cap){
@@ -310,7 +312,7 @@ namespace gr {
         uint64_t id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("block_id"),pmt::from_uint64(0xffffffffffff)));
         uint32_t idx= rit->index();
         int payload = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
-        pkt_nominal = (payload+LSAPHYSYMBOLLEN+d_cross_len) *d_sps;
+        pkt_nominal = (payload+LSAPHYSYMBOLLEN) *d_sps+d_cross_len;
         bit_s =d_smp_list.begin();
         bit_p =d_sync_list.begin();
         while(bit_s!=d_smp_list.end()){
@@ -357,11 +359,21 @@ namespace gr {
         return false;
       }
       int intf_begin = d_intf_idx;
+      //
+      tag_t tmp_tag, tmp_tag2;
+      tmp_tag.offset = d_intf_idx;
+      tmp_tag.key = pmt::intern("Intf_begin");
+      tmp_tag.value=pmt::PMT_T;
+      d_out_tags.push_back(tmp_tag);
       samp_idx = (samp_idx<0)? samp_idx+d_cap: samp_idx;
       while(samp_idx!=d_in_idx){
         d_intf_mem[d_intf_idx++] = d_in_mem[samp_idx++];
         samp_idx %= d_cap;
       }
+      tmp_tag2.offset = d_intf_idx+length_check-1;
+      tmp_tag2.key = pmt::intern("Intf_end");
+      tmp_tag2.value= pmt::PMT_F;
+      d_out_tags.push_back(tmp_tag2);
       // for phase stream
       current_begin = d_sync_idx;
       current_end = (d_sync_idx==0)? d_cap-1 : d_sync_idx-1;
@@ -416,7 +428,7 @@ namespace gr {
       uint64_t id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("block_id"),pmt::from_uint64(0xffffffffffff)));
       int32_t idx = rit->index();
       int payload = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
-      nominal_pkt = (payload+LSAPHYSYMBOLLEN+d_cross_len)*d_sps;
+      nominal_pkt = (payload+LSAPHYSYMBOLLEN)*d_sps+d_cross_len;
       bit_s = d_smp_list.begin();
       bit_p = d_sync_list.begin();
       while(bit_s!=d_smp_list.end()){
@@ -545,8 +557,8 @@ namespace gr {
           d_comp_mem[d_out_size] = d_intf_mem[intf_cnt];
           //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
           // FOR DEBUG
-          //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++];
-          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++];
+          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++];
+          //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++];
           init_phase+=freq_mean;
           phase_wrap(init_phase);
           pkt_cnt++;
@@ -558,6 +570,11 @@ namespace gr {
             pkt_len = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("packet_len"),pmt::from_long(0)));
             pkt_cnt=0;
             // NOTE: maybe the freq est in retransmission helps?
+            tag_t tmp_tag;
+            tmp_tag.offset = d_out_size;
+            tmp_tag.key = pmt::intern("retx");
+            tmp_tag.value = pmt::from_long(retx_id);
+            d_out_tags.push_back(tmp_tag);
             // freq_mean
           }
           if(d_out_size==d_cap){
@@ -566,8 +583,10 @@ namespace gr {
             <<"\033[0m"<<std::endl;
             d_out_idx=0;
             d_out_size=0;
+            d_out_tags.clear();
           }
         }
+        std::sort(d_out_tags.begin(),d_out_tags.end(),gr::tag_t::offset_compare);
         DEBUG<<"\033[35;1m"<<"<IC Crit>Produced output samples:"<<d_out_size<<"\033[0m"<<std::endl;
         // creat output object?
       }
@@ -651,10 +670,11 @@ namespace gr {
             if(d_voe_state){
                 next_state = SUFFERING;
                 DEBUG<<"\033[33m"<<"<IC Crit>Detect interfering signals"<<"\033[0m"
-                <<", block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
+                <<", block_id="<<d_current_block<<" ,block_idx="<<d_block_idx
+                <<" , d_in_idx="<<d_in_idx<<std::endl;
                 init_intf();
                 if(new_intf()){ 
-                  //DEBUG<<"Initialize an interference object..."<<std::endl;
+                  DEBUG<<"Initialize an interference object...d_intf_idx="<<d_intf_idx<<std::endl;
                 }
                 state_interrupt = true;
                 break; // jump out from loop
@@ -662,6 +682,7 @@ namespace gr {
           }
         break;
         case SUFFERING:
+          //std::cout<<"<State suff>d_intf_idx:"<<d_intf_idx<<std::endl;
           for(count_s=0;count_s <nin_s;++count_s){
             // ring queue
             d_in_mem[d_in_idx++] = in[count_s];
@@ -687,10 +708,11 @@ namespace gr {
                 reset_retx();
                 next_state = SEARCH_RETX;
                 DEBUG<<"\033[33m"<<"<IC Crit>Detect the end of interference"<<"\033[0m"
-                <<" , block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
+                <<" , block_id="<<d_current_block<<" ,block_idx="<<d_block_idx
+                <<" , d_in_idx="<<d_in_idx<<std::endl;
                 state_interrupt = true;
                 break; // jump out from loop
-              }  
+              } 
           }
         break;
         case SEARCH_RETX:
@@ -842,9 +864,7 @@ namespace gr {
         }
       }
       // increment block index
-      for(int i=0;i<count_p;++i){
-        d_block_idx++;
-      }
+      d_block_idx+= count_p;
       if(d_do_ic){
         // do ic
         DEBUG<<"\033[31m"<<"<IC Crit>Calling DO IC "<<"\033[0m"<<std::endl;
@@ -858,7 +878,6 @@ namespace gr {
           add_item_tag(0,nitems_written(0),pmt::intern("ic_out"),pmt::PMT_T);
           add_item_tag(1,nitems_written(1),pmt::intern("ic_out"),pmt::PMT_T);
         }
-          
       }
       if(d_reset_retx){
         //
@@ -879,11 +898,24 @@ namespace gr {
         d_sync_list.push_back(block_t(bid_p,d_sync_idx));
         d_block_idx = 0;
         d_current_block = bid_s;
+        //std::cout<<"<DEBUG IC> block id found:"<<bid_s<<" found2:"<<bid_p<<std::endl;
+        //std::cout<<"d_in_idx:"<<d_in_idx<<" ,d_sync_idx:"<<d_sync_idx<<" ,d_intf_idx"<<d_intf_idx<<std::endl;
+        //std::cout<<"count_s:"<<count_s<<" ,count_p:"<<count_p<<std::endl;
+        //std::cout<<"ninput_items[0]:"<<ninput_items[0]<<" ninput_items[1]:"<<ninput_items[1]
+        //<<" ,ninput_items[2]:"<<ninput_items[2]<<std::endl;
       }
       nout = std::min(d_out_size-d_out_idx,noutput_items);
       memcpy(out,d_out_mem+d_out_idx,sizeof(gr_complex)*nout);
       // For DEMO
       memcpy(demo,d_comp_mem+d_out_idx,sizeof(gr_complex)*nout);
+      while(!d_out_tags.empty()){
+        if(d_out_tags[0].offset>=d_out_idx && d_out_tags[0].offset<d_out_idx+nout){
+          add_item_tag(0,nitems_written(0)+d_out_tags[0].offset-d_out_idx,d_out_tags[0].key,d_out_tags[0].value);
+          d_out_tags.erase(d_out_tags.begin());
+        }else{
+          break;
+        }
+      }
       d_out_idx += nout;
       if(d_out_idx == d_out_size){
         d_out_idx=0;

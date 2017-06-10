@@ -360,6 +360,9 @@ enum SYSTEMSTATE{
           break;
         }
       }
+
+      //std::cout<<"<symbol rx stream>noutput_items:"<<noutput_items<<" ninput_items[0]:"<<ninput_items[0]<<std::endl;
+      //std::cout<<" consume and out:"<<nfix<<std::endl;
       std::vector<tag_t> tags;
       get_tags_in_window(tags,0,0,nfix);
       if(have_sync){

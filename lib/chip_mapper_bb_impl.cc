@@ -44,6 +44,7 @@ static const unsigned int CHIPSET[16] = {3653456430,
                                   1618458825,
                                   2517072780,
                                   3378542520};
+static const int LSACODERATEINV = 8;
 
     chip_mapper_bb::sptr
     chip_mapper_bb::make()
@@ -75,7 +76,7 @@ static const unsigned int CHIPSET[16] = {3653456430,
     chip_mapper_bb_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
-      ninput_items_required[0] = noutput_items/relative_rate();
+      ninput_items_required[0] = noutput_items/LSACODERATEINV;
     }
 
     int
@@ -86,12 +87,10 @@ static const unsigned int CHIPSET[16] = {3653456430,
     {
       const unsigned char *in = (const unsigned char *) input_items[0];
       unsigned char *out = (unsigned char *) output_items[0];
-
-      int nin = (ninput_items[0]*relative_rate()<=noutput_items)? ninput_items[0] : noutput_items/relative_rate();
+      int nout_fix = noutput_items/relative_rate();
+      int nin = std::min(ninput_items[0],nout_fix);
       int nout= nin *relative_rate();
-      //assert(nin<=noutput_items/8);
-      //if(nin!=0)
-      //std::cout<<"nin:"<<nin<<" ,nout:"<<noutput_items<<std::endl;
+      
       for(int i=0;i<nin;++i){
         int s1= (in[i]>>4) & 0x0f;
         int s2= (in[i]) & 0x0f;
@@ -108,8 +107,6 @@ static const unsigned int CHIPSET[16] = {3653456430,
         out[8*i+6]=s2_u8[1];
         out[8*i+7]=s2_u8[0];
       }
-      
-
       consume_each (nin);
       return nout;
     }

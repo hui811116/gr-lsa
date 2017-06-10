@@ -36,6 +36,8 @@ namespace gr {
     static unsigned char LSAMAC[] = {0x00,0x00,0x00,0x00,0x00,0x00};  // 2,2,2
     static int d_retx_retry_limit = 20;
 
+    static int d_debug_iter = 20;
+
     su_sr_transmitter_bb::sptr
     su_sr_transmitter_bb::make(const std::string& tagname, bool debug)
     {
@@ -59,6 +61,10 @@ namespace gr {
       set_msg_handler(d_msg_in,boost::bind(&su_sr_transmitter_bb_impl::msg_in,this,_1));
       d_prou_present = false;
       memcpy(d_buf,LSAPHY,sizeof(char)* LSAPHYLEN);
+
+      d_debug_state = false;
+      d_debug_cnt = 0;
+      d_debug_queue.clear();
     }
 
     /*
@@ -72,7 +78,7 @@ namespace gr {
     su_sr_transmitter_bb_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
       int noutput_items = ninput_items[0]+LSAPHYLEN+LSAMACLEN;
-      std::list<srArq_t>::iterator it;
+      /*std::list<srArq_t>::iterator it;
       if(d_prou_present){        
         if(retx_peek_front(noutput_items)){
           // valid
@@ -86,7 +92,7 @@ namespace gr {
         }else{
           // has nothing
         }
-      }
+      }*/
       return noutput_items ;
     }
 
@@ -309,6 +315,48 @@ namespace gr {
       int nin = ninput_items[0];
       int nout;
       pmt::pmt_t nx_msg =pmt::PMT_NIL;
+
+      if(d_debug_queue.size()<d_debug_iter){
+        uint16_t base = (uint16_t)d_debug_cnt;
+        uint8_t * u8_idx = (uint8_t*)&base;
+        memcpy(d_buf+LSAPHYLEN,LSAMAC,sizeof(char)*LSAMACLEN);
+        memcpy(d_buf+LSAPHYLEN+LSAMACLEN,in,sizeof(char)*nin);
+        d_buf[5] = (unsigned char)(nin+LSAMACLEN);
+        d_buf[LSAPHYLEN+4] = u8_idx[1];
+        d_buf[LSAPHYLEN+5] = u8_idx[0];
+        nout = nin + LSAPHYLEN + LSAMACLEN;
+        nx_msg = pmt::make_blob(d_buf,nout);
+        d_debug_queue.push_back(srArq_t(base,nx_msg));
+        memcpy(out,d_buf,sizeof(char)*nout);
+        d_debug_cnt++;
+        if(d_debug_cnt == d_debug_iter){
+          d_debug_state = false;
+          d_debug_cnt =0;
+        }
+      }else{
+        nx_msg = d_debug_queue[d_debug_cnt].msg();
+        size_t io(0);
+        const uint8_t* uvec = pmt::u8vector_elements(nx_msg,io);
+        memcpy(out,uvec,sizeof(char)*io);
+        if(d_debug_state){
+          uint16_t qidx = (uint16_t) d_debug_cnt;
+          uint16_t qsize= (uint16_t) d_debug_iter;
+          uint8_t* u8idx = (uint8_t*) &qidx;
+          uint8_t* u8size= (uint8_t*) &qsize;
+          out[LSAPHYLEN] = u8idx[1];
+          out[LSAPHYLEN+1] = u8idx[0];
+          out[LSAPHYLEN+2] = u8size[1];
+          out[LSAPHYLEN+3] = u8size[0];
+          nout = io;
+        }
+        d_debug_cnt++;
+        if(d_debug_cnt == d_debug_iter){
+          d_debug_state = (!d_debug_state );
+          d_debug_cnt =0;
+        }
+      }
+
+      /*
       if(d_prou_present){
         // should do retransmission
         //assert(!d_retx_queue.empty());
@@ -325,9 +373,9 @@ namespace gr {
               if(update_retx_table(d_retx_idx)){
                 DEBUG<<"<SU SR TX>"<<"\033[32;1m"<<"Retransmission achieve retry limit, forced true..."<<"\033[0m"<<std::endl;
               }
-              /*if(d_retx_cnt>=d_retx_size){
-                d_prou_present = false;
-              }*/
+              //if(d_retx_cnt>=d_retx_size){
+                //d_prou_present = false;
+              //}
           }
         }
         // consider a retry count to reduce retransmission time
@@ -369,7 +417,7 @@ namespace gr {
           nout = io;
           memcpy(out,uvec,sizeof(char)*io);
         }
-      }
+      }*/
       // Tell runtime system how many output items we produced.
       return nout;
     }

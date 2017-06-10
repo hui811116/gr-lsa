@@ -265,6 +265,8 @@ namespace gr {
           nout++;
         }
       }
+      //std::cout<<"<M costas stream>noutput_items:"<<noutput_items<<" ninput_items[0]:"<<ninput_items[0]<<std::endl;
+      //std::cout<<" consume:"<<nin<<" ,output:"<<nout<<std::endl;
       consume_each(nin);
       if(write_foptr){
         produce(0,nout);

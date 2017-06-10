@@ -91,11 +91,12 @@ inline void phase_wrap(float& phase)
       float *out_phase = (float *) output_items[0];
       float * out_freq = (float*) output_items[1];
       int nin = std::min(ninput_items[0],ninput_items[1]);
+      int nout_fix = noutput_items/d_sps * d_sps;
       int count =0;
       int nout=0;
       float p_base, p_frac;
       float f_base, f_frac;
-      while(nout<noutput_items && count<nin-1){
+      while(nout<nout_fix && (count< (nin-1)) ){
         f_frac = (freq[count+1]-freq[count])/(float)(d_sps*d_sps) ;
         f_base = freq[count]/(float)d_sps-((d_sps-1)/2.0f)*f_frac;
         p_base= phase[count]-((d_sps)/2.0f)*f_base;
@@ -110,6 +111,8 @@ inline void phase_wrap(float& phase)
         nout+=d_sps;
         count++;
       }
+      //std::cout<<"<Expand stream>noutput_items:"<<noutput_items<<" ninput_items[0]:"<<ninput_items[0]<<std::endl;
+      //std::cout<<" consume:"<<count<<" ,output:"<<nout<<std::endl;
       consume_each(count);
       return nout;
     }

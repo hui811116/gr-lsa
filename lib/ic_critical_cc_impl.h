@@ -135,6 +135,9 @@ namespace gr {
       int d_in_idx;
       int d_out_size;
       int d_out_idx;
+
+      std::vector<tag_t> d_out_tags; // for debugging
+
       float* d_phase_mem;
       float* d_freq_mem;
       int d_sync_idx;
