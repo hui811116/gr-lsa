@@ -62,10 +62,10 @@ namespace gr {
     }
 
     ic_critical_cc::sptr
-    ic_critical_cc::make(const std::vector<gr_complex>& cross_word, int sps,bool debug)
+    ic_critical_cc::make(const std::vector<gr_complex>& cross_word, int sps,int block_size,bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new ic_critical_cc_impl(cross_word,sps,debug));
+        (new ic_critical_cc_impl(cross_word,sps,block_size,debug));
     }
 
     /*
@@ -73,7 +73,7 @@ namespace gr {
      */
     static int ios[] = {sizeof(gr_complex),sizeof(float),sizeof(float)};
     static std::vector<int> iosig(ios,ios+sizeof(ios)/sizeof(int));
-    ic_critical_cc_impl::ic_critical_cc_impl(const std::vector<gr_complex>& cross_word,int sps,bool debug)
+    ic_critical_cc_impl::ic_critical_cc_impl(const std::vector<gr_complex>& cross_word,int sps,int block_size,bool debug)
       : gr::block("ic_critical_cc",
               gr::io_signature::makev(3, 3, iosig),
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(gr_complex))),
@@ -97,6 +97,9 @@ namespace gr {
       d_intf_idx =0;
       d_intf_freq = (float*) volk_malloc(sizeof(float)*d_cap,volk_get_alignment());
 
+      d_in_block_idx = 0;
+      d_phase_block_idx =0;
+
       if(cross_word.empty()){
         throw std::invalid_argument("Invalid cross_word");
       }
@@ -106,6 +109,10 @@ namespace gr {
         throw std::invalid_argument("Invalid samples per symbol");
       }
       d_sps = sps;
+      if(block_size<=0){
+        throw std::runtime_error("Invalid block size");
+      }
+      d_block_size = block_size;
       reset_retx();
       set_tag_propagation_policy(TPP_DONT);
     }
@@ -201,34 +208,27 @@ namespace gr {
     ic_critical_cc_impl::check_and_copy_retx(hdr_t& tag)
     {
       pmt::pmt_t msg = tag.msg();
-      uint64_t block_id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("block_id"),pmt::from_uint64(0xffffffffffff)));
-      int block_offset = tag.index();
+      uint64_t block_id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("sync_block_id"),pmt::from_uint64(0xffffffffffff)));
+      int block_offset = pmt::to_long(pmt::dict_ref(msg,pmt::intern("sync_offset"),pmt::from_long(0)));
       int payload = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
       int pkt_nominal = (payload + LSAPHYSYMBOLLEN)*d_sps+d_cross_len;
       const int reserved_length = 8*d_sps;
-      std::list<block_t>::reverse_iterator bit_s = d_smp_list.rbegin(),bit_p = d_sync_list.rbegin();
-      while(bit_s!=d_smp_list.rend()){
-        if(bit_s->id()==block_id){
-          break;
-        }
-        bit_s++;
-      }
+      std::list<block_t>::reverse_iterator bit_p = d_sync_list.rbegin();
       while(bit_p!=d_sync_list.rend()){
         if(bit_p->id()==block_id){
           break;
         }
         bit_p++;
       }
-      if(bit_s == d_smp_list.rend() || bit_p == d_sync_list.rend()){
+      if(bit_p == d_sync_list.rend()){
         return false;
       }
       int begin = d_in_idx;
       int end = (d_in_idx==0)? d_cap-1: d_in_idx-1;
       if(end<begin)
         end+=d_cap;
-      int index_check = (bit_s->index()<begin)? bit_s->index()+d_cap : bit_s->index();
-      index_check+=block_offset;
-      if( (index_check-pkt_nominal+1 < begin) || (index_check+reserved_length-1>end) ){
+      int index_check = (tag.index()<begin)? tag.index()+d_cap : tag.index();
+      if(  index_check+pkt_nominal+reserved_length-1 > end ){
         return false;
       }
       int begin_p = d_sync_idx;
@@ -245,15 +245,14 @@ namespace gr {
       // VoE of freq tracking signal
       // float mean, stddev
       // volk()...
-      int samp_idx = index_check - pkt_nominal+1;
-      samp_idx = (samp_idx>=d_cap)? samp_idx-d_cap : samp_idx;
-      int sync_idx = sync_idx_check -pkt_nominal+1;
-      sync_idx = (sync_idx>=d_cap)? sync_idx-d_cap : sync_idx;
-      float init_phase = d_phase_mem[sync_idx];
-      float init_freq = d_freq_mem[sync_idx];
+      int samp_idx = tag.index();
+      //int sync_idx = sync_idx_check -pkt_nominal+1;
+      //sync_idx = (sync_idx>=d_cap)? sync_idx-d_cap : sync_idx;
+      //float init_phase = d_phase_mem[sync_idx];
+      //float init_freq = d_freq_mem[sync_idx];
       int copy_len = pkt_nominal+reserved_length;
       int samp_iter = samp_idx;
-      int sync_iter = sync_idx;
+      //int sync_iter = sync_idx;
       int retx_idx_begin = d_retx_idx;
       if(d_retx_idx+copy_len>=d_cap){
         throw std::runtime_error("<IC Crit>Fatal Error: Retransmission buffer is too small to acquire all retransmission....");
@@ -262,7 +261,7 @@ namespace gr {
         d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++];
         //d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-d_phase_mem[sync_iter++]);
         samp_iter%=d_cap;
-        sync_iter%=d_cap;
+        //sync_iter%=d_cap;
         if(d_retx_idx == d_cap){
           throw std::runtime_error("<IC Crit DEBUG>Fatal error: retransmission size is not enough... abort");
         }
@@ -272,9 +271,12 @@ namespace gr {
       tag.add_msg(pmt::intern("packet_len"),pmt::from_long(pkt_nominal));
       // tag.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
       // tag.add_msg(pmt::intern("freq_std"),pmt::from_float(std));
-      tag.delete_msg(pmt::intern("queue_index"));
-      tag.delete_msg(pmt::intern("queue_size"));
-      tag.delete_msg(pmt::intern("block_id"));
+      //tag.delete_msg(pmt::intern("queue_index"));
+      //tag.delete_msg(pmt::intern("queue_size"));
+      tag.delete_msg(pmt::intern("sync_block_id"));
+      tag.delete_msg(pmt::intern("in_block_id"));
+      tag.delete_msg(pmt::intern("sync_offset"));
+      tag.delete_msg(pmt::intern("in_offset"));
       return true;
     }
 
@@ -304,38 +306,29 @@ namespace gr {
         return false;
       }
       std::list<hdr_t>::reverse_iterator rit = d_tag_list.rbegin();
-      std::list<block_t>::iterator bit_s,bit_p;
+      std::list<block_t>::iterator bit_p;
       int block_offset;
       int pkt_nominal;
       while(rit!=d_tag_list.rend()){
         pmt::pmt_t msg = rit->msg();
-        uint64_t id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("block_id"),pmt::from_uint64(0xffffffffffff)));
-        uint32_t idx= rit->index();
+        uint64_t id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("sync_block_id"),pmt::from_uint64(0xffffffffffff)));
+        int idx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("sync_offset"),pmt::from_long(0)));
         int payload = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
         pkt_nominal = (payload+LSAPHYSYMBOLLEN) *d_sps+d_cross_len;
-        bit_s =d_smp_list.begin();
         bit_p =d_sync_list.begin();
-        while(bit_s!=d_smp_list.end()){
-          if(bit_s->id()==id){
-            break;
-          }
-          bit_s++;
-        }
         while(bit_p!=d_sync_list.end()){
           if(bit_p->id()==id){
             break;
           }
           bit_p++;
         }
-        if(bit_p!=d_sync_list.end() && bit_s!=d_smp_list.end() && id!=d_current_block){
-          // both sync and sample have matched block index
-          // the header belongs to previous block
+        if(bit_p!=d_sync_list.end()&& id!=d_current_block){
           block_offset = idx;
           break;
         }
         rit++;
       }
-      if(rit==d_tag_list.rend() || bit_s==d_smp_list.end() || bit_p == d_sync_list.end()){
+      if(rit==d_tag_list.rend() || bit_p == d_sync_list.end()){
         // failed
         //DEBUG<<"<IC Crit>new_intf::no available front tag found, end function"<<std::endl;
         return false;
@@ -346,14 +339,9 @@ namespace gr {
       if(current_begin>current_end){
         current_end+=d_cap;
       }
-      int samp_base = (bit_s->index()<current_begin)? bit_s->index()+d_cap : bit_s->index();
-      if(samp_base + block_offset-pkt_nominal+1<current_begin){
-        //DEBUG<<"<IC Crit>new_intf::signal already removed..."<<std::endl;
-        return false;
-      }
-      int samp_idx = bit_s->index()+block_offset - pkt_nominal+1;
-      // +1-1 cancel the last term
-      int length_check = current_end - (samp_base + block_offset- pkt_nominal) ;
+      int samp_idx = rit->index();
+      samp_idx = (samp_idx<current_begin)?samp_idx+d_cap : samp_idx;
+      int length_check = current_end - (samp_idx+pkt_nominal) ;
       if(length_check+d_intf_idx >=d_cap){
         DEBUG<<"<IC Crit>loading history will make buffer overflow"<<std::endl;
         return false;
@@ -365,7 +353,7 @@ namespace gr {
       tmp_tag.key = pmt::intern("Intf_begin");
       tmp_tag.value=pmt::PMT_T;
       d_out_tags.push_back(tmp_tag);
-      samp_idx = (samp_idx<0)? samp_idx+d_cap: samp_idx;
+      samp_idx = rit->index();
       while(samp_idx!=d_in_idx){
         d_intf_mem[d_intf_idx++] = d_in_mem[samp_idx++];
         samp_idx %= d_cap;
@@ -375,6 +363,8 @@ namespace gr {
       tmp_tag2.value= pmt::PMT_F;
       d_out_tags.push_back(tmp_tag2);
       // for phase stream
+      hdr_t new_front = *rit;
+      /*
       current_begin = d_sync_idx;
       current_end = (d_sync_idx==0)? d_cap-1 : d_sync_idx-1;
       if(current_begin>current_end){
@@ -397,12 +387,12 @@ namespace gr {
       volk_32f_stddev_and_mean_32f_x2(&stddev,&mean,d_intf_freq,count);
       // recored begin idx
       // avg freq?
-      hdr_t new_front = *rit;
       new_front.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
       new_front.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
       new_front.add_msg(pmt::intern("phase_init"),pmt::from_float(clean_phase));
       new_front.add_msg(pmt::intern("phase_end"),pmt::from_float(end_phase));
       // record clean phase?
+      */
       d_current_intf_tag.set_begin(intf_begin);
       d_current_intf_tag.set_front(new_front);
       return true;
@@ -421,29 +411,22 @@ namespace gr {
       // d_block_idx <--sync to phase offset
       // d_current_block <--burrent processing block, which is this tag belongs
       std::list<hdr_t>::reverse_iterator rit = d_tag_list.rbegin();
-      std::list<block_t>::iterator bit_s,bit_p;
+      std::list<block_t>::iterator bit_p;
       int block_offset=0;
       int nominal_pkt =0;
       pmt::pmt_t msg = rit->msg();
-      uint64_t id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("block_id"),pmt::from_uint64(0xffffffffffff)));
-      int32_t idx = rit->index();
+      uint64_t id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("sync_block_id"),pmt::from_uint64(0xffffffffffff)));
+      int idx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("sync_offset"),pmt::from_long(0)));
       int payload = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
       nominal_pkt = (payload+LSAPHYSYMBOLLEN)*d_sps+d_cross_len;
-      bit_s = d_smp_list.begin();
       bit_p = d_sync_list.begin();
-      while(bit_s!=d_smp_list.end()){
-        if(id==bit_s->id()){
-          break;
-        }
-        bit_s++;
-      }
       while(bit_p!=d_sync_list.end()){
         if(id==bit_p->id()){
           break;
         }
         bit_p++;
       }
-      if(bit_s==d_smp_list.end() || bit_p==d_sync_list.end() || rit == d_tag_list.rend()){
+      if(bit_p==d_sync_list.end() || rit == d_tag_list.rend()){
         // failed
         //DEBUG<<"<IC Crit>update_intf::no available end tag found, end function"<<std::endl;
         return false;
@@ -452,12 +435,12 @@ namespace gr {
       int current_begin = d_in_idx;
       int current_end = (d_in_idx==0)? d_cap-1 : d_in_idx-1;
       current_end = (current_end<current_begin)? current_end+d_cap: current_end;
-      int intf_samp_check = bit_s->index();
+      int intf_samp_check = rit->index();
       int end_idx_corrected;
       if(intf_samp_check<current_begin){
         intf_samp_check+=d_cap;
       }
-      if(intf_samp_check+block_offset<=current_end){
+      if(intf_samp_check+nominal_pkt-1 <= current_end){
         //already stored
         residual =0;
         end_idx_corrected = d_intf_idx-1;
@@ -480,6 +463,7 @@ namespace gr {
       if( (sync_base+block_offset-nominal_pkt+1) <current_begin){
         return false;
       }
+      /*
       int count =0;
       while(sync_idx!=d_sync_idx){
         d_intf_freq[count++] = d_freq_mem[sync_idx++];
@@ -491,9 +475,10 @@ namespace gr {
       // or ignore, and do ic from begin tag
       // set end tag
       // set size
+      */
       hdr_t new_back = *rit;
-      new_back.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
-      new_back.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
+      //new_back.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
+      //new_back.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
       d_current_intf_tag.set_back(new_back);
       // NOTE:
       // due to difficulty in handling state transition and header tags
@@ -542,8 +527,8 @@ namespace gr {
         DEBUG<<"<IC Crit DEBUG>First retransmission tag:"<<d_retx_tag[retx_id]<<std::endl;
         int pkt_len = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("packet_len"),pmt::from_long(0)));
         int pkt_cnt=0;
-        float init_phase = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("phase_init"),pmt::from_float(0)));
-        float freq_mean = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("freq_mean"),pmt::from_float(0)));
+        //float init_phase = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("phase_init"),pmt::from_float(0)));
+        //float freq_mean = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("freq_mean"),pmt::from_float(0)));
         int intf_cnt = intf_begin;
         while(intf_cnt<intf_end){
           //NOTE: sync to interfering signal
@@ -554,13 +539,13 @@ namespace gr {
             throw std::runtime_error("retx idx exceed maximum, boom");
           }
           // for DEMO
-          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt++];
+          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt];
           //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
           // FOR DEBUG
-          d_out_mem[d_out_size++] = d_retx_mem[retx_idx++];
-          //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++];
-          init_phase+=freq_mean;
-          phase_wrap(init_phase);
+          //d_out_mem[d_out_size++] = d_retx_mem[retx_idx++];
+          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++];
+          //init_phase+=freq_mean;
+          //phase_wrap(init_phase);
           pkt_cnt++;
           if(pkt_cnt==pkt_len){
             // Update Retransmission 
@@ -609,6 +594,67 @@ namespace gr {
       }
     }
 
+    bool
+    ic_critical_cc_impl::matching_header(hdr_t& header){
+      // header is from sync stream
+      pmt::pmt_t msg = header.msg();
+      uint64_t block_id = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("sync_block_id"),pmt::from_uint64(0xfffffffffffe)));
+      int block_offset = header.index();
+      int payload = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
+      int pkt_nominal = (payload+LSAPHYSYMBOLLEN)*d_sps + d_cross_len;
+      std::list<hdr_t>::iterator it; 
+      std::list<hdr_t>::iterator candidate_it= d_pending_list.end();
+      hdr_t matched_hdr;
+      pmt::pmt_t temp_msg;
+      uint64_t pending_bid;
+      int min_diff = d_block_size;
+      int diff;
+      int pending_idx;
+      int pending_offset;
+      // FOR DEBUGGING PURPOSE
+      int min_pend_id;
+      int min_pend_offset;
+      pmt::pmt_t min_phase;
+      
+      for(it= d_pending_list.begin();it!=d_pending_list.end();++it){
+        temp_msg = it->msg();
+        pending_bid = pmt::to_uint64(pmt::dict_ref(temp_msg,pmt::intern("in_block_id"),pmt::from_uint64(0xfffffffffffe)));
+        pending_offset = pmt::to_long(pmt::dict_ref(temp_msg,pmt::intern("in_offset"),pmt::from_long(0)));
+        pending_idx = it->index();
+        
+        if(pending_bid > block_id){
+          // find the difference to absolute indexes
+          diff = (pending_bid-block_id)*d_block_size + pending_offset-block_offset +pkt_nominal-1;
+        }else if(pending_bid== block_id){
+          diff = abs(block_offset-pkt_nominal+1-pending_offset);
+        }else{
+          diff = abs((block_id-pending_bid)*d_block_size+block_offset-pending_offset-pkt_nominal+1);
+        }
+        if(diff<min_diff){
+          matched_hdr = *it;
+          min_diff = diff;
+          candidate_it = it;
+          min_pend_id = pending_bid;
+          min_pend_offset = pending_offset;
+          min_phase = pmt::dict_ref(temp_msg,pmt::intern("init_phase"),pmt::from_float(0));
+        }
+      }
+      if(candidate_it==d_pending_list.end() || min_diff>= d_block_size){
+        return false;
+      }
+      candidate_it++;
+      d_pending_list.erase(d_pending_list.begin(),candidate_it);
+      //d_pending_list.erase(d_pending_list.begin(),candidate_it);
+      // update matched header
+      header.add_msg(pmt::intern("in_offset"),pmt::from_long(min_pend_offset));
+      header.add_msg(pmt::intern("sync_offset"),pmt::from_long(block_offset));
+      header.add_msg(pmt::intern("in_block_id"),pmt::from_uint64(min_pend_id));
+      header.add_msg(pmt::intern("init_phase"),min_phase);
+      // bind to ring queue...
+      header.set_index(matched_hdr.index());
+      return true;
+    }
+
     void
     ic_critical_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
@@ -637,16 +683,24 @@ namespace gr {
       std::vector<tag_t> tags_s;
       std::vector<tag_t> tags_p;
       std::vector<tag_t> hdr_tags;
+
+      std::vector<tag_t> cross_tags;
       d_voe_tags.clear(); //
       get_tags_in_window(tags_s,SAMPLE_PORT,0,nin_s,d_block_tag);
       get_tags_in_window(tags_p,PHASE_PORT,0,nin_p,d_block_tag);
       get_tags_in_window(d_voe_tags,SAMPLE_PORT,0,nin_s,d_voe_tag); //
+      //
+      get_tags_in_window(cross_tags,SAMPLE_PORT,0,nin_s,pmt::intern("phase_est"));
+
+      int next_block_id = d_current_block;
       if(!tags_s.empty()){
         nin_s = tags_s[0].offset-nitems_read(SAMPLE_PORT);
       }
       if(!tags_p.empty()){
         nin_p = tags_p[0].offset-nitems_read(PHASE_PORT);
       }
+      int next_in_block_idx = d_in_block_idx + nin_s;
+      int next_phase_block_idx = d_phase_block_idx + nin_p;
       if(!tags_s.empty() && !tags_p.empty()){
         // next block tags is ready
         uint64_t bid_s = pmt::to_uint64(tags_s[0].value);
@@ -655,33 +709,28 @@ namespace gr {
         nin_p++;
         d_smp_list.push_back(block_t(bid_s,d_in_idx));
         d_sync_list.push_back(block_t(bid_p,d_sync_idx));
-        d_block_idx = 0;
-        d_current_block = bid_s;
+        assert(bid_s == bid_p);
+        next_block_id = bid_s;
+        next_in_block_idx= 0;
+        next_phase_block_idx =0;
       }
       // state based method
       int count_s=0;
       int count_p=0;
       int next_state = d_state;
+      int current_in_idx = d_in_idx;
       bool state_interrupt =false;
       std::list<block_t>::iterator it1 = d_smp_list.begin(),it2 = d_sync_list.begin();
+      std::list<hdr_t>::iterator hdr_it = d_tag_list.begin();
       switch(d_state){
         case FREE:
           for(count_s=0;count_s<nin_s;++count_s){
-            // ring queue
-            d_in_mem[d_in_idx++] = in[count_s];
-            d_in_idx %=d_cap;
-            if(it1!=d_smp_list.end()){
-              if(d_in_idx == it1->index()){
-                // wrap around detected
-                it1 = d_smp_list.erase(it1);
-              }
-            }
             assert(d_voe_state == false);
             update_voe_state(count_s);
             if(d_voe_state){
                 next_state = SUFFERING;
                 DEBUG<<"\033[33m"<<"<IC Crit>Detect interfering signals"<<"\033[0m"
-                <<", block_id="<<d_current_block<<" ,block_idx="<<d_block_idx
+                <<", block_id="<<d_current_block<<" ,block_idx="<<d_phase_block_idx
                 <<" , d_in_idx="<<d_in_idx<<std::endl;
                 init_intf();
                 if(new_intf()){ 
@@ -693,33 +742,14 @@ namespace gr {
           }
         break;
         case SUFFERING:
-          //std::cout<<"<State suff>d_intf_idx:"<<d_intf_idx<<std::endl;
           for(count_s=0;count_s <nin_s;++count_s){
-            // ring queue
-            d_in_mem[d_in_idx++] = in[count_s];
-            d_in_idx %=d_cap;
-            if(it1!=d_smp_list.end()){
-              if(d_in_idx == it1->index()){
-                // wrap around detected
-                it1 = d_smp_list.erase(it1);
-              }
-            }
-            // intf queue
-            d_intf_mem[d_intf_idx++] = in[count_s];
-            if(d_intf_idx==d_cap){
-              DEBUG<<"\033[32m"<<"<IC Crit DEBUG> Additional interfering signal may cause overflow"<<"\033[0m"<<std::endl;
-              state_interrupt = true;
-              next_state = FREE;
-              d_voe_state = false;
-              break;
-            }
             assert(d_voe_state == true);
             update_voe_state(count_s);
               if(!d_voe_state){
                 reset_retx();
                 next_state = SEARCH_RETX;
                 DEBUG<<"\033[33m"<<"<IC Crit>Detect the end of interference"<<"\033[0m"
-                <<" , block_id="<<d_current_block<<" ,block_idx="<<d_block_idx
+                <<" , block_id="<<d_current_block<<" ,block_idx="<<d_phase_block_idx
                 <<" , d_in_idx="<<d_in_idx<<std::endl;
                 state_interrupt = true;
                 break; // jump out from loop
@@ -728,30 +758,13 @@ namespace gr {
         break;
         case SEARCH_RETX:
           for(count_s =0;count_s<nin_s;++count_s){
-            //ring queue
-            d_in_mem[d_in_idx++] = in[count_s];
-            d_in_idx %=d_cap;
-            if(it1!=d_smp_list.end()){
-              if(d_in_idx == it1->index()){
-                // wrap around detected
-                it1 = d_smp_list.erase(it1);
-              }
-            }
             // intf queue
-            if(!d_current_intf_tag.empty() && d_current_intf_tag.back_tag_empty()){
-              d_intf_mem[d_intf_idx++] = in[count_s];
-              if(d_intf_idx==d_cap){
-                DEBUG<<"\033[32m"<<"<IC Crit DEBUG> Additional interfering signal may cause overflow, clear tag..."<<"\033[0m"<<std::endl;
-                d_intf_idx = d_current_intf_tag.begin();
-                d_current_intf_tag.clear();
-              }
-            }
             // add something to detect interference during retransmission process
             bool prev_state = d_voe_state;
             update_voe_state(count_s);
             if(!d_voe_state && prev_state){
                 DEBUG<<"\033[33m"<<"<IC Crit> Detect an interfering event during retransmission state"<<"\033[0m"
-                  <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
+                  <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_phase_block_idx<<std::endl;
                 if(d_current_intf_tag.empty()){
                   //already store at least one intf_t
                   if(new_intf()){
@@ -760,13 +773,56 @@ namespace gr {
                 }
             }else if(d_voe_state && !prev_state){
                 DEBUG<<"\033[33m"<<"<Ic Crit> Interfering event during retransmission ends"<<"\033[0m"
-                <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_block_idx<<std::endl;
+                <<" ,block_id="<<d_current_block<<" ,phase_block_idx="<<d_phase_block_idx<<std::endl;
             }
           }
         break;
         default:
           throw std::runtime_error("Undefined state");
         break;
+      }
+      for(int i=0;i<count_s;++i){
+        d_in_mem[d_in_idx++] = in[i];
+        d_in_idx %=d_cap;
+        if(it1!=d_smp_list.end()){
+          if(d_in_idx == it1->index()){
+            // wrap around detected
+            it1 = d_smp_list.erase(it1);
+          }
+        }
+        // index check for detected preambles
+        if(hdr_it != d_tag_list.end()){
+          if(d_in_idx == hdr_it->index()){
+            hdr_it = d_tag_list.erase(hdr_it);
+          }
+        }
+        // intf signal collecting
+        if(!d_current_intf_tag.empty() && d_current_intf_tag.back_tag_empty()){
+          d_intf_mem[d_intf_idx++] = in[i];
+          if(d_intf_idx==d_cap){
+            DEBUG<<"\033[32m"<<"<IC Crit DEBUG> Additional interfering signal may cause overflow, clear tag..."<<"\033[0m"<<std::endl;
+            d_intf_idx = d_current_intf_tag.begin();
+            d_current_intf_tag.clear();
+          }
+        }
+      }
+      while(!cross_tags.empty()){
+        int offset = cross_tags[0].offset - nitems_read(SAMPLE_PORT);
+        if(offset<count_s){
+          pmt::pmt_t tmp_msg = pmt::make_dict();
+          tmp_msg = pmt::dict_add(tmp_msg,pmt::intern("in_block_id"),pmt::from_uint64(d_current_block));
+          tmp_msg = pmt::dict_add(tmp_msg,pmt::intern("in_offset"),pmt::from_long(d_in_block_idx+offset));
+          tmp_msg = pmt::dict_add(tmp_msg,pmt::intern("init_phase"),cross_tags[0].value);
+          hdr_t tmp_hdr( (current_in_idx+offset)%d_cap,tmp_msg);
+          // FIXME 
+          //may need some gap guard
+          d_pending_list.push_back(tmp_hdr);
+          cross_tags.erase(cross_tags.begin());
+          //DEBUG<<" estimated header preamble: in_block_id:"<<d_current_block
+          //<<" ,offset:"<<d_in_block_idx+offset<<" index binding:"<<(current_in_idx+offset)%d_cap<<std::endl;
+        }else{
+          break;
+        }
       }
       count_p = (state_interrupt)? std::min(nin_p,count_s) : nin_p;
       for(int i=0;i<count_p;++i){
@@ -779,6 +835,7 @@ namespace gr {
             it2 = d_sync_list.erase(it2);
           }
         }
+        // index check for header
       }
         // when state change, phase stream should follow count_s 
         // otherwise, just consume until a block tag found
@@ -790,7 +847,7 @@ namespace gr {
       for(int i=0;i<hdr_tags.size();++i){
         if(!pmt::eqv(d_block_tag,hdr_tags[i].key)){
           int offset = hdr_tags[i].offset - nitems_read(PHASE_PORT);
-          if(tmp_hdr.index() == (offset + d_block_idx) ){
+          if(tmp_hdr.index() == (offset + d_phase_block_idx) ){
             tmp_hdr.add_msg(hdr_tags[i].key,hdr_tags[i].value);
           }else{
             // insert new tag
@@ -801,17 +858,18 @@ namespace gr {
               tmp_hdr.reset();
               //DEBUG<<"<DEBUG>New tag:"<<tmp_hdr<<std::endl;
             }
+              tmp_hdr.init();
+              tmp_hdr.set_index(d_phase_block_idx+offset);
+              tmp_hdr.add_msg(hdr_tags[i].key,hdr_tags[i].value);
+              tmp_hdr.add_msg(pmt::intern("sync_block_id"),pmt::from_uint64(d_current_block));
             // new tag
-            tmp_hdr.init();
-            tmp_hdr.set_index(d_block_idx+offset);
-            tmp_hdr.add_msg(hdr_tags[i].key,hdr_tags[i].value);
-            tmp_hdr.add_msg(pmt::intern("block_id"),pmt::from_uint64(d_current_block));
           }
         }
       }
       if(!tmp_hdr.empty()){
         tmp_hdr.delete_msg(pmt::intern("pld_bytes"));
         tmp_hdr.delete_msg(pmt::intern("LSA_hdr"));
+        // do header matching here
         new_tags.push_back(tmp_hdr);
         //DEBUG<<"<DEBUG>New tag:"<<tmp_hdr<<std::endl;
       }
@@ -829,25 +887,12 @@ namespace gr {
         }else if(qsize!=0 && qidx>=qsize){
           continue;
         }
-        switch(d_state){
-          case FREE:
-          d_tag_list.push_back(new_tags[i]);
-            if(d_tag_list.size()>d_max_pending){
-              while(d_tag_list.size()>d_max_pending/2){
-                d_tag_list.pop_front();
-              }
-            }
-          break;
-          case SUFFERING:
-          d_tag_list.push_back(new_tags[i]);
-            if(d_tag_list.size()>d_max_pending){
-              while(d_tag_list.size()>d_max_pending/2){
-                d_tag_list.pop_front();
-              }
-            }
-          break;
-          case SEARCH_RETX:
-            if(qsize==0){
+        if(!matching_header(new_tags[i])){
+          continue;
+        }
+        d_tag_list.push_back(new_tags[i]);
+        if(d_state == SEARCH_RETX){
+          if(qsize==0){
               if(!d_retx_tag.empty()){
                 // this means retransmission is end
                 // declare retransmission failed
@@ -858,9 +903,7 @@ namespace gr {
             }else{
               d_do_ic = detect_ic_chance(new_tags[i]);
             }
-            d_tag_list.push_back(new_tags[i]);
             //FIXME
-            // same tag event for front and back tags may occur 
             if(update_intf(residual)){
               // ready for one interference cancellation block
               if(!d_current_intf_tag.empty())
@@ -868,14 +911,9 @@ namespace gr {
               d_current_intf_tag.clear();
               DEBUG<<"\033[35m"<<"<IC Crit>Interference object complete!"<<"\033[0m"<<std::endl;
             }
-          break;
-          default:
-            throw std::runtime_error("undefined state");
-          break;
         }
       }
       // increment block index
-      d_block_idx+= count_p;
       if(d_do_ic){
         // do ic
         DEBUG<<"\033[31m"<<"<IC Crit>Calling DO IC "<<"\033[0m"<<std::endl;
@@ -883,7 +921,6 @@ namespace gr {
         reset_retx();
         d_tag_list.clear();
         next_state = FREE;
-        //d_voe_cnt =0;
         d_voe_state = false;
         if(d_out_size!=0){
           add_item_tag(0,nitems_written(0),pmt::intern("ic_out"),pmt::PMT_T);
@@ -895,9 +932,12 @@ namespace gr {
         DEBUG<<"\033[31m"<<"<IC Crit>Reset RETX, due to failure"<<"\033[0m"<<std::endl;
         reset_retx();
         next_state = FREE;
-        //d_voe_cnt =0;
         d_voe_state = false;
       }
+      // update indexes
+      d_in_block_idx = next_in_block_idx;
+      d_phase_block_idx = next_phase_block_idx;
+      d_current_block = next_block_id;
       d_state = next_state;
       
       nout = std::min(d_out_size-d_out_idx,noutput_items);

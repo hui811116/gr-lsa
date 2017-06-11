@@ -143,10 +143,15 @@ namespace gr {
       int d_sync_idx;
       const int d_cap;
       uint64_t d_current_block;
-      uint32_t d_block_idx;
+      uint32_t d_phase_block_idx; // for counting offset in stream 2
+      uint32_t d_in_block_idx;  // for counting offset in stream 1
+
       std::list<block_t> d_smp_list;
       std::list<block_t> d_sync_list;
       std::list<hdr_t> d_tag_list;
+
+      std::list<hdr_t> d_pending_list; // used to record possible preambles.
+
       bool d_debug;
       bool d_voe_state;
       int d_state;
@@ -166,6 +171,7 @@ namespace gr {
       std::vector<tag_t> d_voe_tags;
 
       std::vector<gr_complex> d_cross_word;
+      int d_block_size;
 
       bool detect_ic_chance(const hdr_t& new_tag);
       void reset_retx();
@@ -175,8 +181,10 @@ namespace gr {
       bool update_intf(int& residual);
       void do_ic();
       void update_voe_state(int idx);
+
+      bool matching_header(hdr_t& header);
      public:
-      ic_critical_cc_impl(const std::vector<gr_complex>& cross_word,int sps,bool d_debug);
+      ic_critical_cc_impl(const std::vector<gr_complex>& cross_word,int sps,int block_size,bool d_debug);
       ~ic_critical_cc_impl();
       
       // Where all the action really happens
