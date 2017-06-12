@@ -234,6 +234,7 @@ namespace gr {
       if( (sync_idx_check-pkt_nominal+1 < begin_p)|| (sync_idx_check+reserved_length-1>end_p) ){
         return false;
       }
+      
       // valid retransmission size
       // NOTE: can add additional check
       // VoE of freq tracking signal
@@ -245,13 +246,23 @@ namespace gr {
       if(d_retx_idx+copy_len>=d_cap){
         throw std::runtime_error("<IC Crit>Fatal Error: Retransmission buffer is too small to acquire all retransmission....");
       }
+      int sync_iter = sync_idx_check-pkt_nominal+1;
+      sync_iter = (sync_iter<0)? sync_iter+d_cap : sync_iter;
+      sync_iter%= d_cap;
+      for(int i=0;i<pkt_nominal;++i){
+        d_intf_freq[i] = d_freq_mem[sync_iter++];
+        sync_iter%=d_cap;
+      }
+      float mean,stddev;
+      volk_32f_stddev_and_mean_32f_x2(&stddev,&mean,d_intf_freq,pkt_nominal);
       // FIXME
       // Use init_phase to ratate phase offset
+      float init_phase = pmt::to_float(pmt::dict_ref(msg,pmt::intern("init_phase"),pmt::from_float(0)));
       for(int i=0;i<copy_len;++i){
-        d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++];
-        //d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-d_phase_mem[sync_iter++]);
+        d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-init_phase);
+        init_phase+= mean;
+        phase_wrap(init_phase);
         samp_iter%=d_cap;
-        //sync_iter%=d_cap;
         if(d_retx_idx == d_cap){
           throw std::runtime_error("<IC Crit DEBUG>Fatal error: retransmission size is not enough... abort");
         }
@@ -259,8 +270,8 @@ namespace gr {
       tag.set_index(retx_idx_begin);
       tag.add_msg(pmt::intern("copy_len"),pmt::from_long(copy_len));
       tag.add_msg(pmt::intern("packet_len"),pmt::from_long(pkt_nominal));
-      // tag.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
-      // tag.add_msg(pmt::intern("freq_std"),pmt::from_float(std));
+      tag.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
+      tag.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
       //tag.delete_msg(pmt::intern("queue_index"));
       //tag.delete_msg(pmt::intern("queue_size"));
       tag.delete_msg(pmt::intern("sync_block_id"));
@@ -354,7 +365,7 @@ namespace gr {
       d_out_tags.push_back(tmp_tag2);
       // for phase stream
       hdr_t new_front = *rit;
-      /*
+      
       current_begin = d_sync_idx;
       current_end = (d_sync_idx==0)? d_cap-1 : d_sync_idx-1;
       if(current_begin>current_end){
@@ -367,18 +378,18 @@ namespace gr {
         return false;
       }
       int count =0;
-      while(sync_idx!=d_sync_idx){
-        d_intf_freq[count++] = d_freq_mem[sync_idx++];
+      for(count=0;count<pkt_nominal;++count){
+        d_intf_freq[count] = d_freq_mem[sync_idx++];
         sync_idx%=d_cap;
       }
+      //while(sync_idx!=d_sync_idx){
+        //d_intf_freq[count++] = d_freq_mem[sync_idx++];
+        //sync_idx%=d_cap;
+      //}
       float mean,stddev;
       volk_32f_stddev_and_mean_32f_x2(&stddev,&mean,d_intf_freq,count);
-      // recored begin idx
-      // avg freq?
       new_front.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
-      new_front.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
-      // record clean phase?
-      */
+      new_front.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev)); 
       d_current_intf_tag.set_begin(intf_begin);
       d_current_intf_tag.set_front(new_front);
       return true;
@@ -505,9 +516,10 @@ namespace gr {
         DEBUG<<"<IC Crit DEBUG>First retransmission tag:"<<d_retx_tag[retx_id]<<std::endl;
         int pkt_len = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("packet_len"),pmt::from_long(0)));
         int pkt_cnt=0;
-        //float init_phase = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("phase_init"),pmt::from_float(0)));
-        //float freq_mean = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("freq_mean"),pmt::from_float(0)));
         int intf_cnt = intf_begin;
+        float init_phase = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("init_phase"),pmt::from_float(0)));
+        float freq_mean = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("freq_mean"),pmt::from_float(0)));
+        //float gain_refine;
         while(intf_cnt<intf_end){
           //NOTE: sync to interfering signal
           if(intf_cnt>=d_cap){
@@ -520,13 +532,12 @@ namespace gr {
           // if the phase offset affect the result,
           // try to improve it
           // for DEMO
-          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt];
-          //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
-          // FOR DEBUG
-          //d_out_mem[d_out_size++] = d_retx_mem[retx_idx++];
-          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++];
-          //init_phase+=freq_mean;
-          //phase_wrap(init_phase);
+          //gain_refine = std::abs(d_intf_mem[intf_cnt])/std::abs(d_retx_mem[retx_idx]);
+          //d_comp_mem[d_out_size] = d_retx_mem[retx_idx];
+          d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(-init_phase);
+          init_phase+=freq_mean;
+          phase_wrap(init_phase);
+          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++]*gr_expj(-init_phase) - d_retx_mem[retx_idx++];
           pkt_cnt++;
           if(pkt_cnt==pkt_len){
             // Update Retransmission 

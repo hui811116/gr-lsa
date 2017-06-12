@@ -98,9 +98,8 @@ inline void phase_wrap(float& phase)
       float f_base, f_frac;
       while(nout<nout_fix && (count< (nin-1)) ){
         f_frac = (freq[count+1]-freq[count])/(float)(d_sps*d_sps) ;
-        f_base = freq[count]/(float)d_sps-((d_sps-1)/2.0f)*f_frac;
-        p_base= phase[count]-((d_sps)/2.0f)*f_base;
-        phase_wrap(p_base);
+        f_base = freq[count]/(float)d_sps;
+        p_base= phase[count];
         for(int i=0;i<d_sps;++i){
           out_phase[nout+i]=p_base;
           out_freq[nout+i] =f_base;
