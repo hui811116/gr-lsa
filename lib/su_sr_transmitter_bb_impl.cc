@@ -36,7 +36,7 @@ namespace gr {
     static unsigned char LSAMAC[] = {0x00,0x00,0x00,0x00,0x00,0x00};  // 2,2,2
     static int d_retx_retry_limit = 20;
 
-    static int d_debug_iter = 20;
+    //static int d_debug_iter = 20;
 
     su_sr_transmitter_bb::sptr
     su_sr_transmitter_bb::make(const std::string& tagname, bool debug)
@@ -62,9 +62,9 @@ namespace gr {
       d_prou_present = false;
       memcpy(d_buf,LSAPHY,sizeof(char)* LSAPHYLEN);
 
-      d_debug_state = false;
-      d_debug_cnt = 0;
-      d_debug_queue.clear();
+      //d_debug_state = false;
+      //d_debug_cnt = 0;
+      //d_debug_queue.clear();
     }
 
     /*
@@ -78,7 +78,7 @@ namespace gr {
     su_sr_transmitter_bb_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
       int noutput_items = ninput_items[0]+LSAPHYLEN+LSAMACLEN;
-      /*std::list<srArq_t>::iterator it;
+      std::list<srArq_t>::iterator it;
       if(d_prou_present){        
         if(retx_peek_front(noutput_items)){
           // valid
@@ -92,7 +92,7 @@ namespace gr {
         }else{
           // has nothing
         }
-      }*/
+      }
       return noutput_items ;
     }
 
@@ -315,7 +315,7 @@ namespace gr {
       int nin = ninput_items[0];
       int nout;
       pmt::pmt_t nx_msg =pmt::PMT_NIL;
-
+/*
       if(d_debug_queue.size()<d_debug_iter){
         uint16_t base = (uint16_t)d_debug_cnt;
         uint8_t * u8_idx = (uint8_t*)&base;
@@ -355,8 +355,8 @@ namespace gr {
           d_debug_cnt =0;
         }
       }
-
-      /*
+*/
+      
       if(d_prou_present){
         // should do retransmission
         //assert(!d_retx_queue.empty());
@@ -373,9 +373,13 @@ namespace gr {
               if(update_retx_table(d_retx_idx)){
                 DEBUG<<"<SU SR TX>"<<"\033[32;1m"<<"Retransmission achieve retry limit, forced true..."<<"\033[0m"<<std::endl;
               }
-              //if(d_retx_cnt>=d_retx_size){
-                //d_prou_present = false;
-              //}
+              if(d_retx_cnt>=d_retx_size){
+                clear_queue();
+                d_prou_present = false;
+                DEBUG<<"<SU SR TX>"<<"\033[31;1m"<<"Failure: Retransmission exceed retry limit! resume to clear state"<<"\033[0m"<<std::endl;
+                nout =0;
+                return 0;
+              }
           }
         }
         // consider a retry count to reduce retransmission time
@@ -417,7 +421,7 @@ namespace gr {
           nout = io;
           memcpy(out,uvec,sizeof(char)*io);
         }
-      }*/
+      }
       // Tell runtime system how many output items we produced.
       return nout;
     }

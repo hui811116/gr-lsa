@@ -36,8 +36,8 @@ namespace gr {
       uint64_t d_block_no;
       bool d_debug;
 
-      int d_duration_cnt;
-      int d_debug_state;
+      //int d_duration_cnt;
+      //int d_debug_state;
      public:
       block_tagger_cc_impl(const std::string& tagname,int block_size, bool debug);
       ~block_tagger_cc_impl();

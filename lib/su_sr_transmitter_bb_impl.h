@@ -82,9 +82,9 @@ namespace gr {
       unsigned char d_buf[1024];
       bool d_debug;
 
-      std::vector<srArq_t> d_debug_queue;
-      int d_debug_cnt;
-      bool d_debug_state;
+      //std::vector<srArq_t> d_debug_queue;
+      //int d_debug_cnt;
+      //bool d_debug_state;
 
       // thread functions for d_arq_queue;
       void clear_queue();
