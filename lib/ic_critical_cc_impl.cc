@@ -47,13 +47,12 @@ namespace gr {
     SEARCH_RETX
   };
 
-    static const pmt::pmt_t d_block_tag = pmt::intern("block_tag");
-    static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
-    static const int d_voe_min = 128;
-    static const int d_max_pending =256;
-    static const int d_min_process = 16;
-    static const int LSAPHYSYMBOLLEN = PHYLEN*8*LSACODERATEINV/2;
-
+    static const pmt::pmt_t d_block_tag = pmt::intern("block_tag");  // sample block tagger for stream matching
+    static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");      // variance of energy tagger
+    static const int d_min_process = 16;                             // minimum labeled headers to process retransmissions
+    static const int LSAPHYSYMBOLLEN = PHYLEN*8*LSACODERATEINV/2;    // LSA Physical layer symbol level length
+    
+    // helper function for phase correction
     inline void phase_wrap(float& phase){
       while(phase>=TWO_PI)
         phase-=TWO_PI;
@@ -68,9 +67,6 @@ namespace gr {
         (new ic_critical_cc_impl(cross_word,sps,block_size,debug));
     }
 
-    /*
-     * The private constructor
-     */
     static int ios[] = {sizeof(gr_complex),sizeof(float),sizeof(float)};
     static std::vector<int> iosig(ios,ios+sizeof(ios)/sizeof(int));
     ic_critical_cc_impl::ic_critical_cc_impl(const std::vector<gr_complex>& cross_word,int sps,int block_size,bool debug)
@@ -96,7 +92,6 @@ namespace gr {
       d_intf_mem = new gr_complex[d_cap];
       d_intf_idx =0;
       d_intf_freq = (float*) volk_malloc(sizeof(float)*d_cap,volk_get_alignment());
-
       d_in_block_idx = 0;
       d_phase_block_idx =0;
 
@@ -162,7 +157,6 @@ namespace gr {
           if(max_cnt==0){
             return false;
           }
-          //DEBUG<<"<IC Crit>Retransmission queue size maximum found:"<<max_qsize<<std::endl;
           d_retx_cnt=0;
           d_retx_tag.clear();
           d_retx_block.clear();
@@ -245,18 +239,14 @@ namespace gr {
       // VoE of freq tracking signal
       // float mean, stddev
       // volk()...
-      int samp_idx = tag.index();
-      //int sync_idx = sync_idx_check -pkt_nominal+1;
-      //sync_idx = (sync_idx>=d_cap)? sync_idx-d_cap : sync_idx;
-      //float init_phase = d_phase_mem[sync_idx];
-      //float init_freq = d_freq_mem[sync_idx];
       int copy_len = pkt_nominal+reserved_length;
-      int samp_iter = samp_idx;
-      //int sync_iter = sync_idx;
+      int samp_iter = tag.index();
       int retx_idx_begin = d_retx_idx;
       if(d_retx_idx+copy_len>=d_cap){
         throw std::runtime_error("<IC Crit>Fatal Error: Retransmission buffer is too small to acquire all retransmission....");
       }
+      // FIXME
+      // Use init_phase to ratate phase offset
       for(int i=0;i<copy_len;++i){
         d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++];
         //d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-d_phase_mem[sync_iter++]);
@@ -370,14 +360,12 @@ namespace gr {
       if(current_begin>current_end){
         current_end+=d_cap;
       }
-      float end_phase = d_phase_mem[bit_p->index()+block_offset];
       int sync_idx = bit_p->index()+block_offset - pkt_nominal+1;
       int sync_base = (bit_p->index()<current_begin)? bit_p->index()+d_cap : bit_p->index();
       if( (sync_base + block_offset -pkt_nominal+1) <current_begin){
         //DEBUG<<"<IC Crit>new_intf:: the begin of packet already been removed(sync)...end function"<<std::endl;
         return false;
       }
-      float clean_phase  = d_phase_mem[sync_idx];
       int count =0;
       while(sync_idx!=d_sync_idx){
         d_intf_freq[count++] = d_freq_mem[sync_idx++];
@@ -389,8 +377,6 @@ namespace gr {
       // avg freq?
       new_front.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
       new_front.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
-      new_front.add_msg(pmt::intern("phase_init"),pmt::from_float(clean_phase));
-      new_front.add_msg(pmt::intern("phase_end"),pmt::from_float(end_phase));
       // record clean phase?
       */
       d_current_intf_tag.set_begin(intf_begin);
@@ -407,9 +393,6 @@ namespace gr {
       }
       // guarantee for new tags
       // just need to check the last one
-      // available info
-      // d_block_idx <--sync to phase offset
-      // d_current_block <--burrent processing block, which is this tag belongs
       std::list<hdr_t>::reverse_iterator rit = d_tag_list.rbegin();
       std::list<block_t>::iterator bit_p;
       int block_offset=0;
@@ -480,13 +463,8 @@ namespace gr {
       //new_back.add_msg(pmt::intern("freq_mean"),pmt::from_float(mean));
       //new_back.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
       d_current_intf_tag.set_back(new_back);
-      // NOTE:
-      // due to difficulty in handling state transition and header tags
-      // the interfering samples may exceed required.
-      // trim those not neccessary 
       d_current_intf_tag.set_end(end_idx_corrected);
       // average of the freq
-      // and record the end phase
       return true;
     }
 
@@ -538,6 +516,9 @@ namespace gr {
           if(retx_idx>=d_cap){
             throw std::runtime_error("retx idx exceed maximum, boom");
           }
+          // FIXME
+          // if the phase offset affect the result,
+          // try to improve it
           // for DEMO
           d_comp_mem[d_out_size] = d_intf_mem[intf_cnt];
           //d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++] - d_retx_mem[retx_idx++]*gr_expj(init_phase);
@@ -644,7 +625,6 @@ namespace gr {
       }
       candidate_it++;
       d_pending_list.erase(d_pending_list.begin(),candidate_it);
-      //d_pending_list.erase(d_pending_list.begin(),candidate_it);
       // update matched header
       header.add_msg(pmt::intern("in_offset"),pmt::from_long(min_pend_offset));
       header.add_msg(pmt::intern("sync_offset"),pmt::from_long(block_offset));
@@ -683,15 +663,12 @@ namespace gr {
       std::vector<tag_t> tags_s;
       std::vector<tag_t> tags_p;
       std::vector<tag_t> hdr_tags;
-
       std::vector<tag_t> cross_tags;
       d_voe_tags.clear(); //
       get_tags_in_window(tags_s,SAMPLE_PORT,0,nin_s,d_block_tag);
       get_tags_in_window(tags_p,PHASE_PORT,0,nin_p,d_block_tag);
       get_tags_in_window(d_voe_tags,SAMPLE_PORT,0,nin_s,d_voe_tag); //
-      //
       get_tags_in_window(cross_tags,SAMPLE_PORT,0,nin_s,pmt::intern("phase_est"));
-
       int next_block_id = d_current_block;
       if(!tags_s.empty()){
         nin_s = tags_s[0].offset-nitems_read(SAMPLE_PORT);
@@ -768,7 +745,7 @@ namespace gr {
                 if(d_current_intf_tag.empty()){
                   //already store at least one intf_t
                   if(new_intf()){
-                    DEBUG<<"\033[35m"<<"<IC Crit> new intferference object Created"<<"\033[0m"<<std::endl;
+                    DEBUG<<"<IC Crit> new intferference object Created"<<std::endl;
                   }
                 }
             }else if(d_voe_state && !prev_state){
@@ -837,8 +814,8 @@ namespace gr {
         }
         // index check for header
       }
-        // when state change, phase stream should follow count_s 
-        // otherwise, just consume until a block tag found
+      // when state change, phase stream should follow count_s 
+      // otherwise, just consume until a block tag found
       // handling tags
       hdr_t tmp_hdr;
       std::vector<hdr_t> new_tags;
@@ -874,8 +851,6 @@ namespace gr {
         //DEBUG<<"<DEBUG>New tag:"<<tmp_hdr<<std::endl;
       }
       }
-      // FIXME
-      // not necessary anymore
       int residual = count_p;
       // tag size control
       for(int i=0;i<new_tags.size();++i){
@@ -903,13 +878,12 @@ namespace gr {
             }else{
               d_do_ic = detect_ic_chance(new_tags[i]);
             }
-            //FIXME
             if(update_intf(residual)){
               // ready for one interference cancellation block
               if(!d_current_intf_tag.empty())
                 d_intf_stack.push_back(d_current_intf_tag);
               d_current_intf_tag.clear();
-              DEBUG<<"\033[35m"<<"<IC Crit>Interference object complete!"<<"\033[0m"<<std::endl;
+              DEBUG<<"<IC Crit>Interference object complete!"<<std::endl;
             }
         }
       }
