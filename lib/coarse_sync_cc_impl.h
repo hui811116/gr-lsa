@@ -29,7 +29,7 @@ namespace gr {
     class coarse_sync_cc_impl : public coarse_sync_cc
     {
      private:
-      int d_state;
+      //int d_state;
       int d_auto_cnt;
       int d_copy_cnt;
       int d_delay;
@@ -40,7 +40,7 @@ namespace gr {
       const int d_maxlen;
       const pmt::pmt_t d_cfo_key;
       float d_coarse_cfo;
-      // voe tag state
+      uint32_t d_voe_duration_cnt;
       bool d_voe_state;
       std::vector<tag_t> d_tags;
 

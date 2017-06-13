@@ -258,9 +258,13 @@ namespace gr {
       // FIXME
       // Use init_phase to ratate phase offset
       float init_phase = pmt::to_float(pmt::dict_ref(msg,pmt::intern("init_phase"),pmt::from_float(0)));
+      sync_iter = sync_idx_check-pkt_nominal+1;
+      sync_iter = (sync_iter<0)? sync_iter+d_cap : sync_iter;
+      sync_iter%= d_cap;
       for(int i=0;i<copy_len;++i){
         d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-init_phase);
-        init_phase+= mean;
+        init_phase+= d_freq_mem[sync_iter++];
+        //init_phase+= mean;
         phase_wrap(init_phase);
         samp_iter%=d_cap;
         if(d_retx_idx == d_cap){
@@ -348,24 +352,18 @@ namespace gr {
         return false;
       }
       int intf_begin = d_intf_idx;
-      //
-      tag_t tmp_tag, tmp_tag2;
+      tag_t tmp_tag;
       tmp_tag.offset = d_intf_idx;
       tmp_tag.key = pmt::intern("Intf_begin");
       tmp_tag.value=pmt::PMT_T;
-      d_out_tags.push_back(tmp_tag);
+
       samp_idx = rit->index();
       while(samp_idx!=d_in_idx){
         d_intf_mem[d_intf_idx++] = d_in_mem[samp_idx++];
         samp_idx %= d_cap;
       }
-      tmp_tag2.offset = d_intf_idx+length_check-1;
-      tmp_tag2.key = pmt::intern("Intf_end");
-      tmp_tag2.value= pmt::PMT_F;
-      d_out_tags.push_back(tmp_tag2);
       // for phase stream
       hdr_t new_front = *rit;
-      
       current_begin = d_sync_idx;
       current_end = (d_sync_idx==0)? d_cap-1 : d_sync_idx-1;
       if(current_begin>current_end){
@@ -374,7 +372,8 @@ namespace gr {
       int sync_idx = bit_p->index()+block_offset - pkt_nominal+1;
       int sync_base = (bit_p->index()<current_begin)? bit_p->index()+d_cap : bit_p->index();
       if( (sync_base + block_offset -pkt_nominal+1) <current_begin){
-        //DEBUG<<"<IC Crit>new_intf:: the begin of packet already been removed(sync)...end function"<<std::endl;
+        // reset to index before copying
+        d_intf_idx = intf_begin;
         return false;
       }
       int count =0;
@@ -392,6 +391,8 @@ namespace gr {
       new_front.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev)); 
       d_current_intf_tag.set_begin(intf_begin);
       d_current_intf_tag.set_front(new_front);
+      // add tag only everything set
+      d_out_tags.push_back(tmp_tag);
       return true;
     }
 
@@ -402,6 +403,8 @@ namespace gr {
         //DEBUG<<"<IC Crit DEBUG>current intf tag is empty or end tag already found... abort"<<std::endl;
         return false;
       }
+      pmt::pmt_t intf_msg = d_current_intf_tag.msg();
+      int last_voe_end_idx = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_end_idx"),pmt::from_long(-1))) ;
       // guarantee for new tags
       // just need to check the last one
       std::list<hdr_t>::reverse_iterator rit = d_tag_list.rbegin();
@@ -413,6 +416,12 @@ namespace gr {
       int idx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("sync_offset"),pmt::from_long(0)));
       int payload = pmt::to_long(pmt::dict_ref(msg,pmt::intern("payload"),pmt::from_long(-1)));
       nominal_pkt = (payload+LSAPHYSYMBOLLEN)*d_sps+d_cross_len;
+      // FIXME
+      // guard length first guarantee not end in interfering samples
+      if(d_intf_idx-nominal_pkt <last_voe_end_idx ){
+        return false;
+      }
+
       bit_p = d_sync_list.begin();
       while(bit_p!=d_sync_list.end()){
         if(id==bit_p->id()){
@@ -475,7 +484,12 @@ namespace gr {
       //new_back.add_msg(pmt::intern("freq_std"),pmt::from_float(stddev));
       d_current_intf_tag.set_back(new_back);
       d_current_intf_tag.set_end(end_idx_corrected);
-      // average of the freq
+      // tag output
+      tag_t tag;
+      tag.offset = end_idx_corrected;
+      tag.key = pmt::intern("Intf_end");
+      tag.value = pmt::PMT_T;
+      d_out_tags.push_back(tag);
       return true;
     }
 
@@ -535,9 +549,9 @@ namespace gr {
           //gain_refine = std::abs(d_intf_mem[intf_cnt])/std::abs(d_retx_mem[retx_idx]);
           //d_comp_mem[d_out_size] = d_retx_mem[retx_idx];
           d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(-init_phase);
+          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++]*gr_expj(-init_phase) - d_retx_mem[retx_idx++];
           init_phase+=freq_mean;
           phase_wrap(init_phase);
-          d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++]*gr_expj(-init_phase) - d_retx_mem[retx_idx++];
           pkt_cnt++;
           if(pkt_cnt==pkt_len){
             // Update Retransmission 
@@ -740,8 +754,12 @@ namespace gr {
                 <<" , block_id="<<d_current_block<<" ,block_idx="<<d_phase_block_idx
                 <<" , d_in_idx="<<d_in_idx<<std::endl;
                 state_interrupt = true;
+                // FIXME
+                if(!d_current_intf_tag.empty()){
+                  d_current_intf_tag.add_msg(pmt::intern("voe_end_idx"),pmt::from_long(d_intf_idx+count_s));
+                }
                 break; // jump out from loop
-              } 
+              }
           }
         break;
         case SEARCH_RETX:
@@ -913,11 +931,12 @@ namespace gr {
         }
       }
       if(d_reset_retx){
-        //
-        DEBUG<<"\033[31m"<<"<IC Crit>Reset RETX, due to failure"<<"\033[0m"<<std::endl;
+        DEBUG<<"\033[31m"<<"<IC Crit>Reset RETX, due to failure"<<"\033[0m"
+        <<" ,expected:"<<d_retx_tag.size()<<" ,received:"<<d_retx_cnt<<std::endl;
         reset_retx();
         next_state = FREE;
         d_voe_state = false;
+        d_out_tags.clear();
       }
       // update indexes
       d_in_block_idx = next_in_block_idx;
@@ -929,18 +948,28 @@ namespace gr {
       memcpy(out,d_out_mem+d_out_idx,sizeof(gr_complex)*nout);
       // For DEMO
       memcpy(demo,d_comp_mem+d_out_idx,sizeof(gr_complex)*nout);
-      while(!d_out_tags.empty()){
+      /*while(!d_out_tags.empty()){
         if(d_out_tags[0].offset>=d_out_idx && d_out_tags[0].offset<d_out_idx+nout){
           add_item_tag(0,nitems_written(0)+d_out_tags[0].offset-d_out_idx,d_out_tags[0].key,d_out_tags[0].value);
           d_out_tags.erase(d_out_tags.begin());
         }else{
           break;
         }
-      }
+      }*/
       d_out_idx += nout;
+      //std::vector<tag_t>::iterator oit;
       if(d_out_idx == d_out_size){
+        /*for(oit=d_out_tags.begin();oit!=d_out_tags.end();++oit){
+          int offset = (int)oit->offset-d_out_idx;
+          if(offset<0){
+            oit = d_out_tags.erase(oit);
+          }else{
+            oit->offset = offset;
+          }
+        }*/
         d_out_idx=0;
         d_out_size=0;
+        d_out_tags.clear();
       }
 
       consume(SAMPLE_PORT,count_s);

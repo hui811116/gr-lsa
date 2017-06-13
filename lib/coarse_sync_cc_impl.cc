@@ -37,7 +37,7 @@ namespace gr {
       SEARCH_AUTO,
       COPY
     };
-    static const int AUTOLEN = 32;
+    static const int AUTOLEN = 64;
     static const int MAXLEN = (127+6)*8*8/2*4;
     static const int MINGAP = (8+12*8)*8/2*4;
     static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
@@ -71,7 +71,6 @@ namespace gr {
               d_maxlen(MAXLEN),
               d_cfo_key(pmt::string_to_symbol("cfo_est"))
     {
-      d_state = SEARCH_AUTO;
       if(threshold > 1 || threshold<0){
         throw std::invalid_argument("Threshold should between 0 and 1");
       }
@@ -86,6 +85,7 @@ namespace gr {
       d_copy_cnt = 0;
       set_tag_propagation_policy(TPP_DONT);
       d_voe_state = false;
+      d_voe_duration_cnt=0;
     }
 
     /*
@@ -99,15 +99,11 @@ namespace gr {
     coarse_sync_cc_impl::update_tag_state(int idx)
     {
       const uint64_t nread = nitems_read(0);
+      bool tmp_state = d_voe_state;
       while(!d_tags.empty()){
         int offset = d_tags[0].offset - nread;
         if(offset == idx){
-          // DEBUG
-          //bool tmp_state = d_voe_state;
           d_voe_state = pmt::to_bool(d_tags[0].value);
-          //if(tmp_state!=d_voe_state){
-            //std::cout<<"<Coarse DEBUG>Change voe state: after--"<<d_voe_state<<" --prev--"<<tmp_state<<std::endl;
-          //}
           d_tags.erase(d_tags.begin());
           break;
         }else if(idx >offset){
@@ -116,6 +112,9 @@ namespace gr {
         else{
           break;
         }
+      }
+      if(tmp_state != d_voe_state){
+        d_voe_duration_cnt =0;
       }
     }
 
@@ -144,95 +143,40 @@ namespace gr {
       get_tags_in_window(d_tags,0,0,nin,d_voe_tag);
       std::vector<tag_t> tags = d_tags;
       const uint64_t nwrite= nitems_written(0);
-      switch(d_state){
-        case SEARCH_AUTO:
-        while(nout<noutput_items && count<nin){
-          update_tag_state(count);
-          if(in_mag_norm[count]>d_threshold){
-              d_auto_cnt++;
-              if(d_auto_cnt >=d_valid_len){
-                if(!d_voe_state){
-                  d_state = COPY;
-                  d_auto_cnt =0;
-                  // divide by delay
-                  d_coarse_cfo = arg(in_corr[count])/(float)d_delay;
-                  d_copy_cnt =0;
-                  add_item_tag(0,nwrite+count,d_cfo_key,pmt::from_float(d_coarse_cfo));
-                  //std::cout<<"<Coarse DEBUG>send tag"<<std::endl;
-                  break;
-                }else{
-                  // interfering, do not change cfo estimate...
-                  d_auto_cnt=0;
-                }
+      while(count<nin && nout<noutput_items){
+        update_tag_state(count);
+        if(in_mag_norm[count]>d_threshold){
+          d_auto_cnt++;
+          if(d_auto_cnt>=d_valid_len){
+            if(d_copy_cnt>=d_mingap){
+              if(!d_voe_state && (d_voe_duration_cnt>=d_maxlen)){
+                d_coarse_cfo = arg(in_corr[count])/(float)d_delay;
+                d_auto_cnt =0;
+                d_copy_cnt =0;
+                add_item_tag(0,nwrite+nout,d_cfo_key,pmt::from_float(d_coarse_cfo));
               }
             }
-            else{
-              d_auto_cnt =0;
-            }
-            out[nout++] = in_samp[count++] * gr_expj(-d_phase);
-            d_phase+=d_coarse_cfo;
-            phase_wrap(d_phase);
-        }
-        for(int i=0;i<tags.size();++i){
-          int offset = tags[i].offset - nitems_read(0);
-          if(offset <count){
-            add_item_tag(0,nwrite+offset,tags[i].key,tags[i].value);
+            // if no update, reset to zero
+            d_auto_cnt=0;
           }
+        }else{
+          d_auto_cnt= 0;
         }
-          consume_each(count);
-          return nout;
-        break;
-        case COPY:
-          while(count<nin && nout<noutput_items && d_copy_cnt < d_maxlen){
-            update_tag_state(count);
-            if(in_mag_norm[count]>d_threshold){
-              d_auto_cnt++;
-              if(d_auto_cnt < d_valid_len){
-                d_auto_cnt++;
-              }
-              else if(d_copy_cnt>=d_mingap){
-                if(!d_voe_state){
-                  d_coarse_cfo = arg(in_corr[count])/(float)d_delay;
-                  d_auto_cnt =0;
-                  d_copy_cnt =0;
-                  add_item_tag(0,nwrite+nout,d_cfo_key,pmt::from_float(d_coarse_cfo));
-                  //DEBUG
-                  //std::cout<<"<Coarse DEBUG>send tag"<<std::endl;
-                }else{
-                  // interfering, do not change state...
-                  d_auto_cnt=0;
-                }
-              }
-            }
-            else{
-              d_auto_cnt= 0;
-            }
-            out[nout++] = in_samp[count++] * gr_expj(-d_phase); 
-            d_phase += d_coarse_cfo;
-            phase_wrap(d_phase);
-            d_copy_cnt++;
-            if(d_copy_cnt>=d_maxlen){
-              d_state = SEARCH_AUTO;
-              d_copy_cnt =0;
-              d_auto_cnt =0;
-              break;
-            }
-          }
-          for(int i=0;i<tags.size();++i){
-          int offset = tags[i].offset - nitems_read(0);
-          if(offset <count){
-            add_item_tag(0,nwrite+offset,tags[i].key,tags[i].value);
-          }
-        }
-          consume_each(count);
-          return nout;
-        break;
-        default:
-          throw std::runtime_error("Entering undefined state");
-        break;
+        out[nout++] = in_samp[count++] * gr_expj(-d_phase); 
+        d_phase += d_coarse_cfo;
+        phase_wrap(d_phase);
+        d_copy_cnt++;
+        d_voe_duration_cnt++;
       }
+      for(int i=0;i<tags.size();++i){
+        int offset = tags[i].offset - nitems_read(0);
+        if(offset <count){
+          add_item_tag(0,nwrite+offset,tags[i].key,tags[i].value);
+        }
+      }
+      consume_each(count);
+      return nout;
     }
-
   } /* namespace lsa */
 } /* namespace gr */
 

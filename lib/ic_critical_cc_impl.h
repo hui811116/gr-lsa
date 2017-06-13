@@ -84,18 +84,20 @@ namespace gr {
          <<" ,back tag:"<<intf.d_back;
          return out;
        }
-       intf_t(){d_begin_idx=0;d_end_idx=0;d_front = hdr_t();d_front=hdr_t();}
+       intf_t(){d_begin_idx=0;d_end_idx=0;d_front = hdr_t();d_front=hdr_t();d_msg=pmt::make_dict();}
        intf_t(const intf_t& intf){
          d_begin_idx = intf.d_begin_idx;
          d_end_idx=intf.d_end_idx;
          d_front=intf.d_front;
-         d_back=intf.d_back;}
+         d_back=intf.d_back;
+         d_msg = intf.d_msg;}
        ~intf_t(){}
        const intf_t& operator=(const intf_t& intf){
          d_begin_idx = intf.d_begin_idx;
          d_end_idx = intf.d_end_idx;
          d_front=intf.d_front;
          d_back=intf.d_back;
+         d_msg= intf.d_msg;
          return *this;
        }
        void set_front(const hdr_t& front){d_front = front;}
@@ -120,7 +122,11 @@ namespace gr {
        bool empty()const{return d_end_idx==0 && d_begin_idx==0 && d_front.empty() && d_back.empty();}
        bool front_tag_empty()const{return d_front.empty();}
        bool back_tag_empty()const{return d_back.empty();}
+       pmt::pmt_t msg(){return d_msg;}
+       void add_msg(pmt::pmt_t k,pmt::pmt_t v){d_msg = pmt::dict_add(d_msg,k,v);}
+       void delete_msg(pmt::pmt_t k){d_msg = pmt::dict_delete(d_msg,k);}
       private:
+       pmt::pmt_t d_msg;
        int d_end_idx;
        int d_begin_idx;
        hdr_t d_front;

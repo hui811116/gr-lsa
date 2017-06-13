@@ -62,6 +62,7 @@ inline void phase_wrap(float& phase)
       d_sps = sps;
       set_relative_rate(d_sps);
       set_min_noutput_items(d_sps);
+      set_tag_propagation_policy(TPP_DONT);
       set_history(2);
     }
 
@@ -96,6 +97,8 @@ inline void phase_wrap(float& phase)
       int nout=0;
       float p_base, p_frac;
       float f_base, f_frac;
+      std::vector<tag_t> tags;
+      get_tags_in_window(tags,0,0,nin);
       while(nout<nout_fix && (count< (nin-1)) ){
         f_frac = (freq[count+1]-freq[count])/(float)(d_sps*d_sps) ;
         f_base = freq[count]/(float)d_sps;
@@ -110,8 +113,12 @@ inline void phase_wrap(float& phase)
         nout+=d_sps;
         count++;
       }
-      //std::cout<<"<Expand stream>noutput_items:"<<noutput_items<<" ninput_items[0]:"<<ninput_items[0]<<std::endl;
-      //std::cout<<" consume:"<<count<<" ,output:"<<nout<<std::endl;
+      for(int i=0;i<tags.size();++i){
+        int offset = tags[i].offset-nitems_read(0);
+        if(offset>=0 && offset< count){
+          add_item_tag(0,nitems_written(0)+offset,tags[i].key,tags[i].value);
+        }
+      }
       consume_each(count);
       return nout;
     }
