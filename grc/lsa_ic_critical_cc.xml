@@ -74,4 +74,9 @@
     <name>comp</name>
     <type>complex</type>
   </source>
+  <source>
+    <name>SINR</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
 </block>

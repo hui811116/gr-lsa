@@ -74,24 +74,25 @@ namespace gr {
               gr::io_signature::makev(3, 3, iosig),
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(gr_complex))),
               d_cap(MAXCAP),
-              d_cross_word(cross_word)
+              d_cross_word(cross_word),
+              d_out_msg_port(pmt::mp("SINR"))
     {
       d_debug = debug;
       d_in_mem = new gr_complex[d_cap];
-      d_out_mem= new gr_complex[d_cap];
       d_comp_mem = new gr_complex[d_cap];
       d_phase_mem = new float[d_cap];
       d_freq_mem= new float[d_cap];
+      d_out_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
+      d_retx_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
+      d_intf_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
+      d_intf_freq = (float*) volk_malloc(sizeof(float)*d_cap,volk_get_alignment());
       d_in_idx = 0;
       d_sync_idx =0;
       d_out_idx =0;
       d_out_size =0;
       d_state = FREE;
       d_voe_state = false;
-      d_retx_mem = new gr_complex[d_cap];
-      d_intf_mem = new gr_complex[d_cap];
       d_intf_idx =0;
-      d_intf_freq = (float*) volk_malloc(sizeof(float)*d_cap,volk_get_alignment());
       d_in_block_idx = 0;
       d_phase_block_idx =0;
 
@@ -110,6 +111,7 @@ namespace gr {
       d_block_size = block_size;
       reset_retx();
       set_tag_propagation_policy(TPP_DONT);
+      message_port_register_out(d_out_msg_port);
     }
 
     /*
@@ -118,12 +120,12 @@ namespace gr {
     ic_critical_cc_impl::~ic_critical_cc_impl()
     {
       delete [] d_in_mem;
-      delete [] d_out_mem;
       delete [] d_phase_mem;
       delete [] d_freq_mem;
-      delete [] d_retx_mem;
-      delete [] d_intf_mem;
       delete [] d_comp_mem;
+      volk_free(d_out_mem);
+      volk_free(d_retx_mem);
+      volk_free(d_intf_mem);
       volk_free(d_intf_freq);
     }
 
@@ -356,7 +358,6 @@ namespace gr {
       tmp_tag.offset = d_intf_idx;
       tmp_tag.key = pmt::intern("Intf_begin");
       tmp_tag.value=pmt::PMT_T;
-
       samp_idx = rit->index();
       while(samp_idx!=d_in_idx){
         d_intf_mem[d_intf_idx++] = d_in_mem[samp_idx++];
@@ -510,15 +511,27 @@ namespace gr {
         hdr_t back = d_intf_stack[i].back();
         int intf_begin = d_intf_stack[i].begin();
         int intf_end = d_intf_stack[i].end();
-        DEBUG<<"Processing intf tag<"<<i<<">:"<<std::endl
-        <<" front tag="<<front<<std::endl
-        <<" back tag="<<back<<std::endl;
-        DEBUG<<"Intf indexes: begin="<<intf_begin<<", end="<<intf_end<<std::endl;
+        DEBUG<<"Processing intf tag<"<<i<<">:"<<std::endl<<d_intf_stack[i]<<std::endl;
         pmt::pmt_t front_msg = front.msg();
         uint64_t front_base = pmt::to_uint64(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_uint64(0xfffffffffffe)));
-        // FIXME
-        // this tag is added at the end of signal
-        // Take this into consideration!!
+        // DEBUG
+        // FOR output SINR
+        // locate prou signal
+        pmt::pmt_t intf_msg = d_intf_stack[i].msg();
+        int voe_begin_idx = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_begin_idx"),pmt::from_long(0)));
+        int voe_end_idx = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_end_idx"),pmt::from_long(0)));
+        /*
+        tag_t voe_begin_tag, voe_end_tag;
+        voe_begin_tag.offset = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_begin_idx"),pmt::from_long(0)));
+        voe_begin_tag.key = pmt::intern("voe_begin");
+        voe_begin_tag.value = pmt::PMT_T;
+        voe_end_tag.offset = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_end_idx"),pmt::from_long(0)));
+        voe_end_tag.key = pmt::intern("voe_end");
+        voe_end_tag.value = pmt::PMT_F;
+        d_out_tags.push_back(voe_begin_tag);
+        d_out_tags.push_back(voe_end_tag);
+        */
+        
         map_it = base_map.find(front_base);
         if(map_it==base_map.end()){
           DEBUG<<"\033[32m"<<"<IC Crit DEBUG>Intf tag <"<<i<<">find no matched base, ignore"<<"\033[0m"<<std::endl;
@@ -533,7 +546,12 @@ namespace gr {
         int intf_cnt = intf_begin;
         float init_phase = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("init_phase"),pmt::from_float(0)));
         float freq_mean = pmt::to_float(pmt::dict_ref(front_msg,pmt::intern("freq_mean"),pmt::from_float(0)));
-        //float gain_refine;
+        // FOR SINR calculation
+        // waste system resources, only for demo purpose
+        gr_complex retx_eng;
+        volk_32fc_x2_conjugate_dot_prod_32fc(&retx_eng,d_retx_mem+retx_idx,d_retx_mem+retx_idx,pkt_len);
+        retx_eng/=(float)pkt_len; // avg power
+        //
         while(intf_cnt<intf_end){
           //NOTE: sync to interfering signal
           if(intf_cnt>=d_cap){
@@ -543,10 +561,10 @@ namespace gr {
             throw std::runtime_error("retx idx exceed maximum, boom");
           }
           // FIXME
-          // if the phase offset affect the result,
+          // if the phase and freq offset affect the result,
+          // so is channel gain variation
           // try to improve it
           // for DEMO
-          //gain_refine = std::abs(d_intf_mem[intf_cnt])/std::abs(d_retx_mem[retx_idx]);
           //d_comp_mem[d_out_size] = d_retx_mem[retx_idx];
           d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(-init_phase);
           d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++]*gr_expj(-init_phase) - d_retx_mem[retx_idx++];
@@ -566,7 +584,6 @@ namespace gr {
             tmp_tag.key = pmt::intern("retx");
             tmp_tag.value = pmt::from_long(retx_id);
             d_out_tags.push_back(tmp_tag);
-            // freq_mean
           }
           if(d_out_size==d_cap){
             DEBUG<<"\033[32m"
@@ -576,11 +593,26 @@ namespace gr {
             d_out_size=0;
             d_out_tags.clear();
           }
-        }
-        std::sort(d_out_tags.begin(),d_out_tags.end(),gr::tag_t::offset_compare);
+        }//while intf_idx
+        // SINR calculation
+        // Waste of system resources, only for demo purpose
+        pmt::pmt_t out_msg = pmt::make_dict();
+        gr_complex sig_eng, ic_eng;
+        int voe_len = voe_end_idx-voe_begin_idx+1;
+        volk_32fc_x2_conjugate_dot_prod_32fc(&sig_eng,d_intf_mem+voe_begin_idx,d_intf_mem+voe_begin_idx,voe_len);
+        volk_32fc_x2_conjugate_dot_prod_32fc(&ic_eng,d_out_mem+voe_begin_idx,d_out_mem+voe_begin_idx,voe_len);
+        sig_eng/=(float)voe_len;
+        ic_eng/=(float)voe_len;
+        // original-SINR: (sig_eng - retx_eng)/(retx_eng+gr_complex(1e-16,0));
+        // canceled-SINR: (sig_eng - retx_eng)/(ic_eng-sig_eng+retx_eng+gr_complex(1e-16,0));
+        double oSINR = abs(sig_eng - retx_eng)/(double)abs((retx_eng+gr_complex(1e-16,0)));
+        double cSINR = abs(sig_eng - retx_eng)/(double)abs((ic_eng-sig_eng+retx_eng+gr_complex(1e-16,0)));
+        out_msg = pmt::dict_add(out_msg,pmt::intern("original_SINR"),pmt::from_double(oSINR));
+        out_msg = pmt::dict_add(out_msg,pmt::intern("canceled_SINR"),pmt::from_double(cSINR));
+        message_port_pub(d_out_msg_port,out_msg);
         DEBUG<<"\033[35;1m"<<"<IC Crit>Produced output samples:"<<d_out_size<<"\033[0m"<<std::endl;
-        // creat output object?
-      }
+      }// for d_intf_stack
+      std::sort(d_out_tags.begin(),d_out_tags.end(),gr::tag_t::offset_compare);
     }
     void
     ic_critical_cc_impl::update_voe_state(int idx)
@@ -661,6 +693,53 @@ namespace gr {
     }
 
     void
+    ic_critical_cc_impl::check_before_reset()
+    {
+      std::map<uint64_t,int> base_map;
+      std::map<uint64_t,int>::iterator map_it;
+      std::vector<intf_t> new_intf_stack;
+      for(int i=0;i<d_retx_tag.size();++i){
+        if(!d_retx_tag[i].empty()){
+          pmt::pmt_t retx_msg = d_retx_tag[i].msg();
+          uint64_t base = pmt::to_uint64(pmt::dict_ref(retx_msg,pmt::intern("base"),pmt::from_uint64(0xffffffffffffe)));
+          base_map.insert(std::pair<uint64_t,int>(base,i));
+        }
+      }
+      for(int i=0;i<d_intf_stack.size();++i){
+        pmt::pmt_t msg = d_intf_stack[i].msg();
+        hdr_t front = d_intf_stack[i].front();
+        hdr_t end = d_intf_stack[i].back();
+        pmt::pmt_t front_msg = front.msg();
+        pmt::pmt_t end_msg = end.msg();
+        uint64_t front_base = pmt::to_uint64(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_uint64(0xffffffffffffe)));
+        uint64_t end_base = pmt::to_uint64(pmt::dict_ref(end_msg,pmt::intern("base"),pmt::from_uint64(0xfffffffffffffe)));
+        map_it = base_map.find(front_base);
+        if(map_it==base_map.end() || (front_base == end_base) ){
+          continue;
+        }
+        int front_idx = map_it->second;
+        int count = 0;
+        while(count<d_retx_tag.size() && front_base!=end_base){
+          front_idx = (front_idx+1)%d_retx_tag.size();
+          if(d_retx_tag[front_idx].empty()){
+            break;
+          }
+          front_msg = d_retx_tag[front_idx].msg();
+          front_base = pmt::to_uint64(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_uint64(0xfffffffffffffe)));
+          if(front_base == end_base){
+            // can be canceled with incomplete retransmission
+            break;
+          }
+          count++;
+        }
+        if(front_base == end_base){
+          new_intf_stack.push_back(d_intf_stack[i]);
+        }
+      }
+      d_intf_stack = new_intf_stack;
+    }
+
+    void
     ic_critical_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       for(int i=0;i<ninput_items_required.size();++i){
@@ -736,6 +815,7 @@ namespace gr {
                 <<" , d_in_idx="<<d_in_idx<<std::endl;
                 init_intf();
                 if(new_intf()){ 
+                  d_current_intf_tag.add_msg(pmt::intern("voe_begin_idx"),pmt::from_long(d_intf_idx+count_s));
                   DEBUG<<"Initialize an interference object...d_intf_idx="<<d_intf_idx<<std::endl;
                 }
                 state_interrupt = true;
@@ -768,16 +848,20 @@ namespace gr {
             // add something to detect interference during retransmission process
             bool prev_state = d_voe_state;
             update_voe_state(count_s);
-            if(!d_voe_state && prev_state){
+            if(d_voe_state && !prev_state){
                 DEBUG<<"\033[33m"<<"<IC Crit> Detect an interfering event during retransmission state"<<"\033[0m"
                   <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_phase_block_idx<<std::endl;
                 if(d_current_intf_tag.empty()){
                   //already store at least one intf_t
                   if(new_intf()){
+                    d_current_intf_tag.add_msg(pmt::intern("voe_begin_idx"),pmt::from_long(d_intf_idx+count_s));
                     DEBUG<<"<IC Crit> new intferference object Created"<<std::endl;
                   }
                 }
-            }else if(d_voe_state && !prev_state){
+            }else if(!d_voe_state && prev_state){
+              if(!d_current_intf_tag.empty()){
+                d_current_intf_tag.add_msg(pmt::intern("voe_end_idx"),pmt::from_long(d_intf_idx+count_s));
+              }
                 DEBUG<<"\033[33m"<<"<Ic Crit> Interfering event during retransmission ends"<<"\033[0m"
                 <<" ,block_id="<<d_current_block<<" ,phase_block_idx="<<d_phase_block_idx<<std::endl;
             }
@@ -933,6 +1017,7 @@ namespace gr {
       if(d_reset_retx){
         DEBUG<<"\033[31m"<<"<IC Crit>Reset RETX, due to failure"<<"\033[0m"
         <<" ,expected:"<<d_retx_tag.size()<<" ,received:"<<d_retx_cnt<<std::endl;
+        // check_before_reset();
         reset_retx();
         next_state = FREE;
         d_voe_state = false;
@@ -945,28 +1030,22 @@ namespace gr {
       d_state = next_state;
       
       nout = std::min(d_out_size-d_out_idx,noutput_items);
+      while(!d_out_tags.empty()){
+        int offset = d_out_tags[0].offset;
+        if(offset>=d_out_idx && offset<d_out_idx+nout){
+          add_item_tag(0,nitems_written(0),d_out_tags[0].key,d_out_tags[0].value);
+          d_out_tags.erase(d_out_tags.begin());
+        }else if(offset>=d_out_idx+nout){
+          break;
+        }else{
+          throw std::runtime_error("WTF");
+        }
+      }
       memcpy(out,d_out_mem+d_out_idx,sizeof(gr_complex)*nout);
       // For DEMO
       memcpy(demo,d_comp_mem+d_out_idx,sizeof(gr_complex)*nout);
-      /*while(!d_out_tags.empty()){
-        if(d_out_tags[0].offset>=d_out_idx && d_out_tags[0].offset<d_out_idx+nout){
-          add_item_tag(0,nitems_written(0)+d_out_tags[0].offset-d_out_idx,d_out_tags[0].key,d_out_tags[0].value);
-          d_out_tags.erase(d_out_tags.begin());
-        }else{
-          break;
-        }
-      }*/
       d_out_idx += nout;
-      //std::vector<tag_t>::iterator oit;
       if(d_out_idx == d_out_size){
-        /*for(oit=d_out_tags.begin();oit!=d_out_tags.end();++oit){
-          int offset = (int)oit->offset-d_out_idx;
-          if(offset<0){
-            oit = d_out_tags.erase(oit);
-          }else{
-            oit->offset = offset;
-          }
-        }*/
         d_out_idx=0;
         d_out_size=0;
         d_out_tags.clear();

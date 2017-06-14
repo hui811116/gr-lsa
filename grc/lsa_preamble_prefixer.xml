@@ -4,7 +4,22 @@
   <key>lsa_preamble_prefixer</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.preamble_prefixer()</make>
+  <make>lsa.preamble_prefixer($user)</make>
+
+  <param>
+    <name>User</name>
+    <key>user</key>
+    <value>0</value>
+    <type>int</type>
+    <option>
+      <name>ProU</name>
+      <key>0</key>
+    </option>
+    <option>
+      <name>SU</name>
+      <key>1</key>
+    </option>
+  </param>
 
 
   <sink>

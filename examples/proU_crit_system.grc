@@ -6185,6 +6185,12 @@
   </connection>
   <connection>
     <source_block_id>lsa_ic_critical_cc_0</source_block_id>
+    <sink_block_id>blocks_message_debug_0</sink_block_id>
+    <source_key>SINR</source_key>
+    <sink_key>print</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_ic_critical_cc_0</source_block_id>
     <sink_block_id>qtgui_time_sink_x_1_0</sink_block_id>
     <source_key>1</source_key>
     <sink_key>0</sink_key>

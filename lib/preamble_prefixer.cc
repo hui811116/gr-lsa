@@ -34,17 +34,34 @@ namespace gr {
     static const size_t d_reserved_len = 4;
     static const size_t LSA_PREAMBLE_LEN = 6;
     static const unsigned char lsa_preamble[] = {0x00,0x00,0x00,0x00,0xE6,0x00}; // last one for length
+    static const unsigned char prou_preamble[] = {0x00,0x00,0x00,0x00,0x7A,0x00};
     static const int MAXIMUM_LEN = 127;
+
+    enum USERTYPE{
+      PROU=0,
+      SU=1
+    };
 
   class preamble_prefixer_impl : public preamble_prefixer
   {
     public:
-    preamble_prefixer_impl():block("preamble_prefixer",
+    preamble_prefixer_impl(int user):block("preamble_prefixer",
                         gr::io_signature::make(0,0,0),
                         gr::io_signature::make(0,0,0))
     {
       d_buf = new unsigned char[256];
-      memcpy(d_buf,lsa_preamble,sizeof(char)*LSA_PREAMBLE_LEN);
+      switch(user){
+        case PROU:
+          memcpy(d_buf,prou_preamble,sizeof(char)*LSA_PREAMBLE_LEN);
+        break;
+        case SU:
+          memcpy(d_buf,lsa_preamble,sizeof(char)*LSA_PREAMBLE_LEN);
+        break;
+        default:
+          throw std::runtime_error("Invalid user type");
+        break;
+      }
+      d_usertype = user;
       d_in_port = pmt::mp("in");
       d_out_port = pmt::mp("out");
       message_port_register_in(d_in_port);
@@ -80,6 +97,7 @@ namespace gr {
     }
 
     private:
+      int d_usertype;
       pmt::pmt_t d_in_port;
       pmt::pmt_t d_out_port;
       unsigned char* d_buf;
@@ -87,9 +105,9 @@ namespace gr {
 
 
   preamble_prefixer::sptr
-  preamble_prefixer::make()
+  preamble_prefixer::make(int user)
   {
-    return gnuradio::get_initial_sptr(new preamble_prefixer_impl());
+    return gnuradio::get_initial_sptr(new preamble_prefixer_impl(user));
   }
 
   } /* namespace lsa */

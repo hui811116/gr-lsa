@@ -81,7 +81,8 @@ namespace gr {
          out<<"total size:"<<intf.d_end_idx-intf.d_begin_idx+1
          <<" ,begin_idx:"<<intf.d_begin_idx<<" ,end_idx:"<<intf.d_end_idx<<std::endl
          <<" ,front tag:"<<intf.d_front<<std::endl
-         <<" ,back tag:"<<intf.d_back;
+         <<" ,back tag:"<<intf.d_back<<std::endl
+         <<" ,msg:"<<intf.d_msg;
          return out;
        }
        intf_t(){d_begin_idx=0;d_end_idx=0;d_front = hdr_t();d_front=hdr_t();d_msg=pmt::make_dict();}
@@ -148,6 +149,7 @@ namespace gr {
       int d_out_size;
       int d_out_idx;
       std::vector<tag_t> d_out_tags;          // for debugging
+      const pmt::pmt_t d_out_msg_port;
 
       int d_block_size;
       uint64_t d_current_block;
@@ -189,6 +191,7 @@ namespace gr {
       bool update_intf(int& residual);                // captureing end header from ring memory
       void do_ic();                                   // main core to do interference cancellation
       bool matching_header(hdr_t& header);            // labeling bit level header information to preamble candidate
+      void check_before_reset();                      // find ic avalability before resetting retx
 
      public:
       ic_critical_cc_impl(const std::vector<gr_complex>& cross_word,int sps,int block_size,bool d_debug);
