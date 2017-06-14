@@ -57,6 +57,7 @@
 #include "lsa/ic_critical_cc.h"
 #include "lsa/su_packet_sink_c.h"
 #include "lsa/throughput_report.h"
+#include "lsa/sinr_helper.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -131,3 +132,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, ic_critical_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_packet_sink_c);
 %include "lsa/throughput_report.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, throughput_report);
+%include "lsa/sinr_helper.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, sinr_helper);

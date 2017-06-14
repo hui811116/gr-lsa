@@ -1,19 +1,25 @@
 <?xml version="1.0"?>
 <block>
-  <name>LSA Packet Sink(f)</name>
-  <key>lsa_packet_sink</key>
+  <name>SINR helper</name>
+  <key>lsa_sinr_helper</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.packet_sink($thres)</make>
+  <make>lsa.sinr_helper($period,$hislen)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <param>
-    <name>threshold</name>
-    <key>thres</key>
-    <value>10</value>
+    <name>Period</name>
+    <key>period</key>
+    <value>2000</value>
+    <type>float</type>
+  </param>
+  <param>
+    <name>History length</name>
+    <key>hislen</key>
+    <value>64</value>
     <type>int</type>
   </param>
 
@@ -23,8 +29,8 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <sink>
-    <name>in</name>
-    <type>float</type>
+    <name>SINR_in</name>
+    <type>message</type>
   </sink>
 
   <!-- Make one 'source' node per output. Sub-nodes:
@@ -33,7 +39,11 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>pkt_out</name>
+    <name>oSINR_out</name>
+    <type>message</type>
+  </source>
+  <source>
+    <name>cSINR_out</name>
     <type>message</type>
   </source>
 </block>

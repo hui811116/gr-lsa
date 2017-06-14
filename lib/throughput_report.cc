@@ -29,6 +29,13 @@
 namespace gr {
   namespace lsa {
 
+    #define PROUMAXLEN 127
+
+    enum USERTYPE{
+      PROU = 0,
+      SU=1
+    };
+
     inline bool lsa_crc(const uint8_t * uvec)
     {
       uint16_t qidx, qsize, base;
@@ -45,7 +52,7 @@ namespace gr {
     class throughput_report_impl:public throughput_report
     {
       public:
-       throughput_report_impl(float ms, int hisLen) : block("throughput_report",
+       throughput_report_impl(float ms, int hisLen, int user) : block("throughput_report",
                         gr::io_signature::make(0,0,0),
                         gr::io_signature::make(0,0,0)),
                         d_in_port(pmt::mp("pkt_in")),
@@ -68,12 +75,19 @@ namespace gr {
         d_byte_cnt=0;
         d_pkt_acc=0;
         d_byte_acc=0;
-
+        switch(user){
+          case PROU:
+            d_user = PROU;
+          break;
+          case SU:
+            d_user = SU;
+          break;
+          default:
+            throw std::runtime_error("unrecognized user type");
+          break;
+        }
        }
-       ~throughput_report_impl()
-       {
-
-       }
+       ~throughput_report_impl(){}
        void 
        msg_in(pmt::pmt_t msg)
        {
@@ -83,16 +97,31 @@ namespace gr {
         if(pmt::is_blob(v)){
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(v,io);
-          // cyclic check
-          if(io>=6){
-            if(lsa_crc(uvec)){
-              // valid pkt
-              // remove header
-              d_byte_cnt+= (io-6);
-              d_byte_acc+= (io-6);
-              d_pkt_cnt++;
-              d_pkt_acc++;
-            }
+          switch(d_user){
+            case PROU:
+              if(io<=PROUMAXLEN){
+                d_byte_cnt+=io;
+                d_byte_acc+=io;
+                d_pkt_cnt++;
+                d_pkt_acc++;
+              }
+            break;
+            case SU:
+              // cyclic check
+              if(io>=6){
+                if(lsa_crc(uvec)){
+                  // valid pkt
+                  // remove header
+                  d_byte_cnt+= (io-6);
+                  d_byte_acc+= (io-6);
+                  d_pkt_cnt++;
+                  d_pkt_acc++;
+                }
+              }
+            break;
+            default:
+              std::runtime_error("Undefined User Type");
+            break;
           }
         }
        }
@@ -152,10 +181,11 @@ namespace gr {
        boost::shared_ptr<gr::thread::thread> d_thread;
        float d_period_ms;
        bool d_finished;
+       int d_user;
     };
     throughput_report::sptr
-    throughput_report::make(float ms, int hisLen){
-      return gnuradio::get_initial_sptr(new throughput_report_impl(ms,hisLen));
+    throughput_report::make(float ms, int hisLen, int user){
+      return gnuradio::get_initial_sptr(new throughput_report_impl(ms,hisLen,user));
     }
 
   } /* namespace lsa */

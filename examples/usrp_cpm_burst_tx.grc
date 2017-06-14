@@ -178,11 +178,11 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(0, 360)</value>
+      <value>(0, 352)</value>
     </param>
     <param>
       <key>gui_hint</key>
-      <value></value>
+      <value>0,0,1,2</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -612,7 +612,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(792, 28)</value>
+      <value>(904, 28)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -663,7 +663,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(328, 72)</value>
+      <value>(280, 72)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1020,7 +1020,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(888, 96)</value>
+      <value>(744, 96)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1059,7 +1059,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(648, 96)</value>
+      <value>(488, 92)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1075,6 +1075,10 @@
     </param>
     <param>
       <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>user</key>
       <value>0</value>
     </param>
   </block>
@@ -1098,7 +1102,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(600, 20)</value>
+      <value>(704, 12)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1123,6 +1127,10 @@
     <param>
       <key>ms</key>
       <value>6000</value>
+    </param>
+    <param>
+      <key>user</key>
+      <value>0</value>
     </param>
   </block>
   <block>
@@ -1161,11 +1169,11 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1048, 8)</value>
+      <value>(1120, 8)</value>
     </param>
     <param>
       <key>gui_hint</key>
-      <value></value>
+      <value>1,0,2,2</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1193,7 +1201,7 @@
     </param>
     <param>
       <key>label1</key>
-      <value></value>
+      <value>ProU</value>
     </param>
     <param>
       <key>marker1</key>
@@ -1425,7 +1433,7 @@
     </param>
     <param>
       <key>name</key>
-      <value>"Goodput"</value>
+      <value>"ProU Throughput"</value>
     </param>
     <param>
       <key>nconnections</key>
@@ -1473,19 +1481,19 @@
     </param>
     <param>
       <key>ylabel</key>
-      <value>Amplitude</value>
+      <value>Throughput</value>
     </param>
     <param>
       <key>yunit</key>
-      <value>""</value>
+      <value>"Bytes/s"</value>
     </param>
     <param>
       <key>ymax</key>
-      <value>1</value>
+      <value>100</value>
     </param>
     <param>
       <key>ymin</key>
-      <value>-1</value>
+      <value>0</value>
     </param>
   </block>
   <block>

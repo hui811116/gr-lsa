@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <block>
-  <name>LSA Packet Sink</name>
+  <name>LSA Packet Sink(c)</name>
   <key>lsa_su_packet_sink_c</key>
   <category>[lsa]</category>
   <import>import lsa</import>

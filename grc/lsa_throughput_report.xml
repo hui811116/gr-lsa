@@ -4,7 +4,7 @@
   <key>lsa_throughput_report</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.throughput_report($ms,$hisLen)</make>
+  <make>lsa.throughput_report($ms,$hisLen,$user)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -21,6 +21,20 @@
     <key>hisLen</key>
     <value>64</value>
     <type>int</type>
+  </param>
+  <param>
+    <name>User</name>
+    <key>user</key>
+    <value>1</value>
+    <type>int</type>
+    <option>
+      <name>ProU</name>
+      <key>0</key>
+    </option>
+    <option>
+      <name>SU</name>
+      <key>1</key>
+    </option>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
