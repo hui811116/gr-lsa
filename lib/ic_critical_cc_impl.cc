@@ -246,7 +246,8 @@ namespace gr {
       int samp_iter = tag.index();
       int retx_idx_begin = d_retx_idx;
       if(d_retx_idx+copy_len>=d_cap){
-        throw std::runtime_error("<IC Crit>Fatal Error: Retransmission buffer is too small to acquire all retransmission....");
+        return false;
+        //throw std::runtime_error("<IC Crit>Fatal Error: Retransmission buffer is too small to acquire all retransmission....");
       }
       int sync_iter = sync_idx_check-pkt_nominal+1;
       sync_iter = (sync_iter<0)? sync_iter+d_cap : sync_iter;
@@ -270,7 +271,8 @@ namespace gr {
         phase_wrap(init_phase);
         samp_iter%=d_cap;
         if(d_retx_idx == d_cap){
-          throw std::runtime_error("<IC Crit DEBUG>Fatal error: retransmission size is not enough... abort");
+          return false;
+          //throw std::runtime_error("<IC Crit DEBUG>Fatal error: retransmission size is not enough... abort");
         }
       }
       tag.set_index(retx_idx_begin);
@@ -555,10 +557,12 @@ namespace gr {
         while(intf_cnt<intf_end){
           //NOTE: sync to interfering signal
           if(intf_cnt>=d_cap){
-            throw std::runtime_error("inft cnt exceed maximum, boom");
+            return;
+            //throw std::runtime_error("inft cnt exceed maximum, boom");
           }
           if(retx_idx>=d_cap){
-            throw std::runtime_error("retx idx exceed maximum, boom");
+            return;
+            //throw std::runtime_error("retx idx exceed maximum, boom");
           }
           // FIXME
           // if the phase and freq offset affect the result,
@@ -594,11 +598,18 @@ namespace gr {
             d_out_tags.clear();
           }
         }//while intf_idx
+        DEBUG<<"\033[35;1m"<<"<IC Crit>Produced output samples:"<<d_out_size<<"\033[0m"<<std::endl;
         // SINR calculation
         // Waste of system resources, only for demo purpose
         pmt::pmt_t out_msg = pmt::make_dict();
         gr_complex sig_eng, ic_eng;
         int voe_len = voe_end_idx-voe_begin_idx+1;
+        if(voe_len<=0 || (voe_begin_idx+voe_len>=d_cap) ){
+          // save guard, avoid overflow, may require warning
+          DEBUG<<"\033[36;1m"<<"<IC Crit DEBUG>When Calculating SINR, predict overflow event, avoid execution"
+          <<"\033[0m"<<std::endl;
+          continue;
+        }
         volk_32fc_x2_conjugate_dot_prod_32fc(&sig_eng,d_intf_mem+voe_begin_idx,d_intf_mem+voe_begin_idx,voe_len);
         volk_32fc_x2_conjugate_dot_prod_32fc(&ic_eng,d_out_mem+voe_begin_idx,d_out_mem+voe_begin_idx,voe_len);
         sig_eng/=(float)voe_len;
@@ -610,7 +621,6 @@ namespace gr {
         out_msg = pmt::dict_add(out_msg,pmt::intern("original_SINR"),pmt::from_double(oSINR));
         out_msg = pmt::dict_add(out_msg,pmt::intern("canceled_SINR"),pmt::from_double(cSINR));
         message_port_pub(d_out_msg_port,out_msg);
-        DEBUG<<"\033[35;1m"<<"<IC Crit>Produced output samples:"<<d_out_size<<"\033[0m"<<std::endl;
       }// for d_intf_stack
       std::sort(d_out_tags.begin(),d_out_tags.end(),gr::tag_t::offset_compare);
     }
@@ -625,7 +635,8 @@ namespace gr {
           d_voe_tags.erase(d_voe_tags.begin());
           break;
         }else if(idx>offset){
-          throw std::runtime_error("WTF...idx>offset");
+          //throw std::runtime_error("WTF...idx>offset");
+          break;
         }else{
           break;
         }
@@ -736,6 +747,7 @@ namespace gr {
           new_intf_stack.push_back(d_intf_stack[i]);
         }
       }
+      d_intf_stack.clear();
       d_intf_stack = new_intf_stack;
     }
 
@@ -1017,7 +1029,12 @@ namespace gr {
       if(d_reset_retx){
         DEBUG<<"\033[31m"<<"<IC Crit>Reset RETX, due to failure"<<"\033[0m"
         <<" ,expected:"<<d_retx_tag.size()<<" ,received:"<<d_retx_cnt<<std::endl;
-        // check_before_reset();
+        check_before_reset();
+        if(!d_intf_stack.empty()){
+          DEBUG<<"\033[31;1m"<<"<IC Crit>Available interfering object exists, calling do_ic before reset"
+          <<"\033[0m"<<std::endl;
+          do_ic();
+        }
         reset_retx();
         next_state = FREE;
         d_voe_state = false;
@@ -1038,7 +1055,8 @@ namespace gr {
         }else if(offset>=d_out_idx+nout){
           break;
         }else{
-          throw std::runtime_error("WTF");
+          //throw std::runtime_error("WTF");
+          break;
         }
       }
       memcpy(out,d_out_mem+d_out_idx,sizeof(gr_complex)*nout);

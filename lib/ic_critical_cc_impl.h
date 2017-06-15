@@ -105,7 +105,7 @@ namespace gr {
        void set_back(const hdr_t& back){d_back = back;}
        void set_begin(int idx){d_begin_idx = idx; if(d_end_idx<idx){d_end_idx = idx;}}
        void set_end(int idx){d_end_idx = idx;if(d_begin_idx>idx)d_begin_idx=idx;}
-       void clear(){d_end_idx=0;d_begin_idx=0;d_front.reset();d_back.reset();}
+       void clear(){d_end_idx=0;d_begin_idx=0;d_front.reset();d_back.reset();d_msg=pmt::make_dict();}
        int begin()const{return d_begin_idx;}
        int end()const{return d_end_idx;}
        const intf_t& operator*(){return *this;}
