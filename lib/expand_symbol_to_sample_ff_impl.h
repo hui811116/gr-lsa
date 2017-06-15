@@ -18,30 +18,36 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef INCLUDED_LSA_EXPAND_SYMBOL_TO_SAMPLE_FF_IMPL_H
+#define INCLUDED_LSA_EXPAND_SYMBOL_TO_SAMPLE_FF_IMPL_H
 
-#ifndef INCLUDED_LSA_APP_SIMPLE_H
-#define INCLUDED_LSA_APP_SIMPLE_H
-
-#include <lsa/api.h>
-#include <gnuradio/block.h>
+#include <lsa/expand_symbol_to_sample_ff.h>
 
 namespace gr {
   namespace lsa {
 
-    /*!
-     * \brief <+description+>
-     *
-     */
-    class LSA_API app_simple: virtual public block
+    class expand_symbol_to_sample_ff_impl : public expand_symbol_to_sample_ff
     {
-    public:
-      typedef boost::shared_ptr<app_simple> sptr;
-      static sptr make(unsigned int dest, bool debug);
-    private:
+     private:
+      // Nothing to declare in this block.
+      int d_sps;
+
+     public:
+     expand_symbol_to_sample_ff_impl(int sps);
+      //expand_symbol_to_sample_ff_impl(int sps, int nfilts);
+      ~expand_symbol_to_sample_ff_impl();
+
+      // Where all the action really happens
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+
+      int general_work(int noutput_items,
+           gr_vector_int &ninput_items,
+           gr_vector_const_void_star &input_items,
+           gr_vector_void_star &output_items);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_APP_SIMPLE_H */
+#endif /* INCLUDED_LSA_EXPAND_SYMBOL_TO_SAMPLE_FF_IMPL_H */
 

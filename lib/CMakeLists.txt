@@ -29,22 +29,14 @@ list(APPEND lsa_sources
     interference_energy_detector_cc_impl.cc
     modified_polyphase_time_sync_cc_impl.cc
     modified_costas_loop_cc_impl.cc
-    prou_sample_queue_cc_impl.cc
-    interference_canceller_cc_impl.cc
     burst_tagger_cc_impl.cc
-    protocol_parser_b_impl.cc 
     correlate_sync_cc_impl.cc
-    expand_symbal_to_sample_ff_impl.cc
+    expand_symbol_to_sample_ff_impl.cc
     symbol_sync_receiver_cf_impl.cc
     preamble_prefixer.cc
-    symbol_corrector_cc_impl.cc
-    control_source_b_impl.cc
-    app_simple.cc
-    block_mac.cc
     su_ctrl.cc
     chip_mapper.cc
     packet_sink_impl.cc
-    su_transmitter_bb_impl.cc
     chip_mapper_bb_impl.cc
     moving_average_cc_impl.cc
     moving_average_ff_impl.cc 
@@ -52,9 +44,6 @@ list(APPEND lsa_sources
     stat_report.cc
     prou_packet_sink_f_impl.cc
     interference_tagger_cc_impl.cc
-    su_mac.cc
-    prou_ring_queue_cc_impl.cc
-    interference_cancellation_core_cc_impl.cc
     block_tagger_cc_impl.cc
     su_sr_transmitter_bb_impl.cc
     su_tx_helper.cc

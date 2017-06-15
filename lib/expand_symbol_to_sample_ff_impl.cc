@@ -23,7 +23,7 @@
 #endif
 
 #include <gnuradio/io_signature.h>
-#include "expand_symbal_to_sample_ff_impl.h"
+#include "expand_symbol_to_sample_ff_impl.h"
 #include <gnuradio/math.h>
 #include <algorithm>
 
@@ -40,19 +40,19 @@ inline void phase_wrap(float& phase)
     phase+=TWO_PI;
 }
 
-    expand_symbal_to_sample_ff::sptr
-    expand_symbal_to_sample_ff::make(int sps)
+    expand_symbol_to_sample_ff::sptr
+    expand_symbol_to_sample_ff::make(int sps)
     {
       return gnuradio::get_initial_sptr
-        (new expand_symbal_to_sample_ff_impl(sps));
+        (new expand_symbol_to_sample_ff_impl(sps));
     }
 
     /*
      * The private constructor
      */
-    expand_symbal_to_sample_ff_impl::expand_symbal_to_sample_ff_impl(
+    expand_symbol_to_sample_ff_impl::expand_symbol_to_sample_ff_impl(
       int sps)
-      : gr::block("expand_symbal_to_sample_ff",
+      : gr::block("expand_symbol_to_sample_ff",
               gr::io_signature::make2(2, 2, sizeof(float),sizeof(float)),
               gr::io_signature::make2(2, 2, sizeof(float),sizeof(float)))
     {
@@ -69,12 +69,12 @@ inline void phase_wrap(float& phase)
     /*
      * Our virtual destructor.
      */
-    expand_symbal_to_sample_ff_impl::~expand_symbal_to_sample_ff_impl()
+    expand_symbol_to_sample_ff_impl::~expand_symbol_to_sample_ff_impl()
     {
     }
 
     void
-    expand_symbal_to_sample_ff_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
+    expand_symbol_to_sample_ff_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       for(int i=0;i<ninput_items_required.size();++i){
         ninput_items_required[i] = noutput_items/relative_rate()+history();
@@ -82,7 +82,7 @@ inline void phase_wrap(float& phase)
     }
 
     int
-    expand_symbal_to_sample_ff_impl::general_work (int noutput_items,
+    expand_symbol_to_sample_ff_impl::general_work (int noutput_items,
                        gr_vector_int &ninput_items,
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)

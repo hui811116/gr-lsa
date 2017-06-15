@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <block>
-  <name>burst tagger</name>
+  <name>Burst tagger</name>
   <key>lsa_burst_tagger_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>

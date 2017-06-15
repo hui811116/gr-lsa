@@ -19,8 +19,8 @@
  */
 
 
-#ifndef INCLUDED_LSA_SU_MAC_H
-#define INCLUDED_LSA_SU_MAC_H
+#ifndef INCLUDED_LSA_EXPAND_SYMBOL_TO_SAMPLE_FF_H
+#define INCLUDED_LSA_EXPAND_SYMBOL_TO_SAMPLE_FF_H
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
@@ -29,18 +29,29 @@ namespace gr {
   namespace lsa {
 
     /*!
-     * \brief <+description+>
+     * \brief <+description of block+>
+     * \ingroup lsa
      *
      */
-    class LSA_API su_mac : virtual public block
+    class LSA_API expand_symbol_to_sample_ff : virtual public gr::block
     {
-    public:
-      typedef boost::shared_ptr<su_mac> sptr;
-      static sptr make(int bytes_per_packet, bool debug);
+     public:
+      typedef boost::shared_ptr<expand_symbol_to_sample_ff> sptr;
+
+      /*!
+       * \brief Return a shared_ptr to a new instance of lsa::expand_symbol_to_sample_ff.
+       *
+       * To avoid accidental use of raw pointers, lsa::expand_symbol_to_sample_ff's
+       * constructor is in a private implementation
+       * class. lsa::expand_symbol_to_sample_ff::make is the public interface for
+       * creating new instances.
+       */
+       static sptr make(int sps);
+      //static sptr make(int sps, int nfilts);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SU_MAC_H */
+#endif /* INCLUDED_LSA_EXPAND_SYMBOL_TO_SAMPLE_FF_H */
 

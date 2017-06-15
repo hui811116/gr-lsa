@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <block>
-  <name>LSA Correlate Sync</name>
+  <name>Correlate Sync</name>
   <key>lsa_correlate_sync_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>

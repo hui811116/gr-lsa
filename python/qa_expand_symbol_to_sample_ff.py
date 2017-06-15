@@ -23,7 +23,7 @@ from gnuradio import gr, gr_unittest
 from gnuradio import blocks
 import lsa_swig as lsa
 
-class qa_protocol_parser_b (gr_unittest.TestCase):
+class qa_expand_symbol_to_sample_ff (gr_unittest.TestCase):
 
     def setUp (self):
         self.tb = gr.top_block ()
@@ -38,4 +38,4 @@ class qa_protocol_parser_b (gr_unittest.TestCase):
 
 
 if __name__ == '__main__':
-    gr_unittest.run(qa_protocol_parser_b, "qa_protocol_parser_b.xml")
+    gr_unittest.run(qa_expand_symbol_to_sample_ff, "qa_expand_symbol_to_sample_ff.xml")
