@@ -50,7 +50,8 @@ list(APPEND lsa_sources
     ic_critical_cc_impl.cc
     su_packet_sink_c_impl.cc
     throughput_report.cc
-    sinr_helper.cc )
+    sinr_helper.cc
+    utils.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

@@ -23,13 +23,16 @@
 
 #include <lsa/su_sr_transmitter_bb.h>
 #include <ctime>
-#define time_t long int
-#define LSARETRYLIM 10
-#define LSATIMEOUT 5*CLOCKS_PER_SEC
+#include "utils.h"
+
 namespace gr {
   namespace lsa {
 
-    class srArq_t{
+    //#define time_t long int
+    //#define LSARETRYLIM 10
+    //#define LSATIMEOUT 5*CLOCKS_PER_SEC
+
+    /*class srArq_t{
       public:
       friend class su_sr_transmitter_bb_impl;
       friend std::ostream & operator <<(std::ostream& out,const srArq_t& aq){
@@ -63,7 +66,7 @@ namespace gr {
         time_t d_time;
         uint32_t d_retry;
         pmt::pmt_t d_msg;
-    };
+    };*/
 
     class su_sr_transmitter_bb_impl : public su_sr_transmitter_bb
     {

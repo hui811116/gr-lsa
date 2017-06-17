@@ -18,20 +18,23 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDED_LSA_IC_CRITICAL_CC_IMPL_H
-#define INCLUDED_LSA_IC_CRITICAL_CC_IMPL_H
+ #ifndef INCLUDED_LSA_UTILS_H
+ #define INCLUDED_LSA_UTILS_H
+ 
+ #include <lsa/api.h>
+ #include <gnuradio/config.h>
+ #include <iostream>
+ #include <pmt/pmt.h>
+ #include <ctime>
 
-#include <lsa/ic_critical_cc.h>
-#include "utils.h"
+ #define time_t long int
+ #define LSARETRYLIM 10
+ #define LSATIMEOUT 5*CLOCKS_PER_SEC
+ #define MAX_LSA_PAYLOAD 121
+ #define MAX_PROU_PAYLOAD 127
 
-namespace gr {
-  namespace lsa {
-
-    // HELPER CLASS
-    /*
-    class block_t{
+ class block_t{
       public:
-       friend class ic_critical_cc_impl;
        friend std::ostream& operator<<(std::ostream& out, const block_t& block){
          out<<"block_id:"<<block.d_id<<" ,index:"<<block.d_idx;
        }
@@ -49,11 +52,8 @@ namespace gr {
        uint64_t d_id;
        uint32_t d_idx;
     };
-*/
-/*
-    class hdr_t{
+ class hdr_t{
       public:
-       friend class ic_critical_cc_impl;
        friend std::ostream& operator<<(std::ostream& out, const hdr_t& hdr){
          out<<"index:"<<hdr.d_idx<<" ,msg:"<<hdr.d_msg;
          return out;
@@ -76,11 +76,9 @@ namespace gr {
        pmt::pmt_t d_msg;
        unsigned int d_idx;
     };
-*/
-/*
-    class intf_t{
+
+ class intf_t{
       public:
-       friend class ic_critical_cc_impl;
        friend std::ostream& operator<<(std::ostream& out,const intf_t& intf){
          out<<"total size:"<<intf.d_end_idx-intf.d_begin_idx+1
          <<" ,begin_idx:"<<intf.d_begin_idx<<" ,end_idx:"<<intf.d_end_idx<<std::endl
@@ -137,81 +135,40 @@ namespace gr {
        hdr_t d_front;
        hdr_t d_back;
     };
-    */
-    // MAIN CLASS
-    class ic_critical_cc_impl : public ic_critical_cc
-    {
-     private:
-      bool d_debug;
-      const int d_cap;
-      gr_complex* d_in_mem;
-      gr_complex* d_out_mem;
-      gr_complex* d_comp_mem;
-      float* d_phase_mem;
-      float* d_freq_mem;
-      int d_in_idx;
-      int d_sync_idx;
-      int d_out_size;
-      int d_out_idx;
-      std::vector<tag_t> d_out_tags;          // for debugging
-      const pmt::pmt_t d_out_msg_port;
 
-      int d_block_size;
-      uint64_t d_current_block;
-      uint32_t d_phase_block_idx;             // for counting offset in stream 2
-      uint32_t d_in_block_idx;                // for counting offset in stream 1
-
-      std::list<block_t> d_smp_list;
-      std::list<block_t> d_sync_list;
-      std::list<hdr_t> d_tag_list;
-      std::list<hdr_t> d_pending_list;        // used to record possible preambles.
- 
-      std::vector<tag_t> d_voe_tags;
-      bool d_voe_state;
-      int d_state;
-      
-      std::vector<gr_complex> d_cross_word;
-      int d_cross_len;
-      int d_sps;
-
-      std::list<hdr_t> d_retx_candidate;
-      std::vector<hdr_t> d_retx_tag;
-      std::vector<block_t> d_retx_block;
-      int d_retx_cnt;
-      gr_complex* d_retx_mem;
-      int d_retx_idx;
-
-      gr_complex* d_intf_mem;
-      int d_intf_idx;
-      std::vector<intf_t> d_intf_stack;
-      float* d_intf_freq;
-      intf_t d_current_intf_tag;
-      
-      void update_voe_state(int idx);                 // variance of energy tag capturing
-      bool detect_ic_chance(const hdr_t& new_tag);    // update retransmission
-      void reset_retx();                              // clear retransmission registers
-      bool check_and_copy_retx(hdr_t& tag);           // copy and compensate retransmission signals
-      void init_intf();                               // initialize a interfereing object
-      bool new_intf();                                // captureing front header from ring memory
-      bool update_intf(int& residual);                // captureing end header from ring memory
-      void do_ic();                                   // main core to do interference cancellation
-      bool matching_header(hdr_t& header);            // labeling bit level header information to preamble candidate
-      void check_before_reset();                      // find ic avalability before resetting retx
-
-     public:
-      ic_critical_cc_impl(const std::vector<gr_complex>& cross_word,int sps,int block_size,bool d_debug);
-      ~ic_critical_cc_impl();
-      
-      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
-
-      int general_work(int noutput_items,
-           gr_vector_int &ninput_items,
-           gr_vector_const_void_star &input_items,
-           gr_vector_void_star &output_items);
+    class srArq_t{
+      public:
+      friend std::ostream & operator <<(std::ostream& out,const srArq_t& aq){
+        out << "seq:"<<aq.d_noseq<<" ,created time:"<<aq.d_time<<" ,retry:"<<aq.d_retry<<" ,blob_size:"<<pmt::blob_length(aq.d_msg);
+        return out;
+      }
+      srArq_t(){ d_noseq=0; d_time = std::clock();d_retry=0;d_msg = pmt::PMT_NIL;}
+      srArq_t(const srArq_t& aq){d_noseq = aq.d_noseq; d_time = aq.d_time; d_retry =aq.d_retry;d_msg = aq.d_msg;}
+      srArq_t(uint16_t noseq,const pmt::pmt_t& msg){d_noseq = noseq; d_time = std::clock(); d_retry = 0;d_msg= msg;}
+      ~srArq_t(){}
+      const srArq_t& operator=(const srArq_t& aq){
+        d_noseq = aq.d_noseq; d_time = aq.d_time; d_retry = aq.d_retry; d_msg=aq.d_msg;
+        return *this;
+      }
+      const srArq_t& operator*()const{return *this;}
+      time_t time()const {return d_time;}
+      uint16_t seq()const {return d_noseq;}
+      uint32_t retry()const{return d_retry;}
+      pmt::pmt_t msg()const{return d_msg;}
+      bool inc_retry(){d_retry++; return d_retry>LSARETRYLIM;}
+      bool timeout(){return (std::clock()-d_time) >=LSATIMEOUT;}
+      void reset(){d_retry = 0; d_time=std::clock();}
+      void update_time(){d_time = std::clock();}
+      void set_retry(uint32_t re){d_retry = re;}
+      void set_time(time_t time){d_time = time;}
+      void set_seq(uint16_t seq){d_noseq = seq;}
+      void set_msg(pmt::pmt_t msg){d_msg = msg;}
+      size_t blob_length(){return pmt::blob_length(d_msg);}
+      private:
+        uint16_t d_noseq;
+        time_t d_time;
+        uint32_t d_retry;
+        pmt::pmt_t d_msg;
     };
 
-  } // namespace lsa
-} // namespace gr
-
-#endif /* INCLUDED_LSA_IC_CRITICAL_CC_IMPL_H */
-
+ #endif /* INCLUDED_LSA_UTILS_H */

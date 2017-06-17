@@ -3,22 +3,12 @@
 #define LSA_API
 #define DIGITAL_API
 #define FILTER_API
-//#define FFT_API
 #define BLOCKS_API
 
 %include "gnuradio.i"			// the common stuff
 
 //load generated python docstrings
 %include "lsa_swig_doc.i"
-
-
-%include "gnuradio/digital/constellation.h"
-%include "gnuradio/filter/fir_filter.h"
-#include "gnuradio/blocks/count_bits.h"
-
-
-//#include "gnuradio/fft/fft.h"
-
 
 %{
 #include "lsa/eng_det_cc.h"
@@ -49,6 +39,10 @@
 #include "lsa/sinr_helper.h"
 %}
 
+%include "gnuradio/digital/constellation.h"
+%include "gnuradio/filter/fir_filter.h"
+#include "gnuradio/blocks/count_bits.h"
+
 %include "lsa/eng_det_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, eng_det_cc);
 %include "lsa/interference_energy_detector_cc.h"
@@ -57,11 +51,8 @@ GR_SWIG_BLOCK_MAGIC2(lsa, interference_energy_detector_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, modified_polyphase_time_sync_cc);
 %include "lsa/modified_costas_loop_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, modified_costas_loop_cc);
-
-
 %include "lsa/burst_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, burst_tagger_cc);
-
 %include "lsa/correlate_sync_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, correlate_sync_cc);
 %include "lsa/expand_symbol_to_sample_ff.h"
@@ -70,16 +61,12 @@ GR_SWIG_BLOCK_MAGIC2(lsa, expand_symbol_to_sample_ff);
 GR_SWIG_BLOCK_MAGIC2(lsa, symbol_sync_receiver_cf);
 %include "lsa/preamble_prefixer.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, preamble_prefixer);
-
-
-
 %include "lsa/su_ctrl.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, su_ctrl);
 %include "lsa/chip_mapper.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, chip_mapper);
 %include "lsa/packet_sink.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, packet_sink);
-
 %include "lsa/chip_mapper_bb.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, chip_mapper_bb);
 %include "lsa/moving_average_cc.h"
@@ -94,9 +81,6 @@ GR_SWIG_BLOCK_MAGIC2(lsa, stat_report);
 GR_SWIG_BLOCK_MAGIC2(lsa, prou_packet_sink_f);
 %include "lsa/interference_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_tagger_cc);
-
-
-
 %include "lsa/block_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, block_tagger_cc);
 %include "lsa/su_sr_transmitter_bb.h"
