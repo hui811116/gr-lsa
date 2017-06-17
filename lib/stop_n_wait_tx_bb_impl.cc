@@ -55,6 +55,7 @@ namespace gr {
               d_tagname(pmt::intern(tagname))
     {
       d_sns_stop = false;
+      d_state_change = false;
       message_port_register_in(d_in_port);
       set_msg_handler(d_in_port, boost::bind(&stop_n_wait_tx_bb_impl::msg_handler,this, _1));
       memcpy(d_buf,d_phy_field,sizeof(char)*PHYLEN);
@@ -78,10 +79,12 @@ namespace gr {
         if(d_sns_stop && !result){
           DEBUG<<"\033[31;1m"<<"<SNS TX> ProU detected from feedback... resume to transmission mode"<<"\033[0m"<<std::endl;
           d_sns_stop = false;
+          d_state_change = true;
           return;
         }else if(!d_sns_stop && result){
           DEBUG<<"\033[31;1m"<<"<SNS TX> Causing interference to ProU, Stop transmission"<<"\033[0m"<<std::endl;
           d_sns_stop = true;
+          d_state_change = true;
           return;
         }
       }
@@ -144,8 +147,21 @@ namespace gr {
       pmt::pmt_t blob;
       int nout =0;
       if(d_sns_stop){
-        return 0;
+        if(d_state_change){
+          d_state_change = false;
+          add_item_tag(0,nitems_written(0),pmt::intern("tx_eob"),pmt::PMT_T);
+          // dummy byte
+          out[0] = 0xff;
+          nout =1;
+          DEBUG<<"\033[31;1m"<<"<SNS TX> first call after positive state change, add tag to stop usrp"<<"\033[0m"<<std::endl;
+        }
+        return nout;
       }else{
+        if(d_state_change){
+          d_state_change = false;
+          add_item_tag(0,nitems_written(0),pmt::intern("tx_sob"),pmt::PMT_T);
+          DEBUG<<"\033[31;1m"<<"<SNS TX> first call after negative state change, add tag to start usrp"<<"\033[0m"<<std::endl;
+        }
         // check arq 
         while(it!=d_arq_list.end()){
           if(it->timeout()){
