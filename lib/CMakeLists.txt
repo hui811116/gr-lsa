@@ -51,7 +51,8 @@ list(APPEND lsa_sources
     su_packet_sink_c_impl.cc
     throughput_report.cc
     sinr_helper.cc
-    utils.cc )
+    utils.cc
+    stop_n_wait_tx_bb_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

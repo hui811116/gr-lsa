@@ -47,5 +47,6 @@ install(FILES
     ic_critical_cc.h
     su_packet_sink_c.h
     throughput_report.h
-    sinr_helper.h DESTINATION include/lsa
+    sinr_helper.h
+    stop_n_wait_tx_bb.h DESTINATION include/lsa
 )

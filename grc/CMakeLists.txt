@@ -42,5 +42,6 @@ install(FILES
     lsa_ic_critical_cc.xml
     lsa_su_packet_sink_c.xml
     lsa_throughput_report.xml
-    lsa_sinr_helper.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_sinr_helper.xml
+    lsa_stop_n_wait_tx_bb.xml DESTINATION share/gnuradio/grc/blocks
 )

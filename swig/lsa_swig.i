@@ -10,6 +10,10 @@
 //load generated python docstrings
 %include "lsa_swig_doc.i"
 
+%include "gnuradio/digital/constellation.h"
+%include "gnuradio/filter/fir_filter.h"
+#include "gnuradio/blocks/count_bits.h"
+
 %{
 #include "lsa/eng_det_cc.h"
 #include "lsa/interference_energy_detector_cc.h"
@@ -37,11 +41,8 @@
 #include "lsa/su_packet_sink_c.h"
 #include "lsa/throughput_report.h"
 #include "lsa/sinr_helper.h"
+#include "lsa/stop_n_wait_tx_bb.h"
 %}
-
-%include "gnuradio/digital/constellation.h"
-%include "gnuradio/filter/fir_filter.h"
-#include "gnuradio/blocks/count_bits.h"
 
 %include "lsa/eng_det_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, eng_det_cc);
@@ -95,3 +96,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, su_packet_sink_c);
 GR_SWIG_BLOCK_MAGIC2(lsa, throughput_report);
 %include "lsa/sinr_helper.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, sinr_helper);
+%include "lsa/stop_n_wait_tx_bb.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_tx_bb);
