@@ -48,5 +48,6 @@ install(FILES
     su_packet_sink_c.h
     throughput_report.h
     sinr_helper.h
-    stop_n_wait_tx_bb.h DESTINATION include/lsa
+    stop_n_wait_tx_bb.h
+    stop_n_wait_rx_ctrl_cc.h DESTINATION include/lsa
 )

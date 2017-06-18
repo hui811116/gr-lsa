@@ -52,7 +52,8 @@ list(APPEND lsa_sources
     throughput_report.cc
     sinr_helper.cc
     utils.cc
-    stop_n_wait_tx_bb_impl.cc )
+    stop_n_wait_tx_bb_impl.cc
+    stop_n_wait_rx_ctrl_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

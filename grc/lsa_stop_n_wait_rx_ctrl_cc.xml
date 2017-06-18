@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<block>
+  <name>SNS RX Ctrl</name>
+  <key>lsa_stop_n_wait_rx_ctrl_cc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.stop_n_wait_rx_ctrl_cc($high_thres,$low_thres)</make>
+  <callback>set_high_threshold($high_thres)</callback>
+  <callback>set_low_threshold($low_thres)</callback>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>High Threshold</name>
+    <key>high_thres</key>
+    <type>float</type>
+  </param>
+  <param>
+    <name>Low Threshold</name>
+    <key>low_thres</key>
+    <type>float</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+  <sink>
+    <name>voe</name>
+    <type>float</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+  <source>
+    <name>ctrl_out</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+</block>

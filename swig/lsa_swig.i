@@ -42,6 +42,7 @@
 #include "lsa/throughput_report.h"
 #include "lsa/sinr_helper.h"
 #include "lsa/stop_n_wait_tx_bb.h"
+#include "lsa/stop_n_wait_rx_ctrl_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -98,3 +99,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, throughput_report);
 GR_SWIG_BLOCK_MAGIC2(lsa, sinr_helper);
 %include "lsa/stop_n_wait_tx_bb.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_tx_bb);
+%include "lsa/stop_n_wait_rx_ctrl_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_rx_ctrl_cc);
