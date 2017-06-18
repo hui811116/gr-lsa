@@ -105,7 +105,7 @@ namespace gr {
     void
     stop_n_wait_tx_bb_impl::generate_new_pkt(const unsigned char* in, int nin)
     {
-      int pkt_len = nin+PHYLEN;
+      int pkt_len = nin+MACLEN;
       memcpy(d_buf+PHYLEN+MACLEN,in,sizeof(char)*nin);
       uint8_t* u8_seq = (uint8_t*)&d_seq;
       d_buf[PHYLEN-1] = (unsigned char) pkt_len;
