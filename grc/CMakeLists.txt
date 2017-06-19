@@ -44,5 +44,7 @@ install(FILES
     lsa_throughput_report.xml
     lsa_sinr_helper.xml
     lsa_stop_n_wait_tx_bb.xml
-    lsa_stop_n_wait_rx_ctrl_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_stop_n_wait_rx_ctrl_cc.xml
+    lsa_stop_n_wait_ack.xml
+    lsa_sns_tx_helper.xml DESTINATION share/gnuradio/grc/blocks
 )

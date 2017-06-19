@@ -30,14 +30,17 @@ namespace gr {
 
     #define d_debug true
     #define DEBUG d_debug && std::cout
-    #define SNS_COLLISION 1
-    #define SNS_CLEAR 2
+    #define SNS_COLLISION 2
+    #define SNS_CLEAR 3
     #define MAXLEN 125*8*8/2*4
     
     static int d_voe_valid = 128;
     static int d_min_gap = 8*8*8/2*4;
     static int d_burst_max_diff = 256;
-    static int d_max_waiting = 256*MAXLEN;
+    //static int d_max_waiting = 256*MAXLEN;
+    static int d_max_waiting = CLOCKS_PER_SEC * 10;
+    static unsigned char d_sns_collision[] = {0x00,0xff};
+    static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
 
     enum SNSRXSTATE{
       SEARCH_COLLISION,
@@ -66,6 +69,7 @@ namespace gr {
       set_high_threshold(high_thres);
       set_low_threshold(low_thres);
       enter_search_collision();
+      message_port_register_out(d_out_port);
     }
 
     /*
@@ -100,6 +104,7 @@ namespace gr {
       d_burst_voe_cnt=0;
       d_burst_lock = false;
       d_voe_duration =0;
+      d_clock_duration = std::clock();
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_wait_resume()
@@ -107,6 +112,7 @@ namespace gr {
       d_voe_duration =0;
       d_state = WAIT_RESUME;
       d_voe_cnt=0;
+      d_clock_duration = std::clock();
     }
 
     void
@@ -161,9 +167,10 @@ namespace gr {
               d_voe_cnt++;
               if(d_voe_cnt>=d_voe_valid){
                 // consecutive higher than threshold
-                pmt::pmt_t msg_out = pmt::make_dict();
-                msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_COLLISION));
-                //msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_collision"),pmt::PMT_T);
+                pmt::pmt_t msg_out = pmt::cons(
+                  pmt::intern("SNS_hdr"),
+                  pmt::make_blob(d_sns_collision,SNS_COLLISION)
+                );
                 message_port_pub(d_out_port,msg_out);
                 enter_search_stop();
                 DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Detect a collision event..."<<"\033[0m"<<std::endl;
@@ -189,9 +196,9 @@ namespace gr {
                   DEBUG<<"\033[33;1m"<<"<SNS RX CTRL>VoE dropping down of high threshold...burst size:"
                   <<d_voe_duration<<"\033[0m"<<std::endl;
                   // debug for d_voe_duration;
-                }else{
-                  d_burst_voe_cnt=0;
                 }
+              }else{
+                d_burst_voe_cnt=0;
               }
             }
             if(voe[count]<d_low_thres){
@@ -230,8 +237,9 @@ namespace gr {
                   d_burst_lock = false;
                   d_voe_cnt=0;
                   if(abs(d_burst_voe_cnt-d_target_burst_cnt)<= d_burst_max_diff){
-                    pmt::pmt_t msg_out = pmt::make_dict();
-                    msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_CLEAR));
+                    pmt::pmt_t msg_out = pmt::cons(
+                      pmt::intern("SNS_hdr"),
+                      pmt::make_blob(d_sns_clear,SNS_CLEAR));
                     message_port_pub(d_out_port,msg_out);
                     enter_wait_resume();
                     DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Detect a burst with matched length:"<<"\033[0m"
@@ -244,11 +252,13 @@ namespace gr {
               }
             }
             out[nout++] = in[count++];
-            d_voe_duration++;
-            if(d_voe_duration>=d_max_waiting){
+            //d_voe_duration++;
+            if(std::clock()-d_clock_duration >= d_max_waiting){
               // waiting too long, maybe ProU is truned off...
-              pmt::pmt_t msg_out = pmt::make_dict();
-              msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_CLEAR));
+              pmt::pmt_t msg_out = pmt::cons(
+                pmt::intern("SNS_hdr"),
+                pmt::make_blob(d_sns_clear,SNS_CLEAR)
+              );
               message_port_pub(d_out_port,msg_out);
               enter_wait_resume();
               DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Waiting time exceed limit, notify tx to resume..."<<"\033[0m"<<std::endl;
@@ -264,12 +274,12 @@ namespace gr {
                 DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Signal level exceed low threshold...tx resume"<<"\033[0m"<<std::endl;
                 enter_search_collision();
                 break;
-              }else{
-                d_voe_cnt=0;
               }
+            }else{
+              d_voe_cnt=0;
             }
             out[nout++] = in[count++];
-            d_voe_duration++;
+            //d_voe_duration++;
             // can add warning if not resume for a long time
           }
         break;

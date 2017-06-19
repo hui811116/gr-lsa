@@ -49,5 +49,7 @@ install(FILES
     throughput_report.h
     sinr_helper.h
     stop_n_wait_tx_bb.h
-    stop_n_wait_rx_ctrl_cc.h DESTINATION include/lsa
+    stop_n_wait_rx_ctrl_cc.h
+    stop_n_wait_ack.h
+    sns_tx_helper.h DESTINATION include/lsa
 )

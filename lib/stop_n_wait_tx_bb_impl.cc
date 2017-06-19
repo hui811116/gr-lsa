@@ -30,12 +30,15 @@ namespace gr {
 
    #define d_debug true 
    #define DEBUG d_debug && std::cout
-   #define MAX_PAYLOAD = 125
+   #define MAX_PAYLOAD 123
+   #define SNS_COLLISION 2
+   #define SNS_CLEAR 3
+   #define SNS_ACK 4
    
     static int PHYLEN = 6;
-    static int MACLEN = 2;
+    static int MACLEN = 4;
     static unsigned char d_phy_field[] = {0x00,0x00,0x00,0x00,0xE6,0x00};
-    static unsigned char d_mac_field[] = {0x00,0x00};
+    static unsigned char d_mac_field[] = {0x00,0x00,0x00,0x00};
    
     stop_n_wait_tx_bb::sptr
     stop_n_wait_tx_bb::make(const std::string& tagname)
@@ -73,9 +76,13 @@ namespace gr {
     stop_n_wait_tx_bb_impl::msg_handler(pmt::pmt_t msg)
     {
       gr::thread::scoped_lock guard(d_mutex);
-      if(pmt::dict_has_key(msg,pmt::intern("LSA_sensing"))){
+      if(!pmt::dict_has_key(msg,pmt::intern("SNS_ctrl"))){
+        return;
+      }
+      size_t ctrl_type = pmt::to_long(pmt::dict_ref(msg,pmt::intern("SNS_ctrl"),pmt::from_long(-1)));
+      if(ctrl_type == SNS_COLLISION || ctrl_type == SNS_CLEAR){
         // update stop and wait state
-        bool result = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("LSA_sensing"),pmt::PMT_T));
+        bool result = (ctrl_type == SNS_COLLISION)? true : false;
         if(d_sns_stop && !result){
           DEBUG<<"\033[31;1m"<<"<SNS TX> ProU detected from feedback... resume to transmission mode"<<"\033[0m"<<std::endl;
           d_sns_stop = false;
@@ -111,6 +118,8 @@ namespace gr {
       d_buf[PHYLEN-1] = (unsigned char) pkt_len;
       d_buf[PHYLEN] = u8_seq[1];
       d_buf[PHYLEN+1] = u8_seq[0];
+      d_buf[PHYLEN+2] = u8_seq[1];
+      d_buf[PHYLEN+3] = u8_seq[0];
       pmt::pmt_t blob = pmt::make_blob(d_buf,pkt_len+PHYLEN);
       d_arq_list.push_back(srArq_t(d_seq,blob));
       d_seq = (d_seq==0xffff)? 0 : d_seq+1;

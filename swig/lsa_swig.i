@@ -43,6 +43,8 @@
 #include "lsa/sinr_helper.h"
 #include "lsa/stop_n_wait_tx_bb.h"
 #include "lsa/stop_n_wait_rx_ctrl_cc.h"
+#include "lsa/stop_n_wait_ack.h"
+#include "lsa/sns_tx_helper.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -101,3 +103,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, sinr_helper);
 GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_tx_bb);
 %include "lsa/stop_n_wait_rx_ctrl_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_rx_ctrl_cc);
+%include "lsa/stop_n_wait_ack.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_ack);
+%include "lsa/sns_tx_helper.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, sns_tx_helper);
