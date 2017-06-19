@@ -26,13 +26,11 @@
  */
 
 #include "qa_lsa.h"
-#include "qa_burst_gate_cc.h"
 
 CppUnit::TestSuite *
 qa_lsa::suite()
 {
   CppUnit::TestSuite *s = new CppUnit::TestSuite("lsa");
-  s->addTest(gr::lsa::qa_burst_gate_cc::suite());
 
   return s;
 }

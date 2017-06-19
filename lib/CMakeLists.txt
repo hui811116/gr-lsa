@@ -89,7 +89,6 @@ include_directories(${CPPUNIT_INCLUDE_DIRS})
 list(APPEND test_lsa_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/test_lsa.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_lsa.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_burst_gate_cc.cc
     )
 
 add_executable(test-lsa ${test_lsa_sources})
