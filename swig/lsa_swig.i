@@ -45,6 +45,7 @@
 #include "lsa/stop_n_wait_rx_ctrl_cc.h"
 #include "lsa/stop_n_wait_ack.h"
 #include "lsa/sns_tx_helper.h"
+#include "lsa/burst_gate_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -107,3 +108,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_rx_ctrl_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_ack);
 %include "lsa/sns_tx_helper.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, sns_tx_helper);
+%include "lsa/burst_gate_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, burst_gate_cc);

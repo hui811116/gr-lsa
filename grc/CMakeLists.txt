@@ -46,5 +46,6 @@ install(FILES
     lsa_stop_n_wait_tx_bb.xml
     lsa_stop_n_wait_rx_ctrl_cc.xml
     lsa_stop_n_wait_ack.xml
-    lsa_sns_tx_helper.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_sns_tx_helper.xml
+    lsa_burst_gate_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

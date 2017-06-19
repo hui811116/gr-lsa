@@ -55,7 +55,8 @@ list(APPEND lsa_sources
     stop_n_wait_tx_bb_impl.cc
     stop_n_wait_rx_ctrl_cc_impl.cc
     stop_n_wait_ack.cc
-    sns_tx_helper.cc )
+    sns_tx_helper.cc
+    burst_gate_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
@@ -88,6 +89,7 @@ include_directories(${CPPUNIT_INCLUDE_DIRS})
 list(APPEND test_lsa_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/test_lsa.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_lsa.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/qa_burst_gate_cc.cc
     )
 
 add_executable(test-lsa ${test_lsa_sources})

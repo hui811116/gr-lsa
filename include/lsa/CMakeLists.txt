@@ -51,5 +51,6 @@ install(FILES
     stop_n_wait_tx_bb.h
     stop_n_wait_rx_ctrl_cc.h
     stop_n_wait_ack.h
-    sns_tx_helper.h DESTINATION include/lsa
+    sns_tx_helper.h
+    burst_gate_cc.h DESTINATION include/lsa
 )
