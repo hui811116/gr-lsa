@@ -4,32 +4,25 @@
   <key>lsa_eng_det_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.eng_det_cc($threshold,$bin)</make>
+  <make>lsa.eng_det_cc($threshold)</make>
   <callback>set_threshold($threshold)</callback>
-  <callback>set_bin($bin)</callback>
   <param>
     <name>Threshold(dB)</name>
     <key>threshold</key>
-    <value>-3</value>
     <type>float</type>
   </param>
-  <param>
-    <name>Bin Size</name>
-    <key>bin</key>
-    <value>5</value>
-    <type>int</type>
-  </param>
+
   <sink>
     <name>in</name>
     <type>complex</type>
+  </sink>
+  <sink>
+    <name>ed</name>
+    <type>float</type>
   </sink>
   <source>
     <name>out</name>
     <type>complex</type>
   </source>
-  <source>
-    <name>ed</name>
-    <type>float</type>
-    <optional>1</optional>
-  </source>
+  
 </block>

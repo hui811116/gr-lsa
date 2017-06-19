@@ -36,6 +36,7 @@ namespace gr {
       int d_state;
       float d_high_thres;
       float d_low_thres;
+      float d_ed_thres;
       int d_voe_cnt;
       int d_voe_duration;
       bool d_burst_lock;
@@ -49,13 +50,15 @@ namespace gr {
       void enter_wait_resume();
 
      public:
-      stop_n_wait_rx_ctrl_cc_impl(float high_thres, float low_thres);
+      stop_n_wait_rx_ctrl_cc_impl(float high_thres, float low_thres, float ed_thres);
       ~stop_n_wait_rx_ctrl_cc_impl();
 
       void set_high_threshold(float thres);
       float high_threshold()const;
       void set_low_threshold(float thres);
       float low_threshold()const;
+      void set_ed_threshold(float thres);
+      float ed_threshold()const;
 
       // Where all the action really happens
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);

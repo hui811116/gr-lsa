@@ -28,7 +28,7 @@
 namespace gr {
   namespace lsa {
 
-   #define d_debug true 
+   #define d_debug false 
    #define DEBUG d_debug && std::cout
    #define MAX_PAYLOAD 123
    #define SNS_COLLISION 2

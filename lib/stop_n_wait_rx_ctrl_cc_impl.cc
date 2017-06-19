@@ -50,24 +50,25 @@ namespace gr {
     };
 
     stop_n_wait_rx_ctrl_cc::sptr
-    stop_n_wait_rx_ctrl_cc::make(float high_thres, float low_thres)
+    stop_n_wait_rx_ctrl_cc::make(float high_thres, float low_thres, float ed_thres)
     {
       return gnuradio::get_initial_sptr
-        (new stop_n_wait_rx_ctrl_cc_impl(high_thres,low_thres));
+        (new stop_n_wait_rx_ctrl_cc_impl(high_thres,low_thres,ed_thres));
     }
 
     /*
      * The private constructor
      */
-    stop_n_wait_rx_ctrl_cc_impl::stop_n_wait_rx_ctrl_cc_impl(float high_thres, float low_thres)
+    stop_n_wait_rx_ctrl_cc_impl::stop_n_wait_rx_ctrl_cc_impl(float high_thres, float low_thres, float ed_thres)
       : gr::block("stop_n_wait_rx_ctrl_cc",
-              gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(float)),
+              gr::io_signature::make3(3, 3, sizeof(gr_complex),sizeof(float),sizeof(float)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
               d_out_port(pmt::mp("ctrl_out"))
     {
       d_state = SEARCH_COLLISION;
       set_high_threshold(high_thres);
       set_low_threshold(low_thres);
+      set_ed_threshold(ed_thres);
       enter_search_collision();
       message_port_register_out(d_out_port);
     }
@@ -140,6 +141,18 @@ namespace gr {
     }
 
     void
+    stop_n_wait_rx_ctrl_cc_impl::set_ed_threshold(float thres)
+    {
+      d_ed_thres = thres;
+    }
+    
+    float
+    stop_n_wait_rx_ctrl_cc_impl::ed_threshold()const
+    {
+      return d_ed_thres;
+    }
+
+    void
     stop_n_wait_rx_ctrl_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       for(int i=0;i<ninput_items_required.size();++i){
@@ -155,8 +168,9 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       const float *voe = (const float*) input_items[1];
+      const float *ed = (const float*) input_items[2];
       gr_complex *out = (gr_complex *) output_items[0];
-      int nin = std::min(ninput_items[0],ninput_items[1]);
+      int nin = std::min(std::min(ninput_items[0],ninput_items[1]),ninput_items[2]);
       int nout =0;
       int count =0;
       
@@ -173,7 +187,7 @@ namespace gr {
                 );
                 message_port_pub(d_out_port,msg_out);
                 enter_search_stop();
-                DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Detect a collision event..."<<"\033[0m"<<std::endl;
+                //DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Detect a collision event..."<<"\033[0m"<<std::endl;
                 break;
               }
             }else{
@@ -218,24 +232,23 @@ namespace gr {
         case WAIT_BURST:
           while(nout<noutput_items && count<nin){
             if(!d_burst_lock){
-              if(voe[count]>d_low_thres){
+              if(ed[count]>d_ed_thres){
                 d_voe_cnt++;
                 if(d_voe_cnt>=d_voe_valid){
                   d_burst_lock = true;
                   d_burst_voe_cnt =0;
                   d_voe_cnt=0;
                   d_voe_duration =0; //
+                  //DEBUG<<"\033[36;1m"<<"<SNS RX CTRL>detect a trigger signal, start track length"<<"\033[0m"<<std::endl;
                 }
               }else{
                 d_voe_cnt=0;
               }
             }else{
               d_burst_voe_cnt++;
-              if(voe[count]<d_low_thres){
+              if(ed[count]<d_ed_thres){
                 d_voe_cnt++;
                 if(d_voe_cnt>=d_voe_valid){
-                  d_burst_lock = false;
-                  d_voe_cnt=0;
                   if(abs(d_burst_voe_cnt-d_target_burst_cnt)<= d_burst_max_diff){
                     pmt::pmt_t msg_out = pmt::cons(
                       pmt::intern("SNS_hdr"),
@@ -246,6 +259,11 @@ namespace gr {
                     <<" ,target:"<<d_target_burst_cnt<<" ,matched:"<<d_burst_voe_cnt<<std::endl;
                     break;
                   }
+                  DEBUG<<"\033[36;1m"<<"<SNS RX CTRL>length not matched, reset tracking registers"<<"\033[0m"
+                  <<" ,expected:"<<d_target_burst_cnt<<" ,current:"<<d_burst_voe_cnt<<std::endl;
+                  d_burst_voe_cnt = 0;
+                  d_burst_lock = false;
+                  d_voe_cnt=0;
                 }
               }else{
                 d_voe_cnt=0;
@@ -261,7 +279,7 @@ namespace gr {
               );
               message_port_pub(d_out_port,msg_out);
               enter_wait_resume();
-              DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Waiting time exceed limit, notify tx to resume..."<<"\033[0m"<<std::endl;
+              DEBUG<<"\033[33;1m"<<"<SNS RX CTRL>Waiting time exceed limit, notify tx to resume..."<<"\033[0m"<<std::endl;
               break;
             }
           }
@@ -271,7 +289,7 @@ namespace gr {
             if(voe[count]>d_low_thres){
               d_voe_cnt++;
               if(d_voe_cnt>=d_min_gap){
-                DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Signal level exceed low threshold...tx resume"<<"\033[0m"<<std::endl;
+                //DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Signal level exceed low threshold...tx resume"<<"\033[0m"<<std::endl;
                 enter_search_collision();
                 break;
               }
@@ -279,7 +297,6 @@ namespace gr {
               d_voe_cnt=0;
             }
             out[nout++] = in[count++];
-            //d_voe_duration++;
             // can add warning if not resume for a long time
           }
         break;

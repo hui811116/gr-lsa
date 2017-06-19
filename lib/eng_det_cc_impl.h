@@ -32,15 +32,14 @@ namespace gr {
      private:
       // Nothing to declare in this block.
       double d_threshold;
-      int   d_bin;
       pmt::pmt_t d_src_id;
       bool d_state_reg;
-      size_t d_cap;
-      float * d_eng;
+      int d_ed_cnt;
+      int d_burst_cnt;
       const pmt::pmt_t d_ed_tagname;
 
      public:
-      eng_det_cc_impl(float threshold,int bin);
+      eng_det_cc_impl(float threshold);
       ~eng_det_cc_impl();
 
       // Where all the action really happens
@@ -53,9 +52,6 @@ namespace gr {
 
       void set_threshold(float thres_db);
       float threshold() const;
-
-      void set_bin(int bin);
-      int bin() const;
 
     };
 

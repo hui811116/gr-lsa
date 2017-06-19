@@ -33,30 +33,33 @@
 namespace gr {
   namespace lsa {
 
+    #define d_debug false
+    #define DEBUG d_debug && std::cout
+
+    static int d_ed_valid = 64;
+
     eng_det_cc::sptr
-    eng_det_cc::make(float threshold, int bin)
+    eng_det_cc::make(float threshold)
     {
       return gnuradio::get_initial_sptr
-        (new eng_det_cc_impl(threshold, bin));
+        (new eng_det_cc_impl(threshold));
     }
 
     /*
      * The private constructor
      */
-    eng_det_cc_impl::eng_det_cc_impl(float threshold, int bin)
+    eng_det_cc_impl::eng_det_cc_impl(float threshold)
       : gr::block("eng_det_cc",
-              gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make2(1, 2, sizeof(gr_complex),sizeof(float))),
+              gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(float)),
+              gr::io_signature::make(1, 1, sizeof(gr_complex))),
       d_src_id(pmt::intern(alias())),
       d_state_reg(false),
-      d_cap(24*1024),
       d_ed_tagname(pmt::intern("ed_tag"))
     {
       set_threshold(threshold);
-      set_bin(bin);
       set_tag_propagation_policy(TPP_DONT);
-      
-      d_eng = (float*) volk_malloc(sizeof(float)*d_cap, volk_get_alignment());
+      d_state_reg = false;
+      d_ed_cnt =0;
     }
 
     /*
@@ -64,7 +67,6 @@ namespace gr {
      */
     eng_det_cc_impl::~eng_det_cc_impl()
     {
-      volk_free(d_eng);
     }
 
     void
@@ -72,7 +74,7 @@ namespace gr {
     {
       /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
       for(int i=0;i<ninput_items_required.size();++i){
-        ninput_items_required[i] = noutput_items + history();
+        ninput_items_required[i] = noutput_items;
       }
     }
 
@@ -83,62 +85,48 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
+      const float* ed = (const float *) input_items[1];
       gr_complex* out = (gr_complex*) output_items[0];
-      float* out_eng = d_eng;
-      bool have_eng=false;
-      if(output_items.size()>=2){
-        out_eng = (float*)output_items[1];
-        have_eng = true;
-      }
-      int consume = (ninput_items[0]-history()>0)? ninput_items[0]-history() : 0;
-      consume = (consume < noutput_items)? consume : noutput_items;
-      memcpy(out,in,sizeof(gr_complex)*consume);
-      volk_32fc_magnitude_squared_32f(d_eng,in,consume + history());
-
-      // fixed bin, may be a parameter in future implementation
-
-      float float_test;
-      for(int i=0;i<consume;++i)
-      {
-          float_test=std::accumulate(d_eng+i,d_eng+i+d_bin-1,0.0)/(float)d_bin;
-          if(have_eng){
-            out_eng[i] = float_test;
-          }
-          if(float_test >= d_threshold)
-          {
-            if(!d_state_reg){
-              add_item_tag(0,nitems_written(0)+i, d_ed_tagname, pmt::PMT_T, d_src_id);
-              add_item_tag(0,nitems_written(0)+i, pmt::intern("ed_begin"), pmt::PMT_T, d_src_id);
-              if(have_eng){
-                add_item_tag(1,nitems_written(1)+i, d_ed_tagname, pmt::PMT_T, d_src_id);
-                add_item_tag(1,nitems_written(1)+i, pmt::intern("ed_begin"), pmt::PMT_T, d_src_id);
-                }
-              d_state_reg=true;
+      int nin = std::min(ninput_items[0],ninput_items[1]);
+      int nout =0;
+      int count =0;
+      if(!d_state_reg){
+        while(nout<noutput_items && count<nin){
+          if(ed[count]>d_threshold){
+            d_ed_cnt++;
+            if(d_ed_cnt>=d_ed_valid){
+              d_state_reg = true;
+              d_ed_cnt = 0;
+              d_burst_cnt=0;
+              add_item_tag(0,nitems_written(0)+nout,d_ed_tagname,pmt::PMT_T);
+              DEBUG<<"\033[33;1m"<<"<ED DET>detect a energy trigger, start record burst"<<"\033[0m"<<std::endl;
+              break;
             }
-            //out[out_count++] = in[i];
-          }// not yet found 
-          else
-          {
-            if(d_state_reg){
-              add_item_tag(0,nitems_written(0)+i, d_ed_tagname, pmt::PMT_F, d_src_id);
-              if(have_eng){
-                add_item_tag(1,nitems_written(1)+i, d_ed_tagname, pmt::PMT_F, d_src_id);
-              }
-              d_state_reg=false;
-              //out[out_count++] = in[i];
-            } 
+          }else{
+            d_ed_cnt=0;
           }
-      }
-      
-      // Do <+signal processing+>
-      produce(0,consume);
-      if(have_eng)
-        produce(1,consume);
-      // Tell runtime system how many input items we consumed on
-      // each input stream.
-      consume_each (consume);
-      // Tell runtime system how many output items we produced.
-      return WORK_CALLED_PRODUCE;
+          out[nout++] = in[count++];
+        }
+      }else{
+        while(nout<noutput_items && count<nin){
+          d_burst_cnt++;
+          if(ed[count]<d_threshold){
+            d_ed_cnt++;
+            if(d_ed_cnt>= d_ed_valid){
+              d_state_reg = false;
+              d_ed_cnt=0;
+              add_item_tag(0,nitems_written(0)+nout,d_ed_tagname,pmt::PMT_F);
+              DEBUG<<"\033[33;1m"<<"<ED DET>end of burst."<<"\033[0m"<<" ,length="<<d_burst_cnt<<std::endl;
+              break;
+            }
+          }else{
+            d_ed_cnt=0;
+          }
+          out[nout++] = in[count++];
+        }
+      }     
+      consume_each(count);
+      return nout;
     }
 //**************************
 //    SET functions
@@ -146,16 +134,7 @@ namespace gr {
     void 
     eng_det_cc_impl::set_threshold(float thres_db)
     {
-      d_threshold = pow(10,thres_db/10.0f);
-    }
-    void 
-    eng_det_cc_impl::set_bin(int bin)
-    {
-      if(bin<0){
-        throw std::runtime_error("Invalid bin size");
-      }
-      d_bin=bin;
-      set_history(d_bin);
+      d_threshold = thres_db;
     }
 //***************************
 //   GET functions
@@ -163,15 +142,8 @@ namespace gr {
     float 
     eng_det_cc_impl::threshold() const
     {
-      return 10*log10(d_threshold);
+      return d_threshold;
     }
-
-    int 
-    eng_det_cc_impl::bin() const
-    {
-      return d_bin;
-    }
-
   } /* namespace lsa */
 } /* namespace gr */
 
