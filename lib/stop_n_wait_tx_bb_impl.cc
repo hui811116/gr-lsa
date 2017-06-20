@@ -58,7 +58,7 @@ namespace gr {
               d_tagname(pmt::intern(tagname))
     {
       d_sns_stop = false;
-      d_state_change = false;
+      d_state_change = true;
       message_port_register_in(d_in_port);
       set_msg_handler(d_in_port, boost::bind(&stop_n_wait_tx_bb_impl::msg_handler,this, _1));
       memcpy(d_buf,d_phy_field,sizeof(char)*PHYLEN);

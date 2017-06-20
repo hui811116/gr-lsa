@@ -35,6 +35,10 @@
       <name>SU</name>
       <key>1</key>
     </option>
+    <option>
+      <name>SNS</name>
+      <key>2</key>
+    </option>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:

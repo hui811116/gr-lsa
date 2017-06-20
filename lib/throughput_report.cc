@@ -30,10 +30,15 @@ namespace gr {
   namespace lsa {
 
     #define PROUMAXLEN 127
+    #define LSAMAXLEN 121
+    #define SNSMAXLEN 123
+    #define LSAMACLEN 6
+    #define SNSMACLEN 4
 
     enum USERTYPE{
       PROU = 0,
-      SU=1
+      SU=1,
+      SNS=2
     };
 
     inline bool lsa_crc(const uint8_t * uvec)
@@ -47,6 +52,15 @@ namespace gr {
       base  = uvec[4]<<8;
       base |= uvec[5];
       return qidx==0 && qsize ==0;
+    }
+    inline bool sns_crc(const uint8_t* uvec)
+    {
+      uint16_t base1, base2;
+      base1 = uvec[0]<<8;
+      base1|= uvec[1];
+      base2 = uvec[2]<<8;
+      base2|= uvec[3];
+      return base1 == base2;
     }
 
     class throughput_report_impl:public throughput_report
@@ -82,6 +96,9 @@ namespace gr {
           case SU:
             d_user = SU;
           break;
+          case SNS:
+            d_user = SNS;
+          break;
           default:
             throw std::runtime_error("unrecognized user type");
           break;
@@ -108,12 +125,25 @@ namespace gr {
             break;
             case SU:
               // cyclic check
-              if(io>=6){
+              if(io>LSAMACLEN && io<=LSAMAXLEN){
                 if(lsa_crc(uvec)){
                   // valid pkt
                   // remove header
-                  d_byte_cnt+= (io-6);
-                  d_byte_acc+= (io-6);
+                  d_byte_cnt+= (io-LSAMACLEN);
+                  d_byte_acc+= (io-LSAMACLEN);
+                  d_pkt_cnt++;
+                  d_pkt_acc++;
+                }
+              }
+            break;
+            case SNS:
+              // note: control frame do not count in throughput
+              if(io>SNSMACLEN && io<=SNSMAXLEN){
+                // length check passed
+                if(sns_crc(uvec)){
+                  // valid sns pkt
+                  d_byte_cnt+= io-SNSMACLEN;
+                  d_byte_acc+= io-SNSMACLEN;
                   d_pkt_cnt++;
                   d_pkt_acc++;
                 }

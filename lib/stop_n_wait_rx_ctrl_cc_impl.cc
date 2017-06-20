@@ -28,7 +28,7 @@
 namespace gr {
   namespace lsa {
 
-    #define d_debug true
+    #define d_debug false
     #define DEBUG d_debug && std::cout
     #define SNS_COLLISION 2
     #define SNS_CLEAR 3
@@ -38,7 +38,7 @@ namespace gr {
     static int d_min_gap = 8*8*8/2*4;
     static int d_burst_max_diff = 256;
     //static int d_max_waiting = 256*MAXLEN;
-    static int d_max_waiting = CLOCKS_PER_SEC * 10;
+    static time_t d_max_waiting = CLOCKS_PER_SEC * 10;
     static unsigned char d_sns_collision[] = {0x00,0xff};
     static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
 
@@ -208,7 +208,7 @@ namespace gr {
                   d_burst_lock = true;
                   d_target_burst_cnt = (d_voe_duration>=d_min_gap)? d_voe_duration:d_min_gap;
                   DEBUG<<"\033[33;1m"<<"<SNS RX CTRL>VoE dropping down of high threshold...burst size:"
-                  <<d_voe_duration<<"\033[0m"<<std::endl;
+                  <<d_target_burst_cnt<<"\033[0m"<<std::endl;
                   // debug for d_voe_duration;
                 }
               }else{
