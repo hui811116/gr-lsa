@@ -27,7 +27,6 @@
  #include <pmt/pmt.h>
  #include <ctime>
 
- #define time_t long int
  #define LSARETRYLIM 10
  #define LSATIMEOUT 5*CLOCKS_PER_SEC
  #define MAX_LSA_PAYLOAD 121
@@ -151,7 +150,7 @@
         return *this;
       }
       const srArq_t& operator*()const{return *this;}
-      time_t time()const {return d_time;}
+      clock_t time()const {return d_time;}
       uint16_t seq()const {return d_noseq;}
       uint32_t retry()const{return d_retry;}
       pmt::pmt_t msg()const{return d_msg;}
@@ -160,13 +159,13 @@
       void reset(){d_retry = 0; d_time=std::clock();}
       void update_time(){d_time = std::clock();}
       void set_retry(uint32_t re){d_retry = re;}
-      void set_time(time_t time){d_time = time;}
+      void set_time(clock_t time){d_time = time;}
       void set_seq(uint16_t seq){d_noseq = seq;}
       void set_msg(pmt::pmt_t msg){d_msg = msg;}
       size_t blob_length(){return pmt::blob_length(d_msg);}
       private:
         uint16_t d_noseq;
-        time_t d_time;
+        clock_t d_time;
         uint32_t d_retry;
         pmt::pmt_t d_msg;
     };

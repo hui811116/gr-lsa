@@ -26,7 +26,6 @@
 
 namespace gr {
   namespace lsa {
-    #define time_t long int
 
     class stop_n_wait_rx_ctrl_cc_impl : public stop_n_wait_rx_ctrl_cc
     {
@@ -42,7 +41,7 @@ namespace gr {
       bool d_burst_lock;
       int d_burst_voe_cnt;
       int d_target_burst_cnt;
-      time_t d_clock_duration;
+      clock_t d_clock_duration;
       int d_intf_cnt;
 
       void enter_search_collision();

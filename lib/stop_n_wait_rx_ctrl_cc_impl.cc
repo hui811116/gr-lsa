@@ -37,8 +37,7 @@ namespace gr {
     static int d_voe_valid = 128;
     static int d_min_gap = 8*8*8/2*4;
     static int d_burst_max_diff = 256;
-    //static int d_max_waiting = 256*MAXLEN;
-    static time_t d_max_waiting = CLOCKS_PER_SEC * 10;
+    static clock_t d_max_waiting = CLOCKS_PER_SEC * 10;
     static unsigned char d_sns_collision[] = {0x00,0xff};
     static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
 
