@@ -159,7 +159,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>2.5e9</value>
+      <value>2.4e9</value>
     </param>
   </block>
   <block>
@@ -511,49 +511,6 @@
     </param>
   </block>
   <block>
-    <key>lsa_packet_sink</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1024, 172)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>lsa_packet_sink_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>thres</key>
-      <value>10</value>
-    </param>
-  </block>
-  <block>
     <key>lsa_prou_packet_sink_f</key>
     <param>
       <key>alias</key>
@@ -594,45 +551,6 @@
     <param>
       <key>thres</key>
       <value>10</value>
-    </param>
-  </block>
-  <block>
-    <key>lsa_stat_report</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1048, 324)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>lsa_stat_report_0</value>
-    </param>
-    <param>
-      <key>mode</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>ms</key>
-      <value>4000</value>
     </param>
   </block>
   <block>
@@ -2465,27 +2383,9 @@
   </connection>
   <connection>
     <source_block_id>digital_clock_recovery_mm_xx_0</source_block_id>
-    <sink_block_id>lsa_packet_sink_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>digital_clock_recovery_mm_xx_0</source_block_id>
     <sink_block_id>lsa_prou_packet_sink_f_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_packet_sink_0</source_block_id>
-    <sink_block_id>lsa_throughput_report_0</sink_block_id>
-    <source_key>pkt_out</source_key>
-    <sink_key>pkt_in</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_prou_packet_sink_f_0</source_block_id>
-    <sink_block_id>lsa_stat_report_0</sink_block_id>
-    <source_key>pkt_out</source_key>
-    <sink_key>msg_in</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_prou_packet_sink_f_0</source_block_id>

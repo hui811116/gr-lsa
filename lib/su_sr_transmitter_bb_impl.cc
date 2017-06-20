@@ -36,8 +36,6 @@ namespace gr {
     static unsigned char LSAMAC[] = {0x00,0x00,0x00,0x00,0x00,0x00};  // 2,2,2
     static int d_retx_retry_limit = 20;
 
-    //static int d_debug_iter = 20;
-
     su_sr_transmitter_bb::sptr
     su_sr_transmitter_bb::make(const std::string& tagname, bool debug)
     {
@@ -61,10 +59,6 @@ namespace gr {
       set_msg_handler(d_msg_in,boost::bind(&su_sr_transmitter_bb_impl::msg_in,this,_1));
       d_prou_present = false;
       memcpy(d_buf,LSAPHY,sizeof(char)* LSAPHYLEN);
-
-      //d_debug_state = false;
-      //d_debug_cnt = 0;
-      //d_debug_queue.clear();
     }
 
     /*
@@ -80,18 +74,11 @@ namespace gr {
       int noutput_items = ninput_items[0]+LSAPHYLEN+LSAMACLEN;
       std::list<srArq_t>::iterator it;
       if(d_prou_present){        
-        if(retx_peek_front(noutput_items)){
-          // valid
-        }else{
-          // invalid
-          DEBUG<<"<SU SR TX>"<<"\033[33;1m"<<"ERROR:In retransmission state but found no pending packets"<<"\033[0m"<<std::endl;
+        if(!retx_peek_front(noutput_items)){
+          throw std::runtime_error("<SU SR TX>\033[33;1mERROR:In retransmission state but found no pending packets\033[0m");
         }
       }else{
-        if(peek_front(noutput_items)){
-          // has something
-        }else{
-          // has nothing
-        }
+        bool has_pkt = peek_front(noutput_items);
       }
       return noutput_items ;
     }
@@ -101,7 +88,7 @@ namespace gr {
     {
       // should be filtered to save complexity of this block
       // only input dict with valid messages
-      //assert(pmt::is_dict());
+      gr::thread::scoped_lock guard(d_mutex);
       // if is sensing information, lock current queue and change state
       bool sensing = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("LSA_sensing"),pmt::PMT_F));
       int seqno = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));
@@ -157,7 +144,6 @@ namespace gr {
     void
     su_sr_transmitter_bb_impl::reset_retx_retry()
     {
-      gr::thread::scoped_lock guard(d_mutex);
       for(int i=0;i<d_retx_queue.size();++i){
         d_retx_queue[i].set_retry(0);
       }
@@ -167,7 +153,6 @@ namespace gr {
     su_sr_transmitter_bb_impl::create_retx_queue()
     {
       std::list<srArq_t>::iterator it;
-      gr::thread::scoped_lock guard(d_mutex);
       if(d_arq_queue.empty()){
             return false;
           }else{
@@ -190,7 +175,6 @@ namespace gr {
     su_sr_transmitter_bb_impl::get_retx(int idx)
     {
       pmt::pmt_t msg = pmt::PMT_NIL;
-      //gr::thread::scoped_lock guard(d_mutex);
       if(idx>=d_retx_queue.size()){
         return pmt::PMT_NIL;
       }
@@ -199,7 +183,6 @@ namespace gr {
     bool
     su_sr_transmitter_bb_impl::retx_peek_front(int& len)
     {
-      //gr::thread::scoped_lock guard(d_mutex);
       if(d_retx_size!=0){
         len = d_retx_queue[d_retx_idx].blob_length();
       }
@@ -210,7 +193,6 @@ namespace gr {
     su_sr_transmitter_bb_impl::peek_front(int& len)
     {
       std::list<srArq_t>::iterator it;
-      gr::thread::scoped_lock guard(d_mutex);
       it = d_arq_queue.begin();
         if(it!=d_arq_queue.end()){
           if(it->timeout()){
@@ -225,7 +207,6 @@ namespace gr {
     void
     su_sr_transmitter_bb_impl::clear_queue()
     {
-      gr::thread::scoped_lock guard(d_mutex);
       d_arq_queue.clear();
       d_retx_table.clear();
       d_retx_queue.clear();
@@ -235,7 +216,6 @@ namespace gr {
     void
     su_sr_transmitter_bb_impl::enqueue(const srArq_t& arq)
     {
-      //gr::thread::scoped_lock guard(d_mutex);
       d_arq_queue.push_back(arq);
     }
     pmt::pmt_t
@@ -243,7 +223,6 @@ namespace gr {
     {
       pmt::pmt_t nx_msg = pmt::PMT_NIL;
       std::list<srArq_t>::iterator it = d_arq_queue.begin();
-      gr::thread::scoped_lock guard(d_mutex);
       while(it!=d_arq_queue.end()){
         if(it->timeout()) {
             //check retry count
@@ -287,7 +266,6 @@ namespace gr {
       if(idx>=d_retx_table.size()){
         throw std::runtime_error("WTF...");
       }
-      //gr::thread::scoped_lock guard(d_mutex);
       return d_retx_table[idx];
     }
     bool
@@ -295,7 +273,6 @@ namespace gr {
       if(idx>=d_retx_table.size()){
         throw std::runtime_error("WTF......");
       }
-      gr::thread::scoped_lock guard(d_mutex);
       if(d_retx_table[idx]==false){
         d_retx_cnt++;
         d_retx_table[idx] = true;
@@ -315,56 +292,13 @@ namespace gr {
       int nin = ninput_items[0];
       int nout;
       pmt::pmt_t nx_msg =pmt::PMT_NIL;
-/*
-      if(d_debug_queue.size()<d_debug_iter){
-        uint16_t base = (uint16_t)d_debug_cnt;
-        uint8_t * u8_idx = (uint8_t*)&base;
-        memcpy(d_buf+LSAPHYLEN,LSAMAC,sizeof(char)*LSAMACLEN);
-        memcpy(d_buf+LSAPHYLEN+LSAMACLEN,in,sizeof(char)*nin);
-        d_buf[5] = (unsigned char)(nin+LSAMACLEN);
-        d_buf[LSAPHYLEN+4] = u8_idx[1];
-        d_buf[LSAPHYLEN+5] = u8_idx[0];
-        nout = nin + LSAPHYLEN + LSAMACLEN;
-        nx_msg = pmt::make_blob(d_buf,nout);
-        d_debug_queue.push_back(srArq_t(base,nx_msg));
-        memcpy(out,d_buf,sizeof(char)*nout);
-        d_debug_cnt++;
-        if(d_debug_cnt == d_debug_iter){
-          d_debug_state = false;
-          d_debug_cnt =0;
-        }
-      }else{
-        nx_msg = d_debug_queue[d_debug_cnt].msg();
-        size_t io(0);
-        const uint8_t* uvec = pmt::u8vector_elements(nx_msg,io);
-        memcpy(out,uvec,sizeof(char)*io);
-        if(d_debug_state){
-          uint16_t qidx = (uint16_t) d_debug_cnt;
-          uint16_t qsize= (uint16_t) d_debug_iter;
-          uint8_t* u8idx = (uint8_t*) &qidx;
-          uint8_t* u8size= (uint8_t*) &qsize;
-          out[LSAPHYLEN] = u8idx[1];
-          out[LSAPHYLEN+1] = u8idx[0];
-          out[LSAPHYLEN+2] = u8size[1];
-          out[LSAPHYLEN+3] = u8size[0];
-          nout = io;
-        }
-        d_debug_cnt++;
-        if(d_debug_cnt == d_debug_iter){
-          d_debug_state = (!d_debug_state );
-          d_debug_cnt =0;
-        }
-      }
-*/
       
       if(d_prou_present){
         // should do retransmission
-        //assert(!d_retx_queue.empty());
         nx_msg = get_retx(d_retx_idx);
         if(pmt::eqv(nx_msg,pmt::PMT_NIL)){
           throw std::runtime_error("WTF");
         }
-        // FIXME
         if(d_retx_cnt!=0){
           // already passed sensing delay
           d_retx_queue[d_retx_idx].inc_retry();
@@ -414,7 +348,6 @@ namespace gr {
           enqueue(temp_arq);
           memcpy(out,d_buf,sizeof(char)*(nout) );
         }else{
-          //DEBUG<<"<SU SR TX>Retry..."<<std::endl;
           // send existing message
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(nx_msg,io);

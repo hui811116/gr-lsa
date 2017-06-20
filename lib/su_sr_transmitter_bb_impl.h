@@ -28,46 +28,6 @@
 namespace gr {
   namespace lsa {
 
-    //#define time_t long int
-    //#define LSARETRYLIM 10
-    //#define LSATIMEOUT 5*CLOCKS_PER_SEC
-
-    /*class srArq_t{
-      public:
-      friend class su_sr_transmitter_bb_impl;
-      friend std::ostream & operator <<(std::ostream& out,const srArq_t& aq){
-        out << "seq:"<<aq.d_noseq<<" ,created time:"<<aq.d_time<<" ,retry:"<<aq.d_retry<<" ,blob_size:"<<pmt::blob_length(aq.d_msg);
-        return out;
-      }
-      srArq_t(){ d_noseq=0; d_time = std::clock();d_retry=0;d_msg = pmt::PMT_NIL;}
-      srArq_t(const srArq_t& aq){d_noseq = aq.d_noseq; d_time = aq.d_time; d_retry =aq.d_retry;d_msg = aq.d_msg;}
-      srArq_t(uint16_t noseq,const pmt::pmt_t& msg){d_noseq = noseq; d_time = std::clock(); d_retry = 0;d_msg= msg;}
-      ~srArq_t(){}
-      const srArq_t& operator=(const srArq_t& aq){
-        d_noseq = aq.d_noseq; d_time = aq.d_time; d_retry = aq.d_retry; d_msg=aq.d_msg;
-        return *this;
-      }
-      const srArq_t& operator*()const{return *this;}
-      time_t time()const {return d_time;}
-      uint16_t seq()const {return d_noseq;}
-      uint32_t retry()const{return d_retry;}
-      pmt::pmt_t msg()const{return d_msg;}
-      bool inc_retry(){d_retry++; return d_retry>LSARETRYLIM;}
-      bool timeout(){return (std::clock()-d_time) >=LSATIMEOUT;}
-      void reset(){d_retry = 0; d_time=std::clock();}
-      void update_time(){d_time = std::clock();}
-      void set_retry(uint32_t re){d_retry = re;}
-      void set_time(time_t time){d_time = time;}
-      void set_seq(uint16_t seq){d_noseq = seq;}
-      void set_msg(pmt::pmt_t msg){d_msg = msg;}
-      size_t blob_length(){return pmt::blob_length(d_msg);}
-      private:
-        uint16_t d_noseq;
-        time_t d_time;
-        uint32_t d_retry;
-        pmt::pmt_t d_msg;
-    };*/
-
     class su_sr_transmitter_bb_impl : public su_sr_transmitter_bb
     {
      private:
@@ -84,10 +44,6 @@ namespace gr {
       bool d_prou_present;
       unsigned char d_buf[1024];
       bool d_debug;
-
-      //std::vector<srArq_t> d_debug_queue;
-      //int d_debug_cnt;
-      //bool d_debug_state;
 
       // thread functions for d_arq_queue;
       void clear_queue();

@@ -4,12 +4,26 @@
   <key>lsa_eng_det_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.eng_det_cc($threshold)</make>
+  <make>lsa.eng_det_cc($threshold,$tag_power)</make>
   <callback>set_threshold($threshold)</callback>
   <param>
     <name>Threshold(dB)</name>
     <key>threshold</key>
     <type>float</type>
+  </param>
+  <param>
+    <name>Tag power</name>
+    <key>tag_power</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
   </param>
 
   <sink>

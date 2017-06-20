@@ -96,6 +96,7 @@ namespace gr {
       d_burst_lock = false;
       d_burst_voe_cnt =0;
       d_target_burst_cnt = 0;
+      d_intf_cnt =0;
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_wait_burst()
@@ -187,7 +188,6 @@ namespace gr {
                 );
                 message_port_pub(d_out_port,msg_out);
                 enter_search_stop();
-                //DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Detect a collision event..."<<"\033[0m"<<std::endl;
                 break;
               }
             }else{
@@ -207,9 +207,9 @@ namespace gr {
                 if(d_burst_voe_cnt>=d_voe_valid){
                   d_burst_lock = true;
                   d_target_burst_cnt = (d_voe_duration>=d_min_gap)? d_voe_duration:d_min_gap;
-                  DEBUG<<"\033[33;1m"<<"<SNS RX CTRL>VoE dropping down of high threshold...burst size:"
-                  <<d_target_burst_cnt<<"\033[0m"<<std::endl;
-                  // debug for d_voe_duration;
+                  DEBUG<<"\033[33;1m"<<"<SNS RX CTRL>VoE dropping down of high threshold..."<<"\033[0m"
+                  <<"burst size:"<<d_target_burst_cnt<<" ,acc intf:"<<d_intf_cnt<<std::endl;
+                  d_intf_cnt++;
                 }
               }else{
                 d_burst_voe_cnt=0;
@@ -250,14 +250,18 @@ namespace gr {
                 d_voe_cnt++;
                 if(d_voe_cnt>=d_voe_valid){
                   if(abs(d_burst_voe_cnt-d_target_burst_cnt)<= d_burst_max_diff){
-                    pmt::pmt_t msg_out = pmt::cons(
-                      pmt::intern("SNS_hdr"),
-                      pmt::make_blob(d_sns_clear,SNS_CLEAR));
-                    message_port_pub(d_out_port,msg_out);
-                    enter_wait_resume();
                     DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Detect a burst with matched length:"<<"\033[0m"
                     <<" ,target:"<<d_target_burst_cnt<<" ,matched:"<<d_burst_voe_cnt<<std::endl;
-                    break;
+                    d_intf_cnt--;
+                    if(d_intf_cnt<=0){
+                      pmt::pmt_t msg_out = pmt::cons(
+                      pmt::intern("SNS_hdr"),
+                      pmt::make_blob(d_sns_clear,SNS_CLEAR));
+                      message_port_pub(d_out_port,msg_out);
+                      enter_wait_resume();
+                      d_intf_cnt=0;
+                      break;
+                    }
                   }
                   DEBUG<<"\033[36;1m"<<"<SNS RX CTRL>length not matched, reset tracking registers"<<"\033[0m"
                   <<" ,expected:"<<d_target_burst_cnt<<" ,current:"<<d_burst_voe_cnt<<std::endl;

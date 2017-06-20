@@ -37,18 +37,19 @@ namespace gr {
     #define DEBUG d_debug && std::cout
 
     static int d_ed_valid = 64;
+    static const pmt::pmt_t d_pwr_tag =pmt::intern("pwr_tag");
 
     eng_det_cc::sptr
-    eng_det_cc::make(float threshold)
+    eng_det_cc::make(float threshold,bool tag_power)
     {
       return gnuradio::get_initial_sptr
-        (new eng_det_cc_impl(threshold));
+        (new eng_det_cc_impl(threshold, tag_power));
     }
 
     /*
      * The private constructor
      */
-    eng_det_cc_impl::eng_det_cc_impl(float threshold)
+    eng_det_cc_impl::eng_det_cc_impl(float threshold,bool tag_power)
       : gr::block("eng_det_cc",
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(float)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
@@ -60,6 +61,7 @@ namespace gr {
       set_tag_propagation_policy(TPP_DONT);
       d_state_reg = false;
       d_ed_cnt =0;
+      d_tag_power = tag_power;
     }
 
     /*
@@ -98,7 +100,8 @@ namespace gr {
               d_state_reg = true;
               d_ed_cnt = 0;
               d_burst_cnt=0;
-              add_item_tag(0,nitems_written(0)+nout,d_ed_tagname,pmt::PMT_T);
+              d_eng_acc=0;
+              add_item_tag(0,nitems_written(0)+nout,d_ed_tagname,pmt::PMT_T,d_src_id);
               DEBUG<<"\033[33;1m"<<"<ED DET>detect a energy trigger, start record burst"<<"\033[0m"<<std::endl;
               break;
             }
@@ -110,13 +113,19 @@ namespace gr {
       }else{
         while(nout<noutput_items && count<nin){
           d_burst_cnt++;
+          d_eng_acc+= ed[count];
           if(ed[count]<d_threshold){
             d_ed_cnt++;
             if(d_ed_cnt>= d_ed_valid){
               d_state_reg = false;
               d_ed_cnt=0;
-              add_item_tag(0,nitems_written(0)+nout,d_ed_tagname,pmt::PMT_F);
-              DEBUG<<"\033[33;1m"<<"<ED DET>end of burst."<<"\033[0m"<<" ,length="<<d_burst_cnt<<std::endl;
+              add_item_tag(0,nitems_written(0)+nout,d_ed_tagname,pmt::PMT_F,d_src_id);
+              if(d_tag_power){
+                float avg_pwr = d_eng_acc/(float)d_burst_cnt;
+                add_item_tag(0,nitems_written(0)+nout,d_pwr_tag,pmt::from_float(avg_pwr),d_src_id);
+              }
+              DEBUG<<"\033[33;1m"<<"<ED DET>end of burst."<<"\033[0m"<<" ,length="<<d_burst_cnt
+              <<" ,avg_pwr="<<d_eng_acc/(double)d_burst_cnt<<std::endl;
               break;
             }
           }else{

@@ -32,14 +32,17 @@ namespace gr {
      private:
       // Nothing to declare in this block.
       double d_threshold;
-      pmt::pmt_t d_src_id;
+      const pmt::pmt_t d_ed_tagname;
+      const pmt::pmt_t d_src_id;
       bool d_state_reg;
+      bool d_tag_power;
       int d_ed_cnt;
       int d_burst_cnt;
-      const pmt::pmt_t d_ed_tagname;
+      
+      double d_eng_acc;
 
      public:
-      eng_det_cc_impl(float threshold);
+      eng_det_cc_impl(float threshold, bool tag_power);
       ~eng_det_cc_impl();
 
       // Where all the action really happens

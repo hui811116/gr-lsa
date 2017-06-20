@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::eng_det_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(float threshold);
+      static sptr make(float threshold,bool tag_power);
 
       virtual float threshold() const =0;
       virtual void set_threshold(float thres_db) = 0;
