@@ -93,7 +93,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1136, 1052)</value>
+      <value>(1136, 892)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -120,7 +120,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 340)</value>
+      <value>(8, 164)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -128,11 +128,65 @@
     </param>
     <param>
       <key>id</key>
-      <value>cross_ac</value>
+      <value>e6</value>
     </param>
     <param>
       <key>value</key>
-      <value>digital.packet_utils.default_access_code</value>
+      <value>"1001011000000111011110111000110011000011010100100010111011011001"</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(8, 276)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>e6_points</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[mod.points()[e6_sym[i]] for i in range(0,len(e6_sym))]</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(8, 220)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>e6_sym</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>[int(e6[i:i+2],2) for i in range(0,len(e6),2)]</value>
     </param>
   </block>
   <block>
@@ -210,7 +264,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(232, 1100)</value>
+      <value>(232, 940)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -237,7 +291,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(232, 1044)</value>
+      <value>(232, 884)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -276,7 +330,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(0, 1040)</value>
+      <value>(0, 880)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -315,7 +369,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1200, 1052)</value>
+      <value>(1200, 892)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -342,7 +396,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1200, 1108)</value>
+      <value>(1200, 948)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -365,92 +419,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(8, 284)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_bytes</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(cross_ac[i:i+8],2) for i in range(0,len(cross_ac),8)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(8, 212)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_points</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[mod.points()[pre_sym[i]] for i in range(0,len(pre_sym))]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(8, 148)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_sym</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(cross_ac[i:i+bps],2) for i in range(0,len(cross_ac),bps)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
       <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(312, 1044)</value>
+      <value>(312, 884)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -481,7 +454,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1008, 1048)</value>
+      <value>(1008, 888)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -544,7 +517,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(744, 1048)</value>
+      <value>(744, 888)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -583,7 +556,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(536, 1044)</value>
+      <value>(536, 884)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -610,7 +583,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(536, 1100)</value>
+      <value>(536, 940)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -664,7 +637,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1136, 1108)</value>
+      <value>(1136, 948)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -691,7 +664,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(304, 1100)</value>
+      <value>(304, 940)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -722,7 +695,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(880, 1048)</value>
+      <value>(880, 888)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -785,7 +758,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(616, 1048)</value>
+      <value>(616, 888)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -824,7 +797,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(456, 1044)</value>
+      <value>(456, 884)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -851,7 +824,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(456, 1100)</value>
+      <value>(456, 940)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1118,7 +1091,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(912, 800)</value>
+      <value>(920, 808)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1357,7 +1330,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1584, 452)</value>
+      <value>(1552, 836)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1496,234 +1469,6 @@
     <param>
       <key>vlen</key>
       <value>1</value>
-    </param>
-  </block>
-  <block>
-    <key>blocks_stream_to_tagged_stream</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1008, 28)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>blocks_stream_to_tagged_stream_1</value>
-    </param>
-    <param>
-      <key>len_tag_key</key>
-      <value>"packet_len"</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>packet_len</key>
-      <value>len(pre_bytes)*8/bps</value>
-    </param>
-    <param>
-      <key>type</key>
-      <value>complex</value>
-    </param>
-    <param>
-      <key>vlen</key>
-      <value>1</value>
-    </param>
-  </block>
-  <block>
-    <key>blocks_tagged_stream_multiply_length</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(872, 152)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>blocks_tagged_stream_multiply_length_0</value>
-    </param>
-    <param>
-      <key>type</key>
-      <value>complex</value>
-    </param>
-    <param>
-      <key>c</key>
-      <value>8*8/bps</value>
-    </param>
-    <param>
-      <key>lengthtagname</key>
-      <value>"packet_len"</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>vlen</key>
-      <value>1</value>
-    </param>
-  </block>
-  <block>
-    <key>blocks_tagged_stream_mux</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1248, 152)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>blocks_tagged_stream_mux_0</value>
-    </param>
-    <param>
-      <key>type</key>
-      <value>complex</value>
-    </param>
-    <param>
-      <key>lengthtagname</key>
-      <value>"packet_len"</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>ninputs</key>
-      <value>2</value>
-    </param>
-    <param>
-      <key>tag_preserve_head_pos</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>vlen</key>
-      <value>1</value>
-    </param>
-  </block>
-  <block>
-    <key>blocks_vector_source_x</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(848, 20)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>blocks_vector_source_x_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>type</key>
-      <value>complex</value>
-    </param>
-    <param>
-      <key>repeat</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>tags</key>
-      <value>[]</value>
-    </param>
-    <param>
-      <key>vlen</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>vector</key>
-      <value>pre_points</value>
     </param>
   </block>
   <block>
@@ -1958,7 +1703,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1464, 156)</value>
+      <value>(872, 140)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2013,7 +1758,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1672, 160)</value>
+      <value>(1096, 152)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2111,7 +1856,7 @@
     </param>
     <param>
       <key>samples</key>
-      <value>pre_points</value>
+      <value>e6_points</value>
     </param>
     <param>
       <key>thres</key>
@@ -2310,7 +2055,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1496, 232)</value>
+      <value>(1496, 200)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2443,7 +2188,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1264, 636)</value>
+      <value>(1200, 588)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2490,11 +2235,11 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1600, 340)</value>
+      <value>(1476, 664)</value>
     </param>
     <param>
       <key>_rotation</key>
-      <value>0</value>
+      <value>270</value>
     </param>
     <param>
       <key>hisLen</key>
@@ -3993,7 +3738,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1608, 532)</value>
+      <value>(1784, 816)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -5222,7 +4967,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1816, 92)</value>
+      <value>(1248, 84)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -6785,32 +6530,8 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>blocks_stream_to_tagged_stream_1</source_block_id>
-    <sink_block_id>blocks_tagged_stream_mux_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>blocks_tagged_stream_multiply_length_0</source_block_id>
-    <sink_block_id>blocks_tagged_stream_mux_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>1</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>blocks_tagged_stream_mux_0</source_block_id>
-    <sink_block_id>interp_fir_filter_xxx_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>blocks_vector_source_x_0</source_block_id>
-    <sink_block_id>blocks_stream_to_tagged_stream_1</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
     <source_block_id>digital_chunks_to_symbols_xx_0</source_block_id>
-    <sink_block_id>blocks_tagged_stream_multiply_length_0</sink_block_id>
+    <sink_block_id>interp_fir_filter_xxx_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

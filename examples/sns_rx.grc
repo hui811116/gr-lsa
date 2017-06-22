@@ -116,60 +116,6 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(8, 732)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>cross_ac</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>digital.packet_utils.default_access_code</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(192, 732)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>cross_ac</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>zero_symbol*2</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
       <value>1</value>
     </param>
     <param>
@@ -255,34 +201,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(608, 668)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>e6_bytes</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(e6[i:i+8],2) for i in range(0,len(e6),8)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(184, 668)</value>
+      <value>(8, 564)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -298,41 +217,6 @@
     </param>
   </block>
   <block>
-    <key>variable_modulate_vector</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>data</key>
-      <value>e6_bytes</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>taps</key>
-      <value>[1]</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(416, 664)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>e6_samples</value>
-    </param>
-    <param>
-      <key>mod</key>
-      <value>rxmod</value>
-    </param>
-  </block>
-  <block>
     <key>variable</key>
     <param>
       <key>comment</key>
@@ -344,7 +228,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(200, 612)</value>
+      <value>(8, 508)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -566,87 +450,6 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 676)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_bytes</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(cross_ac[i:i+8],2) for i in range(0,len(cross_ac),8)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(8, 604)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_points</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[mod.points()[pre_sym[i]] for i in range(0,len(pre_sym))]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(8, 540)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_sym</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(cross_ac[i:i+bps],2) for i in range(0,len(cross_ac),bps)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
       <value>(1456, 428)</value>
     </param>
     <param>
@@ -820,33 +623,6 @@
     <param>
       <key>value</key>
       <value>"A:B"</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(600, 724)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>rxmod</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>digital.generic_mod(mod, False, 4, True, 0.35, False, False)</value>
     </param>
   </block>
   <block>
@@ -1138,7 +914,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 476)</value>
+      <value>(8, 452)</value>
     </param>
     <param>
       <key>_rotation</key>

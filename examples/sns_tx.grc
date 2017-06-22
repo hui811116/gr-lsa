@@ -116,33 +116,6 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(40, 524)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>cross_ac</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>digital.packet_utils.default_access_code</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
       <value>0</value>
     </param>
     <param>
@@ -201,7 +174,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(600, 428)</value>
+      <value>(152, 428)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -228,7 +201,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(600, 372)</value>
+      <value>(152, 372)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -267,7 +240,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(344, 368)</value>
+      <value>(240, 368)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -306,7 +279,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(248, 372)</value>
+      <value>(56, 372)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -319,87 +292,6 @@
     <param>
       <key>value</key>
       <value>100</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(40, 468)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_bytes</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(cross_ac[i:i+8],2) for i in range(0,len(cross_ac),8)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(40, 396)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_points</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[mod.points()[pre_sym[i]] for i in range(0,len(pre_sym))]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(40, 332)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>pre_sym</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[int(cross_ac[i:i+bps],2) for i in range(0,len(cross_ac),bps)]</value>
     </param>
   </block>
   <block>
@@ -531,7 +423,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(248, 428)</value>
+      <value>(56, 428)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1118,7 +1010,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(272, 500)</value>
+      <value>(488, 372)</value>
     </param>
     <param>
       <key>gui_hint</key>
