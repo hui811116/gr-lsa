@@ -27,6 +27,13 @@
 namespace gr {
   namespace lsa {
 
+    enum BUFFERTYPE{
+      SAMPLE,
+      SYNC,
+      INTF,
+      RETX
+    };
+
     class ic_critical_cc_impl : public ic_critical_cc
     {
      private:
@@ -58,8 +65,7 @@ namespace gr {
       bool d_voe_state;
       int d_state;
       
-      std::vector<gr_complex> d_cross_word;
-      int d_cross_len;
+      int d_prelen;
       int d_sps;
 
       std::list<hdr_t> d_retx_candidate;
@@ -81,13 +87,16 @@ namespace gr {
       bool check_and_copy_retx(hdr_t& tag);           // copy and compensate retransmission signals
       void init_intf();                               // initialize a interfereing object
       bool new_intf();                                // captureing front header from ring memory
-      bool update_intf(int& residual);                // captureing end header from ring memory
+      bool update_intf();                // captureing end header from ring memory
       void do_ic();                                   // main core to do interference cancellation
       bool matching_header(hdr_t& header);            // labeling bit level header information to preamble candidate
       void check_before_reset();                      // find ic avalability before resetting retx
+      std::list<block_t>::iterator search_id(uint64_t id);
+      bool buffer_index_check(int idxToCheck, int duration,BUFFERTYPE type);
+      bool preprocess_hdr(hdr_t& raw_hdr);
 
      public:
-      ic_critical_cc_impl(const std::vector<gr_complex>& cross_word,int sps,int block_size,bool d_debug);
+      ic_critical_cc_impl(int prelen,int sps,int block_size,bool d_debug);
       ~ic_critical_cc_impl();
       
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);

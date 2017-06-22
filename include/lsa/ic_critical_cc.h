@@ -46,10 +46,7 @@ namespace gr {
        * class. lsa::ic_critical_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(const std::vector<gr_complex>& cross_word,int sps,int block_size, bool debug);
-
-      //virtual void set_threshold(float thres) =0;
-      //virtual float threshold()const =0;
+      static sptr make(int prelen,int sps,int block_size, bool debug);
     };
 
   } // namespace lsa
