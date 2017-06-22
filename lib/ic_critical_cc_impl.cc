@@ -522,17 +522,6 @@ namespace gr {
         pmt::pmt_t intf_msg = d_intf_stack[i].msg();
         int voe_begin_idx = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_begin_idx"),pmt::from_long(0)));
         int voe_end_idx = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_end_idx"),pmt::from_long(0)));
-        /*
-        tag_t voe_begin_tag, voe_end_tag;
-        voe_begin_tag.offset = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_begin_idx"),pmt::from_long(0)));
-        voe_begin_tag.key = pmt::intern("voe_begin");
-        voe_begin_tag.value = pmt::PMT_T;
-        voe_end_tag.offset = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_end_idx"),pmt::from_long(0)));
-        voe_end_tag.key = pmt::intern("voe_end");
-        voe_end_tag.value = pmt::PMT_F;
-        d_out_tags.push_back(voe_begin_tag);
-        d_out_tags.push_back(voe_end_tag);
-        */
         
         map_it = base_map.find(front_base);
         if(map_it==base_map.end()){
@@ -920,8 +909,6 @@ namespace gr {
           //may need some gap guard
           d_pending_list.push_back(tmp_hdr);
           cross_tags.erase(cross_tags.begin());
-          //DEBUG<<" estimated header preamble: in_block_id:"<<d_current_block
-          //<<" ,offset:"<<d_in_block_idx+offset<<" index binding:"<<(current_in_idx+offset)%d_cap<<std::endl;
         }else{
           break;
         }

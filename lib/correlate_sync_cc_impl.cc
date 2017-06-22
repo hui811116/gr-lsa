@@ -134,6 +134,7 @@ namespace gr {
           // detect a possible preamble
           phase = fast_atan2f(corrval.imag(),corrval.real());
           add_item_tag(0,nitems_written(0)+count,pmt::intern("phase_est"),pmt::from_float(phase));
+          add_item_tag(0,nitems_written(0)+count,pmt::intern("corr_val"),pmt::from_float(std::abs(corr_norm)));
           if(have_corr){
             add_item_tag(1,nitems_written(1)+count,pmt::intern("phase_est"),pmt::from_float(phase));
           }

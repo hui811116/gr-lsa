@@ -37,7 +37,7 @@ namespace gr {
       SEARCH_AUTO,
       COPY
     };
-    static const int AUTOLEN = 64;
+    static const int AUTOLEN = 128;
     static const int MAXLEN = (127+6)*8*8/2*4;
     static const int MINGAP = (8+12*8)*8/2*4;
     static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");

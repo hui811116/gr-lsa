@@ -57,7 +57,8 @@ list(APPEND lsa_sources
     stop_n_wait_ack.cc
     sns_tx_helper.cc
     burst_gate_cc_impl.cc
-    message_file_sink.cc )
+    message_file_sink.cc
+    sfd_tagger_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

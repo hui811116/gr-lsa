@@ -53,5 +53,6 @@ install(FILES
     stop_n_wait_ack.h
     sns_tx_helper.h
     burst_gate_cc.h
-    message_file_sink.h DESTINATION include/lsa
+    message_file_sink.h
+    sfd_tagger_cc.h DESTINATION include/lsa
 )
