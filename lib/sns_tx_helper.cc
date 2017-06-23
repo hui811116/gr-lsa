@@ -58,14 +58,14 @@ namespace gr {
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(v,io);
           pmt::pmt_t msg_out = pmt::make_dict();
-          if(io==2){
+          if(io==SNS_COLLISION){
             // SNS sensing positive
             msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_COLLISION));
             message_port_pub(d_out_port,msg_out);
-          }else if(io==3){
+          }else if(io==SNS_CLEAR){
             msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_CLEAR));
             message_port_pub(d_out_port,msg_out);
-          }else if(io==4){
+          }else if(io==SNS_ACK){
             uint16_t base1 = 0x0000, base2 = 0x0000;
             base1 = uvec[0]<<8;
             base1|= uvec[1];

@@ -34,6 +34,7 @@ namespace gr {
     #define SNS_CLEAR 3
     #define SNS_ACK 4
     #define MACLEN 4
+    #define MAXLEN 127
     
     static unsigned char d_mac_field[] = {0x00,0x00,0x00,0x00};
 
@@ -63,60 +64,60 @@ namespace gr {
           assert(pmt::is_blob(v));
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(v,io);
-          if(io>127){
+          if(io>MAXLEN){
             return;
-          }else if(io == 2){
+          }else if(io == SNS_COLLISION){
             // sensing true
-            //pmt::pmt_t msg_out = pmt::make_dict();
-            //msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_COLLISION));
             message_port_pub(d_out_port,msg);
             DEBUG<<"\033[31;1m"<<"<SNS ACK> positive sensing"<<"\033[0m"<<std::endl;
-          }else if(io == 3){
+          }else if(io == SNS_CLEAR){
             // resume signal
-            //pmt::pmt_t msg_out = pmt::make_dict();
-            //msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_CLEAR));
             message_port_pub(d_out_port,msg);
             DEBUG<<"\033[31;1m"<<"<SNS ACK> clear signal"<<"\033[0m"<<std::endl;
-          }else if(io == 4){
+          }else if(io == SNS_ACK){
             // ack
-            uint16_t base = 0x0000;
-            uint16_t base2= 0x0000;
-            base = uvec[0]<<8;
-            base |=uvec[1];
-            base2 = uvec[2]<<8;
-            base2|= uvec[3];
-            if(base!=base2){
+            if(!sns_crc(uvec)){
               return;
             }
             // receive an ACK signal
             pmt::pmt_t msg_out = pmt::make_dict();
             msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_ACK));
-            msg_out = pmt::dict_add(msg_out,pmt::intern("base"),pmt::from_long(base));
+            msg_out = pmt::dict_add(msg_out,pmt::intern("base"),pmt::from_long(d_base));
             message_port_pub(d_out_port,msg_out);
-            DEBUG<<"\033[31;1m"<<"<SNS ACK> Receiving an ACK--base="<<base<<"\033[0m"<<std::endl;
+            DEBUG<<"\033[31;1m"<<"<SNS ACK> Receiving an ACK--base="<<d_base<<"\033[0m"<<std::endl;
           }else{
             // normal payload
-            uint16_t base = 0x0000;
-            uint16_t base2= 0x0000;
-            base = uvec[0]<<8;
-            base |=uvec[1];
-            base2 = uvec[2]<<8;
-            base2|= uvec[3];
-            if(base2!=base){
+            if(!sns_crc(uvec)){
               return;
             }
             memcpy(d_buf,uvec,sizeof(char)*MACLEN);
             pmt::pmt_t blob_out = pmt::cons(pmt::intern("SNS_hdr"),pmt::make_blob(d_buf,MACLEN));
             message_port_pub(d_out_port,blob_out);
-            DEBUG<<"\033[31;1m"<<"<SNS ACK> Receive an valid header, sending ack--"<<base<<"\033[0m"<<std::endl;
+            DEBUG<<"\033[31;1m"<<"<SNS ACK> Receive an valid header, sending ack--"<<d_base<<"\033[0m"<<std::endl;
           }          
         }
       
       private:
+        bool sns_crc(const uint8_t* uvec)
+        {
+          uint16_t base = 0x0000;
+          uint16_t base2= 0x0000;
+          base = uvec[0]<<8;
+          base |=uvec[1];
+          base2 = uvec[2]<<8;
+          base2|= uvec[3];
+          if(base==base2){
+            d_base = base;
+            return true;
+          }else{
+            return false;
+          }
+        }
         unsigned char d_buf[256];
         gr::thread::mutex d_mutex;
         const pmt::pmt_t d_in_port;
         const pmt::pmt_t d_out_port;
+        uint16_t d_base;
     };
 
 

@@ -51,5 +51,6 @@ install(FILES
     lsa_message_file_sink.xml
     lsa_sfd_tagger_cc.xml
     lsa_simple_tx.xml
-    lsa_simple_rx.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_simple_rx.xml
+    lsa_phy_crc.xml DESTINATION share/gnuradio/grc/blocks
 )

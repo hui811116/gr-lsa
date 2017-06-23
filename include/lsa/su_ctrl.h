@@ -36,7 +36,7 @@ namespace gr {
     {
     public:
       typedef boost::shared_ptr<su_ctrl> sptr;
-      static sptr make(bool debug);
+      static sptr make();
     private:
     };
 

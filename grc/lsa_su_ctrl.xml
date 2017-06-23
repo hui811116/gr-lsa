@@ -4,24 +4,7 @@
   <key>lsa_su_ctrl</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_ctrl($debug)</make>
-  
-  
-  <param>
-    <name>Debug</name>
-    <key>debug</key>
-    <value>False</value>
-    <type>bool</type>
-    <option>
-      <name>On</name>
-      <key>True</key>
-    </option>
-    <option>
-      <name>Off</name>
-      <key>False</key>
-    </option>
-  </param>
-  
+  <make>lsa.su_ctrl()</make>
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type

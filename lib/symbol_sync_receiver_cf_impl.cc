@@ -164,13 +164,20 @@ enum SYSTEMSTATE{
       pmt::pmt_t msg=pmt::PMT_NIL; 
       msg = pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_out_buf,d_pkt_byte));
       // postfixing header information
+      uint16_t base1,base2;
       d_qidx = d_out_buf[0]<<8;
       d_qidx|= d_out_buf[1];
       d_qsize= d_out_buf[2]<<8;
       d_qsize|=d_out_buf[3];
-      d_base = d_out_buf[4]<<8;
-      d_base|= d_out_buf[5];
-
+      base1 = d_out_buf[4]<<8;
+      base1|= d_out_buf[5];
+      base2 = d_out_buf[6]<<8;
+      base2|= d_out_buf[7];
+      if(base1==base2){
+        d_base = base1;
+      }else{
+        d_base = -1;
+      }
       message_port_pub(d_msg_port, msg);
     }
 
@@ -340,10 +347,14 @@ enum SYSTEMSTATE{
                     msg_out();
                     if(out_sync){
                       int index= (count-1)/d_hdr_bps;
-                      add_item_tag(0,nitems_written(0)+index,pmt::intern("LSA_hdr"),pmt::PMT_T);
+                      if(d_base<0){
+                        add_item_tag(0,nitems_written(0)+index,pmt::intern("LSA_hdr"),pmt::PMT_F);
+                      }else{
+                        add_item_tag(0,nitems_written(0)+index,pmt::intern("LSA_hdr"),pmt::PMT_T);
+                      }
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_index"),pmt::from_long(d_qidx));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_size"),pmt::from_long(d_qsize));
-                      add_item_tag(0,nitems_written(0)+index,pmt::intern("base"),pmt::from_uint64((uint64_t)d_base));
+                      add_item_tag(0,nitems_written(0)+index,pmt::intern("base"),pmt::from_long(d_base));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("pld_bytes"),pmt::from_long(d_pkt_byte));
                       add_item_tag(0,nitems_written(0)+index,pmt::intern("payload"),pmt::from_long(d_pkt_byte*8*CODE_RATE_INV/d_hdr_bps));
                     }

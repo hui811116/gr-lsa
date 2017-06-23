@@ -1440,7 +1440,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(840, 272)</value>
+      <value>(800, 272)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1495,7 +1495,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(384, 264)</value>
+      <value>(328, 264)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1710,7 +1710,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(640, 272)</value>
+      <value>(608, 272)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1871,6 +1871,49 @@
     </param>
   </block>
   <block>
+    <key>lsa_phy_crc</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1304, 376)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>180</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_phy_crc_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>user</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
     <key>lsa_preamble_prefixer</key>
     <param>
       <key>alias</key>
@@ -1928,10 +1971,6 @@
       <value></value>
     </param>
     <param>
-      <key>debug</key>
-      <value>True</value>
-    </param>
-    <param>
       <key>_enabled</key>
       <value>True</value>
     </param>
@@ -1957,7 +1996,7 @@
     </param>
   </block>
   <block>
-    <key>lsa_symbol_sync_receiver_cf</key>
+    <key>lsa_su_packet_sink_c</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1976,7 +2015,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1064, 272)</value>
+      <value>(1176, 260)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1988,7 +2027,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>lsa_symbol_sync_receiver_cf_0</value>
+      <value>lsa_su_packet_sink_c_0</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -2031,7 +2070,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1080, 188)</value>
+      <value>(1080, 124)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -2386,7 +2425,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(936, 124)</value>
+      <value>(840, 124)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -4949,7 +4988,7 @@
   </connection>
   <connection>
     <source_block_id>digital_costas_loop_cc_0</source_block_id>
-    <sink_block_id>lsa_symbol_sync_receiver_cf_0</sink_block_id>
+    <sink_block_id>lsa_su_packet_sink_c_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -5014,6 +5053,12 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>lsa_phy_crc_0</source_block_id>
+    <sink_block_id>lsa_su_ctrl_0</sink_block_id>
+    <source_key>pdu_out</source_key>
+    <sink_key>ctrl_in</sink_key>
+  </connection>
+  <connection>
     <source_block_id>lsa_preamble_prefixer_0</source_block_id>
     <sink_block_id>lsa_chip_mapper_0</sink_block_id>
     <source_key>out</source_key>
@@ -5026,10 +5071,10 @@
     <sink_key>in</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_symbol_sync_receiver_cf_0</source_block_id>
-    <sink_block_id>lsa_su_ctrl_0</sink_block_id>
+    <source_block_id>lsa_su_packet_sink_c_0</source_block_id>
+    <sink_block_id>lsa_phy_crc_0</sink_block_id>
     <source_key>msg</source_key>
-    <sink_key>ctrl_in</sink_key>
+    <sink_key>phy_in</sink_key>
   </connection>
   <connection>
     <source_block_id>uhd_usrp_source_0</source_block_id>

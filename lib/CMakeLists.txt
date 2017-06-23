@@ -60,7 +60,8 @@ list(APPEND lsa_sources
     message_file_sink.cc
     sfd_tagger_cc_impl.cc
     simple_tx.cc
-    simple_rx.cc )
+    simple_rx.cc
+    phy_crc.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

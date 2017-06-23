@@ -32,9 +32,9 @@ namespace gr {
 #define DEBUG d_debug && std::cout
 
     static int LSAPHYLEN = 6;
-    static int LSAMACLEN = 6;
+    static int LSAMACLEN = 8;
     static unsigned char LSAPHY[] = {0x00,0x00,0x00,0x00,0xE6,0x00};
-    static unsigned char LSAMAC[] = {0x00,0x00,0x00,0x00,0x00,0x00};  // 2,2,2
+    static unsigned char LSAMAC[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};  // 2,2,2,2
     static int d_retx_retry_limit = 20;
 
     su_sr_transmitter_bb::sptr
@@ -99,6 +99,7 @@ namespace gr {
       // only input dict with valid messages
       gr::thread::scoped_lock guard(d_mutex);
       // if is sensing information, lock current queue and change state
+      // crc should handle invalid packets
       bool sensing = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("LSA_sensing"),pmt::PMT_F));
       int seqno = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));
       int qidx = pmt::to_long(pmt::dict_ref(msg,pmt::intern("queue_index"),pmt::from_long(-1)));
@@ -114,10 +115,6 @@ namespace gr {
           // reset retry count due to additional interference detection
           reset_retx_retry();
         }
-        return;
-      }
-      if(qidx<0 || qsize<0 || seqno <0){
-        // no useful information
         return;
       }
       if(d_prou_present){
@@ -144,8 +141,7 @@ namespace gr {
         }
         if(dequeue(seqno)){
           // success
-        }else{
-          // failed
+          DEBUG<<"<SU SR TX> dequeue seqno:"<<seqno<<std::endl;
         }
       }
     }
@@ -387,6 +383,8 @@ namespace gr {
           d_buf[5] = (unsigned char)(nin+LSAMACLEN);
           d_buf[LSAPHYLEN+4] = u8_idx[1];
           d_buf[LSAPHYLEN+5] = u8_idx[0];
+          d_buf[LSAPHYLEN+6] = u8_idx[1];
+          d_buf[LSAPHYLEN+7] = u8_idx[0];
           nout = nin + LSAPHYLEN + LSAMACLEN;
           nx_msg = pmt::make_blob(d_buf,nout);
           d_seq = (d_seq == 0xffff)? 0:d_seq; // wrap around

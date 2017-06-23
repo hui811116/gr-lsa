@@ -397,13 +397,13 @@ namespace gr {
     ic_critical_cc_impl::do_ic()
     {
       // ic core here.
-      std::map<uint64_t,int> base_map;
-      std::map<uint64_t,int>::iterator map_it;
-      uint64_t base;
+      std::map<int,int> base_map;
+      std::map<int,int>::iterator map_it;
+      int base;
       for(int i=0;i<d_retx_tag.size();++i){
         pmt::pmt_t msg = d_retx_tag[i].msg();
-        base = pmt::to_uint64(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_uint64(0xffffffffffff)));
-        base_map.insert(std::pair<uint64_t,int>(base,i));
+        base = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));
+        base_map.insert(std::pair<int,int>(base,i));
       }
       for(int i=0;i<d_intf_stack.size();++i){
         hdr_t front = d_intf_stack[i].front();
@@ -412,7 +412,7 @@ namespace gr {
         int intf_end = d_intf_stack[i].end();
         DEBUG<<"Processing intf tag<"<<i<<">:"<<std::endl<<d_intf_stack[i]<<std::endl;
         pmt::pmt_t front_msg = front.msg();
-        uint64_t front_base = pmt::to_uint64(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_uint64(0xfffffffffffe)));
+        int front_base = pmt::to_long(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_long(-1)));
         // DEBUG
         // FOR output SINR
         // locate prou signal
@@ -569,8 +569,8 @@ namespace gr {
       pmt::pmt_t src = raw_hdr.msg();
       int qidx = pmt::to_long(pmt::dict_ref(src,pmt::intern("queue_index"),pmt::from_long(-1)));
       int qsize= pmt::to_long(pmt::dict_ref(src,pmt::intern("queue_size"),pmt::from_long(-1)));
-      uint64_t base =pmt::to_uint64(pmt::dict_ref(src,pmt::intern("base"),pmt::from_uint64(0xffffffffffff)));
-      if(qidx<0 || qsize<0 || base==0xffffffffffff){
+      int base =pmt::to_uint64(pmt::dict_ref(src,pmt::intern("base"),pmt::from_long(-1)));
+      if(qidx<0 || qsize<0 || base<0){
         return false;
       }else if(qsize!=0 && qidx>=qsize){
         return false;
@@ -681,7 +681,7 @@ namespace gr {
       for(int i=0;i<d_retx_tag.size();++i){
         if(!d_retx_tag[i].empty()){
           pmt::pmt_t retx_msg = d_retx_tag[i].msg();
-          uint64_t base = pmt::to_uint64(pmt::dict_ref(retx_msg,pmt::intern("base"),pmt::from_uint64(0xffffffffffffe)));
+          int base = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("base"),pmt::from_long(-1)));
           base_map.insert(std::pair<uint64_t,int>(base,i));
         }
       }
@@ -691,8 +691,8 @@ namespace gr {
         hdr_t end = d_intf_stack[i].back();
         pmt::pmt_t front_msg = front.msg();
         pmt::pmt_t end_msg = end.msg();
-        uint64_t front_base = pmt::to_uint64(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_uint64(0xffffffffffffe)));
-        uint64_t end_base = pmt::to_uint64(pmt::dict_ref(end_msg,pmt::intern("base"),pmt::from_uint64(0xfffffffffffffe)));
+        int front_base = pmt::to_long(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_long(-1)));
+        int end_base = pmt::to_long(pmt::dict_ref(end_msg,pmt::intern("base"),pmt::from_long(-1)));
         map_it = base_map.find(front_base);
         if(map_it==base_map.end() || (front_base == end_base) ){
           continue;
@@ -705,7 +705,7 @@ namespace gr {
             break;
           }
           front_msg = d_retx_tag[front_idx].msg();
-          front_base = pmt::to_uint64(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_uint64(0xfffffffffffffe)));
+          front_base = pmt::to_long(pmt::dict_ref(front_msg,pmt::intern("base"),pmt::from_long(-1)));
           if(front_base == end_base){
             // can be canceled with incomplete retransmission
             break;

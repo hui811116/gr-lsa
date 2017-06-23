@@ -101,11 +101,13 @@ namespace gr {
           if(std::difftime(std::time(NULL),d_timer)>0){
             // at least a second passed
             std::time(&d_timer);
-            *d_file <<"\n<Event> time update:"<< std::ctime(&d_timer);
-            *d_file <<"<Bytes>"<<std::dec<<d_byte_cnt<<"<Packets>"<<d_pkt_cnt<<std::endl;
+            *d_file <<"\n[Event]\n <Time>\n"<< std::ctime(&d_timer);
+            *d_file <<"\n<Bytes>\n"<<std::dec<<d_byte_cnt<<"\n<Packets>\n"<<d_pkt_cnt
+            <<"\n[Event*]"<<std::endl;
             d_pkt_cnt=0;
             d_byte_cnt=0;
           }
+          // seq number can be stored here
           pmt::pmt_t k = pmt::car(msg);
           pmt::pmt_t v = pmt::cdr(msg);
           if(!pmt::is_blob(v)){
@@ -113,48 +115,45 @@ namespace gr {
           }
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(v,io);
+          uint16_t seq = pmt::to_long(k);
+          d_pkt_cnt++;
+          d_byte_cnt+=io;
           switch(d_sys){
             case LSA:
-              if(io<=LSAMAXLEN && io>LSAMACLEN){
-                d_pkt_cnt++;
-                d_byte_cnt+=io;
-                *d_file << "[LSA]"<<"["<<std::dec<<io<<"]"<<std::endl;
-              }else{
-                io=0;
-              }
+                *d_file << "[LSA]"<<std::endl;
             break;
             case SNS:
-              if(io<=SNSMAXLEN && io>SNSMACLEN){
-                d_pkt_cnt++;
-                d_byte_cnt+=io;
-                *d_file << "[SNS]"<<"["<<std::dec<<io<<"]"<<std::endl;
-              }else{
-                io=0;
-              }
+                *d_file << "[SNS]"<<std::endl;
             break;
             case PROU:
-              if(io<=PROUMAXLEN && io>0){
-                d_pkt_cnt++;
-                d_byte_cnt+=io;
-                *d_file << "[PROU]"<<"["<<std::dec<<io<<"]"<<std::endl;
-              }else{
-                io=0;
-              }
+                *d_file << "[PROU]"<<std::endl;
             break;
             default:
               throw std::runtime_error("Undefined system");
             break;
           }
-
-          // private member
+          *d_file<<"<seq>\n"<<std::dec<<seq<<std::endl;
+          *d_file<<"<size>\n"<<std::dec<<io<<std::endl;
+          *d_file<<"[Hex]"<<std::endl;
           int i=0;
           for(i=0;i<io;++i){
             *d_file<<" "<<std::setfill('0')<<std::setw(2)<<std::hex<<(int)uvec[i];
-            if( (i+1)%BYTES_PER_LINE==0 )
-              *d_file<<std::endl;
           }
-          if(i%BYTES_PER_LINE!=0)
-          *d_file<<std::endl;          
+          *d_file<<"\n[Hex*]"<<std::endl;
+          switch(d_sys){
+            case LSA:
+                *d_file << "[LSA*]"<<std::endl;
+            break;
+            case SNS:
+                *d_file << "[SNS*]"<<std::endl;
+            break;
+            case PROU:
+                *d_file << "[PROU*]"<<std::endl;
+            break;
+            default:
+              throw std::runtime_error("Undefined system");
+            break;
+          }
         }
         const pmt::pmt_t d_in_port;
         std::fstream* d_file;

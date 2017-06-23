@@ -29,44 +29,10 @@
 namespace gr {
   namespace lsa {
 
-    #define PROUMAXLEN 127
-    #define LSAMAXLEN 121
-    #define SNSMAXLEN 123
-    #define LSAMACLEN 6
-    #define SNSMACLEN 4
-
-    enum USERTYPE{
-      PROU = 0,
-      SU=1,
-      SNS=2
-    };
-
-    inline bool lsa_crc(const uint8_t * uvec)
-    {
-      uint16_t qidx, qsize, base;
-      qidx  = uvec[0]<<8;
-      qidx |= uvec[1];
-      qsize = uvec[2]<<8;
-      qsize|= uvec[3];
-      // can check base
-      base  = uvec[4]<<8;
-      base |= uvec[5];
-      return qidx==0 && qsize ==0;
-    }
-    inline bool sns_crc(const uint8_t* uvec)
-    {
-      uint16_t base1, base2;
-      base1 = uvec[0]<<8;
-      base1|= uvec[1];
-      base2 = uvec[2]<<8;
-      base2|= uvec[3];
-      return base1 == base2;
-    }
-
     class throughput_report_impl:public throughput_report
     {
       public:
-       throughput_report_impl(float ms, int hisLen, int user) : block("throughput_report",
+       throughput_report_impl(float ms, int hisLen) : block("throughput_report",
                         gr::io_signature::make(0,0,0),
                         gr::io_signature::make(0,0,0)),
                         d_in_port(pmt::mp("pkt_in")),
@@ -89,20 +55,6 @@ namespace gr {
         d_byte_cnt=0;
         d_pkt_acc=0;
         d_byte_acc=0;
-        switch(user){
-          case PROU:
-            d_user = PROU;
-          break;
-          case SU:
-            d_user = SU;
-          break;
-          case SNS:
-            d_user = SNS;
-          break;
-          default:
-            throw std::runtime_error("unrecognized user type");
-          break;
-        }
        }
        ~throughput_report_impl(){}
        void 
@@ -114,45 +66,10 @@ namespace gr {
         if(pmt::is_blob(v)){
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(v,io);
-          switch(d_user){
-            case PROU:
-              if(io<=PROUMAXLEN){
-                d_byte_cnt+=io;
-                d_byte_acc+=io;
-                d_pkt_cnt++;
-                d_pkt_acc++;
-              }
-            break;
-            case SU:
-              // cyclic check
-              if(io>LSAMACLEN && io<=LSAMAXLEN){
-                if(lsa_crc(uvec)){
-                  // valid pkt
-                  // remove header
-                  d_byte_cnt+= (io-LSAMACLEN);
-                  d_byte_acc+= (io-LSAMACLEN);
-                  d_pkt_cnt++;
-                  d_pkt_acc++;
-                }
-              }
-            break;
-            case SNS:
-              // note: control frame do not count in throughput
-              if(io>SNSMACLEN && io<=SNSMAXLEN){
-                // length check passed
-                if(sns_crc(uvec)){
-                  // valid sns pkt
-                  d_byte_cnt+= io-SNSMACLEN;
-                  d_byte_acc+= io-SNSMACLEN;
-                  d_pkt_cnt++;
-                  d_pkt_acc++;
-                }
-              }
-            break;
-            default:
-              std::runtime_error("Undefined User Type");
-            break;
-          }
+          d_byte_cnt+=io;
+          d_byte_acc+=io;
+          d_pkt_cnt++;
+          d_pkt_acc++;
         }
        }
        bool 
@@ -211,11 +128,10 @@ namespace gr {
        boost::shared_ptr<gr::thread::thread> d_thread;
        float d_period_ms;
        bool d_finished;
-       int d_user;
     };
     throughput_report::sptr
-    throughput_report::make(float ms, int hisLen, int user){
-      return gnuradio::get_initial_sptr(new throughput_report_impl(ms,hisLen,user));
+    throughput_report::make(float ms, int hisLen){
+      return gnuradio::get_initial_sptr(new throughput_report_impl(ms,hisLen));
     }
 
   } /* namespace lsa */

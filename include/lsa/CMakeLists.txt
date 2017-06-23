@@ -56,5 +56,6 @@ install(FILES
     message_file_sink.h
     sfd_tagger_cc.h
     simple_tx.h
-    simple_rx.h DESTINATION include/lsa
+    simple_rx.h
+    phy_crc.h DESTINATION include/lsa
 )

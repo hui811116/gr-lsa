@@ -51,7 +51,7 @@ namespace gr {
       
       uint16_t d_qidx;
       uint16_t d_qsize;
-      uint16_t d_base;
+      int d_base;
       
       int d_pld_cnt;
       int d_pre_cnt;

@@ -19,8 +19,8 @@
  */
 
 
-#ifndef INCLUDED_LSA_THROUGHPUT_REPORT_H
-#define INCLUDED_LSA_THROUGHPUT_REPORT_H
+#ifndef INCLUDED_LSA_PHY_CRC_H
+#define INCLUDED_LSA_PHY_CRC_H
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
@@ -32,15 +32,15 @@ namespace gr {
      * \brief <+description+>
      *
      */
-    class LSA_API throughput_report : virtual public block
+    class LSA_API phy_crc : virtual public block
     {
-    public:
-      typedef boost::shared_ptr<throughput_report> sptr;
-      static sptr make(float ms,int hisLen);
+      public:
+        typedef boost::shared_ptr<phy_crc> sptr;
+        static sptr make(int user);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_THROUGHPUT_REPORT_H */
+#endif /* INCLUDED_LSA_PHY_CRC_H */
 

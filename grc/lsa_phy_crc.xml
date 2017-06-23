@@ -1,34 +1,41 @@
 <?xml version="1.0"?>
 <block>
-  <name>Throughput Report</name>
-  <key>lsa_throughput_report</key>
+  <name>PHY CRC</name>
+  <key>lsa_phy_crc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.throughput_report($ms,$hisLen)</make>
+  <make>lsa.phy_crc($user)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <param>
-    <name>Period</name>
-    <key>ms</key>
-    <value>2000</value>
-    <type>float</type>
-  </param>
-  <param>
-    <name>History Length</name>
-    <key>hisLen</key>
-    <value>64</value>
+    <name>User</name>
+    <key>user</key>
+    <value>1</value>
     <type>int</type>
+    <option>
+      <name>ProU</name>
+      <key>0</key>
+    </option>
+    <option>
+      <name>LSA</name>
+      <key>1</key>
+    </option>
+    <option>
+      <name>SNS</name>
+      <key>2</key>
+    </option>
   </param>
+
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type
        * vlen
        * optional (set to 1 for optional inputs) -->
   <sink>
-    <name>pkt_in</name>
+    <name>phy_in</name>
     <type>message</type>
   </sink>
 
@@ -38,7 +45,12 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>tp_out</name>
+    <name>pdu_out</name>
     <type>message</type>
+  </source>
+  <source>
+    <name>thr_out</name>
+    <type>message</type>
+    <optional>1</optional>
   </source>
 </block>
