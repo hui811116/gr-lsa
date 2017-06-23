@@ -28,6 +28,7 @@
 namespace gr {
   namespace lsa {
 
+#define d_debug false
 #define DEBUG d_debug && std::cout
 
     static int LSAPHYLEN = 6;
@@ -37,23 +38,28 @@ namespace gr {
     static int d_retx_retry_limit = 20;
 
     su_sr_transmitter_bb::sptr
-    su_sr_transmitter_bb::make(const std::string& tagname, bool debug)
+    su_sr_transmitter_bb::make(const std::string& tagname, const std::string& filename, bool usef)
     {
       return gnuradio::get_initial_sptr
-        (new su_sr_transmitter_bb_impl(tagname,debug));
+        (new su_sr_transmitter_bb_impl(tagname, filename,usef));
     }
 
     /*
      * The private constructor
      */
-    su_sr_transmitter_bb_impl::su_sr_transmitter_bb_impl(const std::string& tagname, bool debug)
+    su_sr_transmitter_bb_impl::su_sr_transmitter_bb_impl(const std::string& tagname, const std::string& filename, bool usef)
       : gr::tagged_stream_block("su_sr_transmitter_bb",
               gr::io_signature::make(1, 1, sizeof(unsigned char)),
               gr::io_signature::make(1, 1, sizeof(unsigned char)), tagname),
               d_tagname(tagname),
               d_msg_in(pmt::mp("msg_in"))
     {
-      d_debug = debug;
+      d_usef = usef;
+      if(usef){
+        if(!read_data(filename)){
+          d_usef = false;
+        }
+      }
       d_seq = 0;
       message_port_register_in(d_msg_in);
       set_msg_handler(d_msg_in,boost::bind(&su_sr_transmitter_bb_impl::msg_in,this,_1));
@@ -72,6 +78,9 @@ namespace gr {
     su_sr_transmitter_bb_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
       int noutput_items = ninput_items[0]+LSAPHYLEN+LSAMACLEN;
+      if(d_usef){
+        noutput_items = d_data_src[d_seq%d_data_src.size()].size()+LSAPHYLEN+LSAMACLEN;
+      }
       std::list<srArq_t>::iterator it;
       if(d_prou_present){        
         if(!retx_peek_front(noutput_items)){
@@ -261,6 +270,38 @@ namespace gr {
     }
 
     bool
+    su_sr_transmitter_bb_impl::read_data(const std::string& filename)
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      std::string str,line;
+      if(!d_data_src.empty()){
+        for(int i=0; i<d_data_src.size();++i)
+          d_data_src[i].clear();
+        d_data_src.clear();
+      }
+      if(d_file.is_open())
+        d_file.close();
+      DEBUG<<"reading dataset:"<<filename;
+      d_file.open(filename.c_str(),std::fstream::in);
+      if(d_file.is_open()){
+        while(getline(d_file,line,'\n')){
+          std::istringstream temp(line);
+          std::vector<unsigned char> u8;
+          while(getline(temp,str,',')){
+            int tmp = std::atoi(str.c_str());
+            u8.push_back((unsigned char)tmp);
+          }
+          d_data_src.push_back(u8);
+        }
+        DEBUG<<"...done"<<std::endl;
+      }else{
+        DEBUG<<"...fail"<<std::endl;
+        d_data_src.clear();
+      }
+      return !d_data_src.empty();
+    }
+
+    bool
     su_sr_transmitter_bb_impl::check_retx_table(int idx)
     {
       if(idx>=d_retx_table.size()){
@@ -292,7 +333,11 @@ namespace gr {
       int nin = ninput_items[0];
       int nout;
       pmt::pmt_t nx_msg =pmt::PMT_NIL;
-      
+      if(d_usef){
+        DEBUG<<"<SR SU TX>Use file data: index="<<d_seq%d_data_src.size()<<std::endl;
+        in = d_data_src[d_seq%d_data_src.size()].data();
+        nin = d_data_src[d_seq%d_data_src.size()].size();
+      }
       if(d_prou_present){
         // should do retransmission
         nx_msg = get_retx(d_retx_idx);

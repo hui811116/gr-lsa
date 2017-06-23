@@ -2016,7 +2016,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1496, 8)</value>
+      <value>(1496, 40)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2055,7 +2055,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1496, 200)</value>
+      <value>(1496, 248)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2144,8 +2144,12 @@
       <value>True</value>
     </param>
     <param>
+      <key>filename</key>
+      <value>/home/nic-hui/project/data/data_100.csv</value>
+    </param>
+    <param>
       <key>_coordinate</key>
-      <value>(616, 40)</value>
+      <value>(640, 36)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2166,6 +2170,10 @@
     <param>
       <key>tagname</key>
       <value>"packet_len"</value>
+    </param>
+    <param>
+      <key>usef</key>
+      <value>True</value>
     </param>
   </block>
   <block>

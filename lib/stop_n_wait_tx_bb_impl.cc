@@ -41,16 +41,16 @@ namespace gr {
     static unsigned char d_mac_field[] = {0x00,0x00,0x00,0x00};
    
     stop_n_wait_tx_bb::sptr
-    stop_n_wait_tx_bb::make(const std::string& tagname)
+    stop_n_wait_tx_bb::make(const std::string& tagname, const std::string& filename, bool usef)
     {
       return gnuradio::get_initial_sptr
-        (new stop_n_wait_tx_bb_impl(tagname));
+        (new stop_n_wait_tx_bb_impl(tagname,filename,usef));
     }
 
     /*
      * The private constructor
      */
-    stop_n_wait_tx_bb_impl::stop_n_wait_tx_bb_impl(const std::string& tagname)
+    stop_n_wait_tx_bb_impl::stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef)
       : gr::tagged_stream_block("stop_n_wait_tx_bb",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(1, 1, sizeof(char)), tagname),
@@ -63,6 +63,12 @@ namespace gr {
       set_msg_handler(d_in_port, boost::bind(&stop_n_wait_tx_bb_impl::msg_handler,this, _1));
       memcpy(d_buf,d_phy_field,sizeof(char)*PHYLEN);
       d_seq = 0x0000;
+      d_usef = usef;
+      if(usef){
+        if(!read_data(filename)){
+          d_usef = false;
+        }
+      }
     }
 
     /*
@@ -70,6 +76,36 @@ namespace gr {
      */
     stop_n_wait_tx_bb_impl::~stop_n_wait_tx_bb_impl()
     {
+    }
+
+    bool
+    stop_n_wait_tx_bb_impl::read_data(const std::string& filename)
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      std::string str,line;
+      if(d_file.is_open()){
+        d_file.close();
+      }
+      if(!d_data_src.empty()){
+        for(int i=0;i<d_data_src.size();++i)
+          d_data_src[i].clear();
+        d_data_src.clear();
+      }
+      d_file.open(filename.c_str(),std::fstream::in);
+      if(d_file.is_open()){
+        while(getline(d_file,line,'\n')){
+          std::istringstream temp(line);
+          std::vector<unsigned char> u8;
+          while(getline(temp,str,',')){
+            int tmp = std::atoi(str.c_str());
+            u8.push_back((unsigned char)tmp);
+          }
+          d_data_src.push_back(u8);
+        }
+      }else{
+        d_data_src.clear();
+      }
+      return !d_data_src.empty();
     }
 
     void
@@ -133,11 +169,17 @@ namespace gr {
         std::list<srArq_t>::iterator it = d_arq_list.begin();
         if(d_arq_list.empty()){
           noutput_items = ninput_items[0] + PHYLEN + MACLEN;
+          if(d_usef){
+            noutput_items = d_data_src[d_seq%d_data_src.size()].size() + PHYLEN+MACLEN;
+          }
         }else{
           if(it->timeout() && it->retry()>= LSARETRYLIM){
             noutput_items = it->blob_length();
           }else{
             noutput_items = ninput_items[0] + PHYLEN + MACLEN;
+            if(d_usef){
+              noutput_items = d_data_src[d_seq%d_data_src.size()].size() + PHYLEN+MACLEN;
+            }
           }
         }
       }
@@ -152,6 +194,11 @@ namespace gr {
     {
       const unsigned char *in = (const unsigned char *) input_items[0];
       unsigned char *out = (unsigned char *) output_items[0];
+      int nin = ninput_items[0];
+      if(d_usef){
+        in = d_data_src[d_seq%d_data_src.size()].data();
+        nin = d_data_src[d_seq%d_data_src.size()].size();
+      }
       std::list<srArq_t>::iterator it = d_arq_list.begin();
       pmt::pmt_t blob;
       int nout =0;
@@ -193,9 +240,9 @@ namespace gr {
         if(it==d_arq_list.end()){
           // add new pkt
           // filling PKT_LEN+MAC SEQ
-          int pkt_len = ninput_items[0] + MACLEN;
+          int pkt_len = nin + MACLEN;
           assert(pkt_len <= MAX_PAYLOAD);
-          generate_new_pkt(in,ninput_items[0]);
+          generate_new_pkt(in,nin);
           nout = pkt_len+PHYLEN;
           memcpy(out,d_buf,sizeof(char)*nout);
         }else{

@@ -23,6 +23,7 @@
 
 #include <lsa/stop_n_wait_tx_bb.h>
 #include "utils.h"
+#include <fstream>
 
 namespace gr {
   namespace lsa {
@@ -40,6 +41,11 @@ namespace gr {
       unsigned char d_buf[256];
       uint16_t d_seq;
 
+      std::fstream d_file;
+      std::vector< std::vector<unsigned char> > d_data_src;
+      bool d_usef;
+
+      bool read_data(const std::string& filename);
       void msg_handler(pmt::pmt_t msg);
       void generate_new_pkt(const unsigned char* in, int nin);
 
@@ -47,7 +53,7 @@ namespace gr {
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
-      stop_n_wait_tx_bb_impl(const std::string& tagname);
+      stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef);
       ~stop_n_wait_tx_bb_impl();
 
       // Where all the action really happens

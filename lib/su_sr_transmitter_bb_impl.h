@@ -24,6 +24,7 @@
 #include <lsa/su_sr_transmitter_bb.h>
 #include <ctime>
 #include "utils.h"
+#include <fstream>
 
 namespace gr {
   namespace lsa {
@@ -43,7 +44,8 @@ namespace gr {
       const pmt::pmt_t d_msg_in;
       bool d_prou_present;
       unsigned char d_buf[1024];
-      bool d_debug;
+      bool d_usef;
+      std::fstream d_file;
 
       // thread functions for d_arq_queue;
       void clear_queue();
@@ -59,11 +61,15 @@ namespace gr {
       bool update_retx_table(int idx);
       void reset_retx_retry();
 
+      // file operation
+      std::vector< std::vector<unsigned char> > d_data_src;
+      bool read_data(const std::string& filename);
+
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
-      su_sr_transmitter_bb_impl(const std::string& tagname, bool debug);
+      su_sr_transmitter_bb_impl(const std::string& tagname, const std::string& filename, bool usef);
       ~su_sr_transmitter_bb_impl();
 
       void msg_in(pmt::pmt_t);

@@ -1209,16 +1209,16 @@
       <value></value>
     </param>
     <param>
-      <key>debug</key>
-      <value>False</value>
-    </param>
-    <param>
       <key>_enabled</key>
       <value>True</value>
     </param>
     <param>
+      <key>filename</key>
+      <value>/home/nic-hui/project/data/data_100.csv</value>
+    </param>
+    <param>
       <key>_coordinate</key>
-      <value>(560, 288)</value>
+      <value>(504, 284)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1239,6 +1239,10 @@
     <param>
       <key>tagname</key>
       <value>"packet_len"</value>
+    </param>
+    <param>
+      <key>usef</key>
+      <value>True</value>
     </param>
   </block>
   <block>

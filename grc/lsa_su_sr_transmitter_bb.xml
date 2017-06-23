@@ -4,7 +4,7 @@
   <key>lsa_su_sr_transmitter_bb</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.su_sr_transmitter_bb($tagname, $debug)</make>
+  <make>lsa.su_sr_transmitter_bb($tagname,$filename,$usef)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -17,16 +17,22 @@
     <type>string</type>
   </param>
   <param>
-    <name>Debug</name>
-    <key>debug</key>
+    <name>File</name>
+    <key>filename</key>
+    <value></value>
+    <type>file_open</type>
+  </param>
+  <param>
+    <name>Use file</name>
+    <key>usef</key>
     <value>False</value>
     <type>bool</type>
     <option>
-      <name>On</name>
+      <name>Yes</name>
       <key>True</key>
     </option>
     <option>
-      <name>Off</name>
+      <name>No</name>
       <key>False</key>
     </option>
   </param>

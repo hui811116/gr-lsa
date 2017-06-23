@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::stop_n_wait_tx_bb::make is the public interface for
        * creating new instances.
        */
-      static sptr make(const std::string& tagname);
+      static sptr make(const std::string& tagname, const std::string& fileanme, bool usef);
     };
 
   } // namespace lsa
