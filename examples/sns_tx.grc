@@ -248,11 +248,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(408, 588)</value>
+      <value>(264, 588)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -265,6 +265,33 @@
     <param>
       <key>value</key>
       <value>"addr=192.168.10.2"</value>
+    </param>
+  </block>
+  <block>
+    <key>variable</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(432, 588)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>rx_dev_id</value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>"name=MyB210"</value>
     </param>
   </block>
   <block>

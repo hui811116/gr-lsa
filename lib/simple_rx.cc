@@ -86,7 +86,7 @@ namespace gr {
                 d_expect_seq = (base1==0xffff)? 0:base1+1;
                 pmt::pmt_t pdu_out = pmt::make_blob(uvec+SEQLEN,io-SEQLEN);
                 // export valid pdu only...
-                message_port_pub(d_pdu_port,pmt::cons(pmt::PMT_NIL,pdu_out));
+                message_port_pub(d_pdu_port,pmt::cons(pmt::from_long(base1),pdu_out));
               }
             }
           }

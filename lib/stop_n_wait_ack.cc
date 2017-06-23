@@ -28,7 +28,7 @@
 
 namespace gr {
   namespace lsa {
-    #define d_debug false
+    #define d_debug true
     #define DEBUG d_debug && std::cout
     #define SNS_COLLISION 2
     #define SNS_CLEAR 3
@@ -36,7 +36,8 @@ namespace gr {
     #define MACLEN 4
     #define MAXLEN 127
     
-    static unsigned char d_mac_field[] = {0x00,0x00,0x00,0x00};
+    static unsigned char d_sns_collision[] = {0x00,0xff};
+    static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
 
     class stop_n_wait_ack_impl : public stop_n_wait_ack
     {
@@ -64,9 +65,10 @@ namespace gr {
           assert(pmt::is_blob(v));
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(v,io);
-          if(io>MAXLEN){
+          if(!sns_crc(uvec,io)){
             return;
-          }else if(io == SNS_COLLISION){
+          }
+          if(io == SNS_COLLISION){
             // sensing true
             message_port_pub(d_out_port,msg);
             DEBUG<<"\033[31;1m"<<"<SNS ACK> positive sensing"<<"\033[0m"<<std::endl;
@@ -75,10 +77,6 @@ namespace gr {
             message_port_pub(d_out_port,msg);
             DEBUG<<"\033[31;1m"<<"<SNS ACK> clear signal"<<"\033[0m"<<std::endl;
           }else if(io == SNS_ACK){
-            // ack
-            if(!sns_crc(uvec)){
-              return;
-            }
             // receive an ACK signal
             pmt::pmt_t msg_out = pmt::make_dict();
             msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_ACK));
@@ -87,9 +85,6 @@ namespace gr {
             DEBUG<<"\033[31;1m"<<"<SNS ACK> Receiving an ACK--base="<<d_base<<"\033[0m"<<std::endl;
           }else{
             // normal payload
-            if(!sns_crc(uvec)){
-              return;
-            }
             memcpy(d_buf,uvec,sizeof(char)*MACLEN);
             pmt::pmt_t blob_out = pmt::cons(pmt::intern("SNS_hdr"),pmt::make_blob(d_buf,MACLEN));
             message_port_pub(d_out_port,blob_out);
@@ -98,20 +93,34 @@ namespace gr {
         }
       
       private:
-        bool sns_crc(const uint8_t* uvec)
+        bool sns_crc(const uint8_t* uvec, size_t io)
         {
-          uint16_t base = 0x0000;
-          uint16_t base2= 0x0000;
-          base = uvec[0]<<8;
-          base |=uvec[1];
-          base2 = uvec[2]<<8;
-          base2|= uvec[3];
-          if(base==base2){
-            d_base = base;
-            return true;
+          if(io>MAXLEN || io==1 || io==0){
+            return false;
+          }else if(io==SNS_COLLISION){
+            if(d_sns_collision[0]!=uvec[0] || d_sns_collision[1]!=uvec[1]){
+              return false;
+            }
+          }else if(io==SNS_CLEAR){
+            if(d_sns_clear[0]!=uvec[0]||d_sns_clear[1]!=uvec[1]||d_sns_clear[2]!=uvec[2]){
+              return false;
+            }
+          }else if(io>=SNS_ACK){
+            uint16_t base = 0x0000;
+            uint16_t base2= 0x0000;
+            base = uvec[0]<<8;
+            base |=uvec[1];
+            base2 = uvec[2]<<8;
+            base2|= uvec[3];
+            if(base==base2){
+              d_base = base;
+            }else{
+              return false;
+            }
           }else{
             return false;
           }
+          return true;
         }
         unsigned char d_buf[256];
         gr::thread::mutex d_mutex;
