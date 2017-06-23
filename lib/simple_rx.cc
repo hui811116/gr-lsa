@@ -68,23 +68,23 @@ namespace gr {
             base2 = uvec[2]<<8;
             base2|= uvec[3];
             if(base1 == base2){
-              DEBUG<<"<SIMPLE RX>Valid seq:"<<base1<<std::endl;
+              DEBUG<<"<SIMPLE RX>Received valid seqno:"<<base1<<std::endl;
               // crc passed
+              const uint8_t* u8 = (const uint8_t*) &base1;
+              d_buf[0] = u8[1];
+              d_buf[1] = u8[0];
+              d_buf[2] = u8[1];
+              d_buf[3] = u8[0];
+              pmt::pmt_t msg_out = pmt::make_blob(d_buf,SEQLEN);
+              message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,msg_out));
               d_reset_cnt++;
               if(d_reset_cnt>=RESETLIMIT || base1 == d_expect_seq){
-                DEBUG<<"<SIMPLE RX>Acknowledge seq:"<<base1<<" ,reset_cnt:"<<d_reset_cnt<<std::endl;
+                DEBUG<<"<SIMPLE RX>Increase seq number to:"<<base1<<" ,reset_cnt:"<<d_reset_cnt<<std::endl;
                 d_reset_cnt =0;
-                // ack this pkt
+                // sync to this number
                 d_rx_seq = base1;
                 d_expect_seq = (base1==0xffff)? 0:base1+1;
-                const uint8_t* u8 = (const uint8_t*) &d_rx_seq;
-                d_buf[0] = u8[1];
-                d_buf[1] = u8[0];
-                d_buf[2] = u8[1];
-                d_buf[3] = u8[0];
-                pmt::pmt_t msg_out = pmt::make_blob(d_buf,SEQLEN);
                 pmt::pmt_t pdu_out = pmt::make_blob(uvec+SEQLEN,io-SEQLEN);
-                message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,msg_out));
                 // export valid pdu only...
                 message_port_pub(d_pdu_port,pmt::cons(pmt::PMT_NIL,pdu_out));
               }
