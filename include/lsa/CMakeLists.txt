@@ -54,5 +54,7 @@ install(FILES
     sns_tx_helper.h
     burst_gate_cc.h
     message_file_sink.h
-    sfd_tagger_cc.h DESTINATION include/lsa
+    sfd_tagger_cc.h
+    simple_tx.h
+    simple_rx.h DESTINATION include/lsa
 )

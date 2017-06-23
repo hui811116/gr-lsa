@@ -105,6 +105,7 @@ namespace gr {
       }else{
         d_data_src.clear();
       }
+      d_file.close();
       return !d_data_src.empty();
     }
 

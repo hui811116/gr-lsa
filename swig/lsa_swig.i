@@ -48,6 +48,8 @@
 #include "lsa/burst_gate_cc.h"
 #include "lsa/message_file_sink.h"
 #include "lsa/sfd_tagger_cc.h"
+#include "lsa/simple_tx.h"
+#include "lsa/simple_rx.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -116,3 +118,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, burst_gate_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, message_file_sink);
 %include "lsa/sfd_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, sfd_tagger_cc);
+%include "lsa/simple_tx.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, simple_tx);
+%include "lsa/simple_rx.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, simple_rx);
