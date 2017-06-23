@@ -28,7 +28,7 @@
 
 namespace gr {
   namespace lsa {
-    #define d_debug true
+    #define d_debug false
     #define DEBUG d_debug && std::cout
     #define LSAMAXLEN 121
     #define SNSMAXLEN 123
@@ -102,8 +102,11 @@ namespace gr {
                 if(d_lsa_queue_table[d_qidx]==false){
                   // a new retransmission
                   thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
-                  message_port_pub(d_thr_port,thr_msg);
+                  message_port_pub(d_thr_port,pmt::cons(pmt::from_long(d_seq),thr_msg));
                 }
+              }else if(d_qsize==0 && d_qidx==0){
+                thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
+                message_port_pub(d_thr_port,pmt::cons(pmt::from_long(d_seq),thr_msg));
               }
             }else{
               thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
