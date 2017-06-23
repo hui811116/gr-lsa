@@ -29,7 +29,7 @@
 
 namespace gr {
   namespace lsa {
-    #define d_debug true
+    #define d_debug false
     #define DEBUG d_debug && std::cout
     #define SEQLEN 4
     #define MAXLEN 123
@@ -92,8 +92,7 @@ namespace gr {
               // crc passed
               if(base1 == d_seqno){
                 DEBUG<<"<SIMPLE TX>successfullt acked:"<<base1<<std::endl;
-                d_thread->interrupt();
-                d_thread->join();
+                d_ack_received.notify_one();
                 d_acked = true;
               }
             }
@@ -132,14 +131,21 @@ namespace gr {
             generate_msg();
             message_port_pub(d_out_port,d_current_msg);
             retry++;
-            boost::this_thread::sleep(boost::posix_time::milliseconds(d_timeout));
+            gr::thread::scoped_lock lock(d_mutex);
+            d_ack_received.timed_wait(lock,boost::posix_time::milliseconds(d_timeout));
+            lock.unlock();
+            //boost::this_thread::sleep(boost::posix_time::milliseconds(d_timeout));
             if(d_finished){
-              DEBUG<<"<SIMPLE TX>Finished called"<<std::endl;
+              //DEBUG<<"<SIMPLE TX>Finished called"<<std::endl;
               return;
             }
             if(d_acked || retry>d_retry_limit){
               // successfully acked or exceed retry limit
-              DEBUG<<"<SIMPLE TX>Acked or Exceed retry limit"<<std::endl;
+              if(d_acked){
+                DEBUG<<"<SIMPLE TX>Acked"<<std::endl;
+              }else{
+                DEBUG<<"Exceed retry limit"<<std::endl;
+              }
               retry=0;
               d_seqno = (d_seqno == 0xffff)? 0 : d_seqno+1;
             }
@@ -158,6 +164,7 @@ namespace gr {
           d_current_msg = pmt::cons(pmt::PMT_NIL,blob);
         }
         gr::thread::mutex d_mutex;
+        gr::thread::condition_variable d_ack_received;
         boost::shared_ptr<gr::thread::thread> d_thread;
         bool d_finished;
         bool d_acked;
