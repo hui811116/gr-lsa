@@ -28,7 +28,7 @@
 
 namespace gr {
   namespace lsa {
-    #define d_debug true
+    #define d_debug false
     #define DEBUG d_debug && std::cout
     #define SNS_COLLISION 2
     #define SNS_CLEAR 3
