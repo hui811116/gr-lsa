@@ -55,7 +55,7 @@ namespace gr {
           }
           message_port_register_in(d_in_port);
           message_port_register_out(d_out_port);
-          set_msg_handler(d_out_port,boost::bind(&simple_tx_impl::msg_in,this,_1));
+          set_msg_handler(d_in_port,boost::bind(&simple_tx_impl::msg_in,this,_1));
           d_seqno = 0;
         }
         ~simple_tx_impl(){}
@@ -72,8 +72,32 @@ namespace gr {
           d_finished = true;
           d_thread->interrupt();
           d_thread->join();
-          d_ack_received.notify_one();
           return block::stop();
+        }
+        void msg_in(pmt::pmt_t msg)
+        {
+          gr::thread::scoped_lock guard(d_mutex);
+          pmt::pmt_t k = pmt::car(msg);
+          pmt::pmt_t v = pmt::cdr(msg);
+          assert(pmt::is_blob(v));
+          size_t io(0);
+          const uint8_t* uvec = pmt::u8vector_elements(v,io);
+          if(io==4){
+            uint16_t base1, base2;
+            base1 = uvec[0]<<8;
+            base1|= uvec[1];
+            base2 = uvec[2]<<8;
+            base2|= uvec[3];
+            if(base1==base2){
+              // crc passed
+              if(base1 == d_seqno){
+                DEBUG<<"<SIMPLE TX>successfullt acked:"<<base1<<std::endl;
+                d_thread->interrupt();
+                d_thread->join();
+                d_acked = true;
+              }
+            }
+          }
         }
       private:
         bool read_data(const std::string& filename)
@@ -94,53 +118,34 @@ namespace gr {
               }
               u8.push_back((uint8_t)tmp);
             }
+            d_data_src.push_back(u8);
           }
           d_file.close();
           return true;
         }
         void run()
         {
+          int retry =0;
           while(!d_finished){
-            int retry =0;
+            DEBUG<<"<SIMPLE TX>sending seq:"<<d_seqno<<std::endl;
             d_acked = false;
-            while(!d_acked && (retry++)<d_retry_limit){
-              generate_msg();
-              message_port_pub(d_out_port,d_current_msg);
-              gr::thread::scoped_lock lock(d_mutex);
-              d_ack_received.timed_wait(lock,boost::posix_time::milliseconds(d_timeout));
-              lock.unlock();
+            generate_msg();
+            message_port_pub(d_out_port,d_current_msg);
+            retry++;
+            boost::this_thread::sleep(boost::posix_time::milliseconds(d_timeout));
+            if(d_finished){
+              DEBUG<<"<SIMPLE TX>Finished called"<<std::endl;
+              return;
             }
-            if(d_acked){
-              // successfully acked
+            if(d_acked || retry>d_retry_limit){
+              // successfully acked or exceed retry limit
+              DEBUG<<"<SIMPLE TX>Acked or Exceed retry limit"<<std::endl;
+              retry=0;
               d_seqno = (d_seqno == 0xffff)? 0 : d_seqno+1;
-            }else{
-              // due to timeout
             }
           }
         }
-        void msg_in(pmt::pmt_t msg)
-        {
-          gr::thread::scoped_lock guard(d_mutex);
-          pmt::pmt_t k = pmt::car(msg);
-          pmt::pmt_t v = pmt::cdr(msg);
-          assert(pmt::is_blob(v));
-          size_t io(0);
-          const uint8_t* uvec = pmt::u8vector_elements(v,io);
-          if(io==4){
-            uint16_t base1, base2;
-            base1 = uvec[0]<<8;
-            base1|= uvec[1];
-            base2 = uvec[2]<<8;
-            base2|= uvec[3];
-            if(base1==base2){
-              // crc passed
-              if(base1 == d_seqno){
-                d_ack_received.notify_one();
-                d_acked = true;
-              }
-            }
-          }
-        }
+        
         void generate_msg(){
           gr::thread::scoped_lock guard(d_mutex);
           const uint8_t* u8_seq = (const uint8_t*) &d_seqno;
@@ -149,11 +154,10 @@ namespace gr {
           d_buf[2] = u8_seq[1];
           d_buf[3] = u8_seq[0];
           memcpy(d_buf+SEQLEN,d_data_src[d_seqno].data(),sizeof(char)*d_data_src[d_seqno].size());
-          pmt::pmt_t blob = pmt::make_blob(d_data_src[d_seqno].data(),d_data_src[d_seqno].size());
+          pmt::pmt_t blob = pmt::make_blob(d_buf,SEQLEN+d_data_src[d_seqno].size());
           d_current_msg = pmt::cons(pmt::PMT_NIL,blob);
         }
         gr::thread::mutex d_mutex;
-        gr::thread::condition_variable d_ack_received;
         boost::shared_ptr<gr::thread::thread> d_thread;
         bool d_finished;
         bool d_acked;
