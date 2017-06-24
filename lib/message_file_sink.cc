@@ -91,6 +91,10 @@ namespace gr {
           if(!d_file->is_open()){
             throw std::runtime_error("<FILE SINK>cannot open file...file exist or cannot be opened");
           }
+          // record the time when file started!
+          d_timer = std::time(NULL);
+          *d_file <<"\n[Event]\n<Time>\n"<< std::ctime(&d_timer)
+          <<"<Bytes>\n"<<std::dec<<0<<"\n<Packets>\n"<<0<<"\n[Event*]"<<std::endl;
         }
       private:
         void msg_in(pmt::pmt_t msg)
@@ -101,8 +105,8 @@ namespace gr {
           if(std::difftime(std::time(NULL),d_timer)>0){
             // at least a second passed
             std::time(&d_timer);
-            *d_file <<"\n[Event]\n <Time>\n"<< std::ctime(&d_timer);
-            *d_file <<"\n<Bytes>\n"<<std::dec<<d_byte_cnt<<"\n<Packets>\n"<<d_pkt_cnt
+            *d_file <<"\n[Event]\n<Time>\n"<< std::ctime(&d_timer)
+            <<"<Bytes>\n"<<std::dec<<d_byte_cnt<<"\n<Packets>\n"<<d_pkt_cnt
             <<"\n[Event*]"<<std::endl;
             d_pkt_cnt=0;
             d_byte_cnt=0;
@@ -110,7 +114,7 @@ namespace gr {
           // seq number can be stored here
           pmt::pmt_t k = pmt::car(msg);
           pmt::pmt_t v = pmt::cdr(msg);
-          if(!pmt::is_blob(v)){
+          if(!pmt::is_blob(v) || !pmt::is_integer(k)){
             return;
           }
           size_t io(0);
@@ -132,12 +136,15 @@ namespace gr {
               throw std::runtime_error("Undefined system");
             break;
           }
-          *d_file<<"<seq>\n"<<std::dec<<seq<<std::endl;
-          *d_file<<"<size>\n"<<std::dec<<io<<std::endl;
-          *d_file<<"[Hex]"<<std::endl;
+          *d_file<<"<seq>\n"<<std::dec<<seq<<std::endl
+          <<"<size>\n"<<std::dec<<io<<std::endl
+          <<"[Hex]"<<std::endl;
           int i=0;
           for(i=0;i<io;++i){
-            *d_file<<" "<<std::setfill('0')<<std::setw(2)<<std::hex<<(int)uvec[i];
+            *d_file<<std::setfill('0')<<std::setw(2)<<std::hex<<(int)uvec[i];
+            if(i!=io-1){
+              *d_file<<",";
+            }
           }
           *d_file<<"\n[Hex*]"<<std::endl;
           switch(d_sys){

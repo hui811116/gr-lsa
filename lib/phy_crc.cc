@@ -101,6 +101,7 @@ namespace gr {
               if(d_qsize!=0){
                 if(d_lsa_queue_table[d_qidx]==false){
                   // a new retransmission
+                  d_lsa_queue_table[d_qidx] = true;
                   thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
                   message_port_pub(d_thr_port,pmt::cons(pmt::from_long(d_seq),thr_msg));
                 }
