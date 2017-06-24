@@ -112,14 +112,17 @@ namespace gr {
             d_byte_cnt=0;
           }
           // seq number can be stored here
-          pmt::pmt_t k = pmt::car(msg);
+          pmt::pmt_t k = pmt::car(msg); // pwr and seqno is hide in this key
           pmt::pmt_t v = pmt::cdr(msg);
-          if(!pmt::is_blob(v) || !pmt::is_integer(k)){
+          if(!pmt::is_blob(v) || !pmt::is_dict(k)){
             return;
           }
+          uint16_t seq=0;
+          float pwr=0;
+          seq = pmt::to_long(pmt::dict_ref(k,pmt::intern("seqno"),pmt::from_long(0)));
+          pwr = pmt::to_float(pmt::dict_ref(k,pmt::intern("pwr"),pmt::from_float(0)));
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(v,io);
-          uint16_t seq = pmt::to_long(k);
           d_pkt_cnt++;
           d_byte_cnt+=io;
           switch(d_sys){
@@ -137,6 +140,7 @@ namespace gr {
             break;
           }
           *d_file<<"<seq>\n"<<std::dec<<seq<<std::endl
+          <<"<pwr>\n"<<std::dec<<std::fixed<<std::setprecision(2)<<pwr<<std::endl
           <<"<size>\n"<<std::dec<<io<<std::endl
           <<"[Hex]"<<std::endl;
           int i=0;

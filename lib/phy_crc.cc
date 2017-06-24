@@ -81,6 +81,7 @@ namespace gr {
         void msg_in(pmt::pmt_t msg)
         {
           gr::thread::scoped_lock guard(d_mutex);
+          // k may contain pwr information
           pmt::pmt_t k = pmt::car(msg);
           pmt::pmt_t v = pmt::cdr(msg);
           assert(pmt::is_blob(v));
@@ -89,33 +90,40 @@ namespace gr {
           if(io<=d_min_len || io>d_max_len){
             return;
           }
-          // crc for different user type
-          if(phy_crc(uvec,io)){
-            // crc passed
-            pmt::pmt_t thr_msg;
-            if(d_user == LSA){
-              if(d_qsize!=d_lsa_queue_table.size()){
-                d_lsa_queue_table.clear();
-                d_lsa_queue_table.resize(d_qsize,false);
-              }
-              if(d_qsize!=0){
-                if(d_lsa_queue_table[d_qidx]==false){
-                  // a new retransmission
-                  d_lsa_queue_table[d_qidx] = true;
-                  thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
-                  message_port_pub(d_thr_port,pmt::cons(pmt::from_long(d_seq),thr_msg));
-                }
-              }else if(d_qsize==0 && d_qidx==0){
-                thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
-                message_port_pub(d_thr_port,pmt::cons(pmt::from_long(d_seq),thr_msg));
-              }
-            }else{
-              thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
-              // for throughput measurement and ber calculation
-              message_port_pub(d_thr_port,pmt::cons(pmt::from_long(d_seq),thr_msg));
-            }
-            message_port_pub(d_out_port,pmt::cons(pmt::from_long(d_seq),v));
+          pmt::pmt_t pwr = pmt::from_float(0);
+          if(pmt::is_number(k)){
+            // have pwr tag
+            pwr = k;
           }
+          // crc for different user type
+          if(!phy_crc(uvec,io)){
+            return;
+          }
+            // crc passed
+          pmt::pmt_t thr_msg;
+          pmt::pmt_t dict = pmt::make_dict();
+          dict = pmt::dict_add(dict, pmt::intern("seqno"),pmt::from_long(d_seq));
+          dict = pmt::dict_add(dict, pmt::intern("pwr"),pwr);
+          thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
+          if(d_user == LSA){
+            if(d_qsize!=d_lsa_queue_table.size()){
+              d_lsa_queue_table.clear();
+              d_lsa_queue_table.resize(d_qsize,false);
+            }
+            if(d_qsize!=0){
+              if(d_lsa_queue_table[d_qidx]==false){
+                // a new retransmission
+                d_lsa_queue_table[d_qidx] = true;
+                message_port_pub(d_thr_port,pmt::cons(dict,thr_msg));
+              }
+            }else if(d_qidx==0){
+              message_port_pub(d_thr_port,pmt::cons(dict,thr_msg));
+            }
+          }else{
+            // for throughput measurement and ber calculation
+            message_port_pub(d_thr_port,pmt::cons(dict,thr_msg));
+          }
+          message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,v));
         }
 
       private:

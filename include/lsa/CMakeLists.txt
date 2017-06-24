@@ -57,5 +57,6 @@ install(FILES
     sfd_tagger_cc.h
     simple_tx.h
     simple_rx.h
-    phy_crc.h DESTINATION include/lsa
+    phy_crc.h
+    signal_power_tagger_cc.h DESTINATION include/lsa
 )

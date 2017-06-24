@@ -28,9 +28,9 @@
 
 namespace gr {
   namespace lsa {
-
+// MSK representation of bits
 static const unsigned int CHIPSET[16] = {
-  3765939820,
+      3765939820,
       3456596710,
       1826650030,
       1724778362,
@@ -45,24 +45,7 @@ static const unsigned int CHIPSET[16] = {
       1368596360,
       85537272,
       2287047455,
-      4169472305
-                                  /*3653456430,
-                                  3986437410,
-                                  786023250,
-                                  585997365,
-                                  1378802115,
-                                  891481500,
-                                  3276943065,
-                                  2620728045,
-                                  2358642555,
-                                  3100205175,
-                                  2072811015,
-                                  2008598880,
-                                  125537430,
-                                  1618458825,
-                                  2517072780,
-                                  3378542520*/
-                                  };
+      4169472305};
 static const int MAX_PLD = 127;
 enum SYSTEMSTATE{
   SEARCH_ZERO,
@@ -158,19 +141,6 @@ inline unsigned char slice(const float& f)
     }
 
     void
-    packet_sink_impl::msg_out()
-    {
-      pmt::pmt_t dict = pmt::make_dict();
-      dict= pmt::dict_add(dict,pmt::intern("LSA_hdr"),pmt::PMT_T);
-      dict= pmt::dict_add(dict,pmt::intern("queue_index"),pmt::from_long(d_qidx));
-      dict= pmt::dict_add(dict,pmt::intern("queue_size"),pmt::from_long(d_qsize));
-      dict= pmt::dict_add(dict,pmt::intern("payload"),pmt::from_long(d_pkt_pld));
-      message_port_pub(d_pld_out,dict);
-      //pmt::pmt_t blob = pmt::make_blob(d_buf,d_pkt_byte);
-      //message_port_pub(d_pld_out,pmt::cons(pmt::PMT_NIL,blob));
-    }
-
-    void
     packet_sink_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       ninput_items_required[0] = noutput_items;
@@ -257,28 +227,12 @@ inline unsigned char slice(const float& f)
                   else{
                     d_pkt_byte |= c;
                     if(d_pkt_byte == 0){
-                      //NACK
-                      //pmt::pmt_t dict = pmt::make_dict();
-                      //dict = pmt::dict_add(dict,pmt::intern("LSA_hdr"),pmt::PMT_T);
-                      //dict = pmt::dict_add(dict,pmt::intern("queue_index"),pmt::from_long(0));
-                      //dict = pmt::dict_add(dict,pmt::intern("queue_size"),pmt::from_long(0));
-                      //dict = pmt::dict_add(dict,pmt::intern("payload"),pmt::from_long(0));
-                      //message_port_pub(d_pld_out,dict);
                       enter_search();
                       break;
                     }
                     else if(d_pkt_byte <= MAX_PLD){
-                      //LSA special flags
-                      //if(d_pkt_byte==1){
-                        //ACK
-                        //d_pkt_pld = 1;
-                        //d_pkt_byte =2;
-                        //enter_load_payload();
-                      //}
-                      //else{
                         d_pkt_pld = d_pkt_byte;
                         enter_load_payload();
-                      //}
                       break;
                     }
                     else{
@@ -313,23 +267,6 @@ inline unsigned char slice(const float& f)
                   d_symbol_cnt++;
                   if(d_symbol_cnt/2 >= d_pkt_byte){
                     // payload length collected
-                    // special cases output from here,
-                    //if(d_pkt_pld == 1){
-                      // ACK: queue size contain RETX or Fresh info
-                      //d_qidx = d_buf[0];
-                      //d_qsize = d_buf[1];
-                    //}
-                    //else if(d_pkt_pld==2){
-                      // sensing:
-                      //d_qidx = 0xff;
-                      //d_qsize = 0x00;
-                    //}
-                    //else{
-                      //d_qidx = d_buf[0];
-                      //d_qsize = d_buf[1];
-                    //}
-                    //msg_out();
-                    // current version do not count the BER of SU
                     pmt::pmt_t blob = pmt::make_blob(d_buf,d_pkt_byte);
                     message_port_pub(d_pld_out,pmt::cons(pmt::intern("LSA_hdr"),blob));
                     enter_search();

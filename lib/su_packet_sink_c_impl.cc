@@ -48,6 +48,7 @@ static const unsigned int CHIPSET[16] = {
 static const int MAX_PLD = 127;
 static const int CODE_RATE_INV= 8;
 static const unsigned int d_mask = 0x7ffffffe;
+static const pmt::pmt_t d_pwr_tag = pmt::intern("pwr_tag");
 
 enum SYSTEMSTATE{
   SEARCH_ZERO,
@@ -87,6 +88,7 @@ enum SYSTEMSTATE{
       // coded 
       d_threshold = (threshold<0)? 0: threshold;
       d_const_buf = new unsigned char[d_cap];
+      d_current_pwr = pmt::from_float(0);
     }
 
     /*
@@ -160,6 +162,12 @@ enum SYSTEMSTATE{
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       int nin = std::min(ninput_items[0],d_cap/d_hdr_bps);
+      std::vector<tag_t> pwr_tags;
+      if(nin!=0)
+        get_tags_in_window(pwr_tags,0,0,nin,d_pwr_tag);
+      if(!pwr_tags.empty()){
+        d_current_pwr = pwr_tags[0].value;
+      }
       for(int i=0;i<nin;++i){
         unsigned char temp =d_hdr_const->decision_maker(&in[i]);
           for(int j =0;j<d_hdr_bps;++j){
@@ -280,7 +288,8 @@ enum SYSTEMSTATE{
                   }
                   d_symbol_cnt++;
                   if(d_symbol_cnt/2 >= d_pkt_byte){
-                    pmt::pmt_t msg = pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_buf,d_pkt_byte));
+                    // hide pwr tag in key field
+                    pmt::pmt_t msg = pmt::cons(d_current_pwr,pmt::make_blob(d_buf,d_pkt_byte));
                     message_port_pub(d_msg_port,msg);
                     // reason: header may be intact
                     enter_search();

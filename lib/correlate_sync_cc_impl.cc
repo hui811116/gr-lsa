@@ -91,7 +91,6 @@ namespace gr {
     void
     correlate_sync_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
-      /* <+forecast+> e.g. ninput_items_required[0] = noutput_items */
       for(int i=0;i<ninput_items_required.size();++i){
         ninput_items_required[i] = noutput_items + history();
       }
@@ -144,8 +143,6 @@ namespace gr {
         int offset = tags[i].offset - nitems_read(0);
         add_item_tag(0,nitems_written(0)+offset,tags[i].key,tags[i].value);
       }
-      //std::cout<<"<Cross corr stream>noutput_items:"<<noutput_items<<" ninput_items[0]:"<<ninput_items[0]<<std::endl;
-      //std::cout<<" consume:"<<count<<" ,output:"<<nout<<std::endl;
       consume_each (count);
       return nout;
     }

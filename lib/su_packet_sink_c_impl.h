@@ -42,16 +42,16 @@ namespace gr {
       int d_threshold;
       unsigned int d_data_reg;
       unsigned int d_byte_cnt;
-      
       uint16_t d_qidx;
       uint16_t d_qsize;
       uint16_t d_base;
-      
       int d_pld_cnt;
       int d_pre_cnt;
       int d_chip_cnt;
       unsigned char d_pkt_byte;
       unsigned char d_symbol_cnt;
+      // for recording snr of payload
+      pmt::pmt_t d_current_pwr;
 
       unsigned char decode_chip(const unsigned int& reg);
       void enter_search();
@@ -59,8 +59,7 @@ namespace gr {
       void enter_load_payload();
 
      public:
-      su_packet_sink_c_impl(const gr::digital::constellation_sptr& hdr_const,
-      int threshold);
+      su_packet_sink_c_impl(const gr::digital::constellation_sptr& hdr_const,int threshold);
       ~su_packet_sink_c_impl();
 
       // Where all the action really happens

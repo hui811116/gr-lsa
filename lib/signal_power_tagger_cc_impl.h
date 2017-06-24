@@ -18,39 +18,26 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDED_LSA_PACKET_SINK_IMPL_H
-#define INCLUDED_LSA_PACKET_SINK_IMPL_H
+#ifndef INCLUDED_LSA_SIGNAL_POWER_TAGGER_CC_IMPL_H
+#define INCLUDED_LSA_SIGNAL_POWER_TAGGER_CC_IMPL_H
 
-#include <lsa/packet_sink.h>
+#include <lsa/signal_power_tagger_cc.h>
 
 namespace gr {
   namespace lsa {
 
-    class packet_sink_impl : public packet_sink
+    class signal_power_tagger_cc_impl : public signal_power_tagger_cc
     {
      private:
-      unsigned int d_data_reg;
-      unsigned int d_mask;
-      unsigned char d_buf[1024];
-      int d_pre_cnt;
-      int d_chip_cnt;
-      unsigned char d_pkt_byte;
-      unsigned char d_symbol_cnt;
-      unsigned char d_pkt_pld; // to copy the length tag
-      unsigned char d_qidx;
-      unsigned char d_qsize;
-      int d_threshold;
-      int d_state;
-      pmt::pmt_t d_pld_out;
-
-      void enter_search();
-      void enter_have_sync();
-      void enter_load_payload();
-      unsigned char decode_chip(const unsigned int& reg);
+      bool d_state;
+      int d_calc_len;
+      gr_complex d_eng_acc;
+      const pmt::pmt_t d_pwr_tag;
+      const pmt::pmt_t d_src_id;
 
      public:
-      packet_sink_impl(int threshold);
-      ~packet_sink_impl();
+      signal_power_tagger_cc_impl(int calc_len);
+      ~signal_power_tagger_cc_impl();
 
       // Where all the action really happens
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);
@@ -64,5 +51,5 @@ namespace gr {
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_PACKET_SINK_IMPL_H */
+#endif /* INCLUDED_LSA_SIGNAL_POWER_TAGGER_CC_IMPL_H */
 

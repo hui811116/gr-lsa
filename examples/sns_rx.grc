@@ -435,7 +435,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"name=MyB210"</value>
+      <value>"name=NicB210"</value>
     </param>
   </block>
   <block>
@@ -703,7 +703,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"name=MyB210"</value>
+      <value>"name=NicB210"</value>
     </param>
   </block>
   <block>
@@ -2211,6 +2211,49 @@
     </param>
   </block>
   <block>
+    <key>lsa_message_file_sink</key>
+    <param>
+      <key>app</key>
+      <value>False</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>filename</key>
+      <value>/home/nic-hui/project/data/sns_test_result.txt</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1216, 436)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_message_file_sink_0</value>
+    </param>
+    <param>
+      <key>system</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
     <key>lsa_moving_average_cc</key>
     <param>
       <key>alias</key>
@@ -2423,6 +2466,49 @@
     <param>
       <key>user</key>
       <value>1</value>
+    </param>
+  </block>
+  <block>
+    <key>lsa_signal_power_tagger_cc</key>
+    <param>
+      <key>calc_len</key>
+      <value>512</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1336, 396)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>180</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_signal_power_tagger_cc_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
     </param>
   </block>
   <block>
@@ -6550,7 +6636,7 @@
   </connection>
   <connection>
     <source_block_id>lsa_coarse_sync_cc_0</source_block_id>
-    <sink_block_id>digital_pfb_clock_sync_xxx_0</sink_block_id>
+    <sink_block_id>lsa_signal_power_tagger_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -6616,6 +6702,12 @@
   </connection>
   <connection>
     <source_block_id>lsa_phy_crc_0</source_block_id>
+    <sink_block_id>lsa_message_file_sink_0</sink_block_id>
+    <source_key>thr_out</source_key>
+    <sink_key>msg_in</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_phy_crc_0</source_block_id>
     <sink_block_id>lsa_throughput_report_0</sink_block_id>
     <source_key>thr_out</source_key>
     <sink_key>pkt_in</sink_key>
@@ -6625,6 +6717,12 @@
     <sink_block_id>lsa_chip_mapper_0</sink_block_id>
     <source_key>out</source_key>
     <sink_key>pdu_in</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_signal_power_tagger_cc_0</source_block_id>
+    <sink_block_id>digital_pfb_clock_sync_xxx_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_stop_n_wait_ack_0</source_block_id>

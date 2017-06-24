@@ -61,7 +61,8 @@ list(APPEND lsa_sources
     sfd_tagger_cc_impl.cc
     simple_tx.cc
     simple_rx.cc
-    phy_crc.cc )
+    phy_crc.cc
+    signal_power_tagger_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
