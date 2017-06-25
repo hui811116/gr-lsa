@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::signal_power_tagger_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(int calc_len);
+      static sptr make(int calc_len,int tag);
     };
 
   } // namespace lsa

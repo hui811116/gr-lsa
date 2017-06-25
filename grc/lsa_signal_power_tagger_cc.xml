@@ -4,7 +4,7 @@
   <key>lsa_signal_power_tagger_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.signal_power_tagger_cc($calc_len)</make>
+  <make>lsa.signal_power_tagger_cc($calc_len,$tag)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -14,6 +14,20 @@
     <name>Avg Length</name>
     <key>calc_len</key>
     <type>int</type>
+  </param>
+  <param>
+    <name>Tag Type</name>
+    <key>tag</key>
+    <value>0</value>
+    <type>int</type>
+    <option>
+      <name>CFO</name>
+      <key>0</key>
+    </option>
+    <option>
+      <name>Corr</name>
+      <key>1</key>
+    </option>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -34,5 +48,10 @@
   <source>
     <name>out</name>
     <type>complex</type>
+  </source>
+  <source>
+    <name>pwr</name>
+    <type>message</type>
+    <optional>1</optional>
   </source>
 </block>

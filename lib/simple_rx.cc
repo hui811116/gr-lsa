@@ -42,16 +42,31 @@ namespace gr {
                 gr::io_signature::make(0,0,0),
                 gr::io_signature::make(0,0,0)),
                 d_in_port(pmt::mp("pdu_in")),
+                d_pwr_port(pmt::mp("pwr_in")),
                 d_out_port(pmt::mp("ack_out")),
                 d_pdu_port(pmt::mp("pdu_out"))
         {
           reset();
           message_port_register_in(d_in_port);
+          message_port_register_in(d_pwr_port);
           message_port_register_out(d_out_port);
           message_port_register_out(d_pdu_port);
           set_msg_handler(d_in_port,boost::bind(&simple_rx_impl::msg_in,this,_1));
+          set_msg_handler(d_pwr_port,boost::bind(&simple_rx_impl::pwr_in,this,_1));
+          d_pwr_tag = pmt::from_float(0);
         }
         ~simple_rx_impl(){}
+        void pwr_in(pmt::pmt_t pwr)
+        {
+          gr::thread::scoped_lock guard(d_mutex);
+          pmt::pmt_t k = pmt::car(pwr);
+          pmt::pmt_t v = pmt::cdr(pwr);
+          if(pmt::is_number(v)){
+            float pwr_val = pmt::to_float(v);
+            DEBUG<<"<Simple RX>Receive power tag with value = "<<pwr_val<<std::endl;
+            d_pwr_tag = v;
+          }
+        }
         void msg_in(pmt::pmt_t msg)
         {
           gr::thread::scoped_lock guard(d_mutex);
@@ -85,6 +100,9 @@ namespace gr {
                 d_rx_seq = base1;
                 d_expect_seq = (base1==0xffff)? 0:base1+1;
                 pmt::pmt_t pdu_out = pmt::make_blob(uvec+SEQLEN,io-SEQLEN);
+                pmt::pmt_t dict = pmt::make_dict();
+                dict = pmt::dict_add(dict,pmt::intern("seqno"),pmt::from_long(base1));
+                dict = pmt::dict_add(dict,pmt::intern("pwr"),d_pwr_tag);
                 // export valid pdu only...
                 message_port_pub(d_pdu_port,pmt::cons(pmt::from_long(base1),pdu_out));
               }
@@ -100,8 +118,10 @@ namespace gr {
         }
         gr::thread::mutex d_mutex;
         const pmt::pmt_t d_in_port;
+        const pmt::pmt_t d_pwr_port;
         const pmt::pmt_t d_out_port;
         const pmt::pmt_t d_pdu_port;
+        pmt::pmt_t d_pwr_tag;
         uint16_t d_rx_seq;
         uint16_t d_expect_seq;
         int d_reset_cnt;

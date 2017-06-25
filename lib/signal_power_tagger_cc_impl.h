@@ -34,9 +34,12 @@ namespace gr {
       gr_complex d_eng_acc;
       const pmt::pmt_t d_pwr_tag;
       const pmt::pmt_t d_src_id;
+      const pmt::pmt_t d_pwr_port;
+      pmt::pmt_t d_cap_tag;
+      int d_tagtype;
 
      public:
-      signal_power_tagger_cc_impl(int calc_len);
+      signal_power_tagger_cc_impl(int calc_len,int tag);
       ~signal_power_tagger_cc_impl();
 
       // Where all the action really happens
