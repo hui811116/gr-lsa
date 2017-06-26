@@ -255,7 +255,6 @@ namespace gr {
     su_sr_transmitter_bb_impl::dequeue(int seq)
     {
       std::list<srArq_t>::iterator it;
-      gr::thread::scoped_lock guard(d_mutex);
       for(it = d_arq_queue.begin();it!=d_arq_queue.end();++it){
         if(it->seq()==seq){
           it = d_arq_queue.erase(it);          
