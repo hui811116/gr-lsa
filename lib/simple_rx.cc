@@ -104,7 +104,7 @@ namespace gr {
                 dict = pmt::dict_add(dict,pmt::intern("seqno"),pmt::from_long(base1));
                 dict = pmt::dict_add(dict,pmt::intern("pwr"),d_pwr_tag);
                 // export valid pdu only...
-                message_port_pub(d_pdu_port,pmt::cons(pmt::from_long(base1),pdu_out));
+                message_port_pub(d_pdu_port,pmt::cons(dict,pdu_out));
               }
             }
           }
