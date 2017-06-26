@@ -107,10 +107,10 @@ namespace gr {
           if(!d_file.is_open()){
             return false;
           }
-          while(getline(d_file,line)){
+          while(getline(d_file,line,'\n')){
             std::istringstream temp(line);
             std::vector<uint8_t> u8;
-            while(getline(temp,str)){
+            while(getline(temp,str,',')){
               int tmp = std::atoi(str.c_str());
               if(u8.size()>MAXLEN){
                 throw std::runtime_error("message to be transmitted exceed the maximum payload length");
