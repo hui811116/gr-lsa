@@ -19,8 +19,8 @@
  */
 
 
-#ifndef INCLUDED_LSA_SIMPLE_TX_H
-#define INCLUDED_LSA_SIMPLE_TX_H
+#ifndef INCLUDED_LSA_BYTE_TO_SYMBOL_BC_H
+#define INCLUDED_LSA_BYTE_TO_SYMBOL_BC_H
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
@@ -29,18 +29,28 @@ namespace gr {
   namespace lsa {
 
     /*!
-     * \brief <+description+>
+     * \brief <+description of block+>
+     * \ingroup lsa
      *
      */
-    class LSA_API simple_tx : virtual public block
+    class LSA_API byte_to_symbol_bc : virtual public gr::block
     {
-      public:
-        typedef boost::shared_ptr<simple_tx> sptr;
-        static sptr make(const std::string& filename,float timeout,bool slow);
+     public:
+      typedef boost::shared_ptr<byte_to_symbol_bc> sptr;
+
+      /*!
+       * \brief Return a shared_ptr to a new instance of lsa::byte_to_symbol_bc.
+       *
+       * To avoid accidental use of raw pointers, lsa::byte_to_symbol_bc's
+       * constructor is in a private implementation
+       * class. lsa::byte_to_symbol_bc::make is the public interface for
+       * creating new instances.
+       */
+      static sptr make();
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SIMPLE_TX_H */
+#endif /* INCLUDED_LSA_BYTE_TO_SYMBOL_BC_H */
 

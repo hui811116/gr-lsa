@@ -1,41 +1,22 @@
 <?xml version="1.0"?>
 <block>
-  <name>Simple Tx</name>
-  <key>lsa_simple_tx</key>
+  <name>Byte to Symbol</name>
+  <key>lsa_byte_to_symbol_bc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.simple_tx($filename,$timeout,$slow)</make>
+  <make>lsa.byte_to_symbol_bc()</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
+  <!--
   <param>
-    <name>File</name>
-    <key>filename</key>
-    <value></value>
-    <type>file_open</type>
+    <name>...</name>
+    <key>...</key>
+    <type>...</type>
   </param>
-  <param>
-    <name>Timeout</name>
-    <key>timeout</key>
-    <value>2000</value>
-    <type>float</type>
-  </param>
-  <param>
-    <name>Low Rate</name>
-    <key>slow</key>
-    <value>False</value>
-    <type>bool</type>
-    <option>
-      <name>Yes</name>
-      <key>True</key>
-    </option>
-    <option>
-      <name>No</name>
-      <key>False</key>
-    </option>
-  </param>
+  -->
 
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
@@ -43,8 +24,8 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <sink>
-    <name>ack_in</name>
-    <type>message</type>
+    <name>in</name>
+    <type>byte</type>
   </sink>
 
   <!-- Make one 'source' node per output. Sub-nodes:
@@ -53,7 +34,7 @@
        * vlen
        * optional (set to 1 for optional inputs) -->
   <source>
-    <name>pdu_out</name>
-    <type>message</type>
+    <name>out</name>
+    <type>complex</type>
   </source>
 </block>

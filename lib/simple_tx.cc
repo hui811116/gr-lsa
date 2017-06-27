@@ -38,7 +38,7 @@ namespace gr {
     class simple_tx_impl : public simple_tx
     {
       public:
-        simple_tx_impl(const std::string& filename, float timeout): block("simple_tx",
+        simple_tx_impl(const std::string& filename, float timeout, bool slow): block("simple_tx",
                   gr::io_signature::make(0,0,0),
                   gr::io_signature::make(0,0,0)),
                   d_timeout(timeout),
@@ -57,6 +57,7 @@ namespace gr {
           message_port_register_out(d_out_port);
           set_msg_handler(d_in_port,boost::bind(&simple_tx_impl::msg_in,this,_1));
           d_seqno = 0;
+          d_slow = slow;
         }
         ~simple_tx_impl(){}
         bool start()
@@ -92,7 +93,9 @@ namespace gr {
               // crc passed
               if(base1 == d_seqno){
                 DEBUG<<"<SIMPLE TX>successfullt acked:"<<base1<<std::endl;
-                d_ack_received.notify_one();
+                if(!d_slow){
+                  d_ack_received.notify_one();
+                }
                 d_acked = true;
               }
             }
@@ -178,11 +181,12 @@ namespace gr {
         uint16_t d_seqno;
         pmt::pmt_t d_current_msg;
         unsigned char d_buf[256];
+        bool d_slow;
     };
     simple_tx::sptr
-    simple_tx::make(const std::string& filename,float timeout)
+    simple_tx::make(const std::string& filename,float timeout,bool slow)
     {
-      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout));
+      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout,slow));
     }
   } /* namespace lsa */
 } /* namespace gr */

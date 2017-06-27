@@ -52,6 +52,7 @@
 #include "lsa/simple_rx.h"
 #include "lsa/phy_crc.h"
 #include "lsa/signal_power_tagger_cc.h"
+#include "lsa/byte_to_symbol_bc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -128,3 +129,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, simple_rx);
 GR_SWIG_BLOCK_MAGIC2(lsa, phy_crc);
 %include "lsa/signal_power_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, signal_power_tagger_cc);
+%include "lsa/byte_to_symbol_bc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, byte_to_symbol_bc);

@@ -53,5 +53,6 @@ install(FILES
     lsa_simple_tx.xml
     lsa_simple_rx.xml
     lsa_phy_crc.xml
-    lsa_signal_power_tagger_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_signal_power_tagger_cc.xml
+    lsa_byte_to_symbol_bc.xml DESTINATION share/gnuradio/grc/blocks
 )

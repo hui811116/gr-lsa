@@ -18,29 +18,34 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef INCLUDED_LSA_BYTE_TO_SYMBOL_BC_IMPL_H
+#define INCLUDED_LSA_BYTE_TO_SYMBOL_BC_IMPL_H
 
-#ifndef INCLUDED_LSA_SIMPLE_TX_H
-#define INCLUDED_LSA_SIMPLE_TX_H
-
-#include <lsa/api.h>
-#include <gnuradio/block.h>
+#include <lsa/byte_to_symbol_bc.h>
 
 namespace gr {
   namespace lsa {
 
-    /*!
-     * \brief <+description+>
-     *
-     */
-    class LSA_API simple_tx : virtual public block
+    class byte_to_symbol_bc_impl : public byte_to_symbol_bc
     {
-      public:
-        typedef boost::shared_ptr<simple_tx> sptr;
-        static sptr make(const std::string& filename,float timeout,bool slow);
+     private:
+      const pmt::pmt_t d_src_id;
+
+     public:
+      byte_to_symbol_bc_impl();
+      ~byte_to_symbol_bc_impl();
+
+      // Where all the action really happens
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+
+      int general_work(int noutput_items,
+           gr_vector_int &ninput_items,
+           gr_vector_const_void_star &input_items,
+           gr_vector_void_star &output_items);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SIMPLE_TX_H */
+#endif /* INCLUDED_LSA_BYTE_TO_SYMBOL_BC_IMPL_H */
 
