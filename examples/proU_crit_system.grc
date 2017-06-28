@@ -294,7 +294,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>2.5e9</value>
+      <value>2.4e9</value>
     </param>
   </block>
   <block>
@@ -678,7 +678,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>-40</value>
+      <value>-20</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1222,7 +1222,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1273,7 +1273,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1324,7 +1324,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1371,7 +1371,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1823,7 +1823,7 @@
     </param>
     <param>
       <key>thres</key>
-      <value>0.54</value>
+      <value>0.85</value>
     </param>
   </block>
   <block>
@@ -2296,7 +2296,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -2777,11 +2777,11 @@
     </param>
     <param>
       <key>ymax</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>ymin</key>
-      <value>-1</value>
+      <value>-80</value>
     </param>
   </block>
   <block>
@@ -3542,7 +3542,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -4233,7 +4233,7 @@
     </param>
     <param>
       <key>ymin</key>
-      <value>-1</value>
+      <value>0</value>
     </param>
   </block>
   <block>
@@ -4596,7 +4596,7 @@
     </param>
     <param>
       <key>ymin</key>
-      <value>-1</value>
+      <value>0</value>
     </param>
   </block>
   <block>

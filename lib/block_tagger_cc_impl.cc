@@ -30,8 +30,6 @@ namespace gr {
 
 #define DEBUG d_debug && std::cout
 
-    //static int d_empty_duration = 8000*500;
-    //static int d_voe_duration = 40000;
     static pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
 
     block_tagger_cc::sptr
@@ -59,8 +57,6 @@ namespace gr {
       d_debug = debug;
       d_block_cnt =0;
 
-      //d_duration_cnt= 0;
-      //d_debug_state = false;
     }
 
     /*
@@ -96,21 +92,6 @@ namespace gr {
         }
         out[nout++] = in[i];
         d_block_cnt++;
-
-        /*d_duration_cnt++;
-        if(d_debug_state){
-          if(d_duration_cnt == d_voe_duration){
-            d_duration_cnt=0;
-            d_debug_state = false;
-            add_item_tag(0,nwrite+i,d_voe_tag,pmt::PMT_F);
-          }
-        }else{
-          if(d_duration_cnt == d_empty_duration){
-            d_duration_cnt =0;
-            d_debug_state = true;
-            add_item_tag(0,nwrite+i,d_voe_tag,pmt::PMT_T);
-          }
-        }*/
         
       }
       for(int i=0;i<tags.size();++i){
@@ -120,8 +101,6 @@ namespace gr {
         }
         add_item_tag(0,nwrite+offset,tags[i].key,tags[i].value,d_src_id);
       }
-      //std::cout<<"<BLOCK tagger stream>noutput_items:"<<noutput_items<<" ninput_items[0]:"<<ninput_items[0]<<std::endl;
-      //std::cout<<" consume:"<<nin<<" ,output:"<<nout<<std::endl;
       consume_each (nin);
       return nout;
     }

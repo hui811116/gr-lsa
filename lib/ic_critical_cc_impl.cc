@@ -50,6 +50,7 @@ namespace gr {
     static const pmt::pmt_t d_block_tag = pmt::intern("block_tag");  // sample block tagger for stream matching
     static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");      // variance of energy tagger
     static const pmt::pmt_t d_sfd_tag = pmt::intern("sfd_est");
+    static const pmt::pmt_t d_lsa_tag = pmt::intern("LSA_hdr");
     static const int d_min_process = 16;                             // minimum labeled headers to process retransmissions
     static const int LSAPHYSYMBOLLEN = PHYLEN*8*LSACODERATEINV/2;    // LSA Physical layer symbol level length
     
@@ -159,6 +160,7 @@ namespace gr {
           if(max_cnt==0){
             return false;
           }
+          d_retx_idx =0;
           d_retx_cnt=0;
           d_retx_tag.clear();
           d_retx_block.clear();
@@ -210,13 +212,18 @@ namespace gr {
       const int reserved_length = 8*d_sps;
       std::list<block_t>::iterator bit_p = search_id(block_id);
       if(bit_p == d_sync_list.end()){
+        //DEBUG<<"<RETX Check> Found no block"<<std::endl;
         return false;
       }
       if(!buffer_index_check(tag.index(),pkt_nominal+reserved_length,SAMPLE)){
+        //DEBUG<<"<RETX Check> Sample check failed"<<std::endl;
+        //DEBUG<<"tag_index:"<<tag.index()<<" pkt_nominal+reserved_length:"<<pkt_nominal+reserved_length<<" ,d_in_idx:"<<d_in_idx<<std::endl;
         return false;
       }
       int sync_iter = (bit_p->index()+block_offset)%d_cap;
       if(!buffer_index_check(sync_iter,pkt_nominal,SYNC)){
+        //DEBUG<<"<RETX Check> Sync check failed"<<std::endl;
+        //DEBUG<<"bit_p->index():"<<bit_p->index()<<" offset:"<<block_offset<<" ,d sync_idx:"<<d_sync_idx<<std::endl;
         return false;
       }
       int copy_len = pkt_nominal+reserved_length;
@@ -224,6 +231,7 @@ namespace gr {
       int retx_idx_begin = d_retx_idx;
       if(d_retx_idx+copy_len>=d_cap){
         // buffer size not enough
+        DEBUG<<"<RETX Check> RETX overflow"<<std::endl;
         return false;
       }
       for(int i=0;i<pkt_nominal;++i){
@@ -375,12 +383,27 @@ namespace gr {
         DEBUG<<"<IC Crit>update_intf:: not already stored...end function"<<std::endl;
         return false;
       }
+      hdr_t tmp_front = d_current_intf_tag.front();
+      pmt::pmt_t fmsg = tmp_front.msg();
+      uint64_t fid = pmt::to_uint64(pmt::dict_ref(fmsg,pmt::intern("sync_block_id"),pmt::from_uint64(0xffffffffffff)));
+      int foff = pmt::to_long(pmt::dict_ref(fmsg,pmt::intern("sync_offset"),pmt::from_long(0)));
+      if(fid>=id){
+        return false;
+      }else{
+        long int fdis = (id-fid)*d_block_size + (idx-foff);
+        if(fdis<d_block_size){
+          return false;
+        }
+      }
+
       int end_idx_corrected =d_intf_idx-1;
       // success to record a valid header after interference occur
       idx = (bit_p->index()+idx)%d_cap;
       if(!buffer_index_check(idx,nominal_pkt,SYNC)){
         return false;
       }
+      //DEBUG<<"<Update Intf> Front tag:"<<d_current_intf_tag.front()<<std::endl;
+      //DEBUG<<"<Update Intf> Insert back header:"<<*rit<<std::endl;
       hdr_t new_back = *rit;
       d_current_intf_tag.set_back(new_back);
       d_current_intf_tag.set_end(end_idx_corrected);
@@ -441,18 +464,6 @@ namespace gr {
         retx_eng/=(float)pkt_len; // avg power
         //
         while(intf_cnt<intf_end){
-          //NOTE: sync to interfering signal
-          // FIXME
-          // actually, the following two cases will not happen
-          // since in allocation phase, the index limit had been checked
-          /*
-          if(intf_cnt>=d_cap){
-            throw std::runtime_error("inft cnt exceed maximum, boom");
-          }
-          if(retx_idx>=d_cap){
-            throw std::runtime_error("retx cnt exceed maximum, boom");
-          }
-          */
           // FIXME
           // try to improve phase correction
           // for DEMO
@@ -569,18 +580,23 @@ namespace gr {
       pmt::pmt_t src = raw_hdr.msg();
       int qidx = pmt::to_long(pmt::dict_ref(src,pmt::intern("queue_index"),pmt::from_long(-1)));
       int qsize= pmt::to_long(pmt::dict_ref(src,pmt::intern("queue_size"),pmt::from_long(-1)));
-      int base =pmt::to_uint64(pmt::dict_ref(src,pmt::intern("base"),pmt::from_long(-1)));
+      int base =pmt::to_long(pmt::dict_ref(src,pmt::intern("base"),pmt::from_long(-1)));
       if(qidx<0 || qsize<0 || base<0){
         return false;
       }else if(qsize!=0 && qidx>=qsize){
         return false;
       }
       if(!matching_header(raw_hdr)){
+        //DEBUG<<"<IC Crit> header not match any candidates..."<<std::endl;
         return false;
       }
+      //NOTE: after matching header, the information changed!
+      //      do not change index (already bind to in samples index)
+      src= raw_hdr.msg(); // update msg
       int payload = pmt::to_long(pmt::dict_ref(src,pmt::intern("payload"),pmt::from_long(0)));
       int pkt_nominal = (LSAPHYSYMBOLLEN+payload)*d_sps;
-      int raw_block_offset = raw_hdr.index();
+      int raw_block_offset = pmt::to_long(pmt::dict_ref(src,pmt::intern("sync_offset"),pmt::from_long(-1)));
+      assert(raw_block_offset>=0);
       uint64_t raw_block_id = pmt::to_uint64(pmt::dict_ref(src,pmt::intern("sync_block_id"),pmt::from_uint64(0xffffffffffff)));
       raw_block_offset= raw_block_offset-pkt_nominal+1;
       while(raw_block_offset<0){
@@ -589,8 +605,9 @@ namespace gr {
         raw_block_id--;
       }
       raw_hdr.delete_msg(pmt::intern("sync_block_id"));
+      raw_hdr.delete_msg(pmt::intern("sync_offset"));
       raw_hdr.add_msg(pmt::intern("sync_block_id"),pmt::from_uint64(raw_block_id));
-      raw_hdr.set_index(raw_block_offset);
+      raw_hdr.add_msg(pmt::intern("sync_offset"),pmt::from_long(raw_block_offset));
       return true;
     }
 
@@ -657,7 +674,7 @@ namespace gr {
           min_phase = pmt::dict_ref(temp_msg,pmt::intern("init_phase"),pmt::from_float(0));
         }
       }
-      if(candidate_it==d_pending_list.end() || min_diff>= d_block_size){
+      if(candidate_it==d_pending_list.end() || min_diff>= d_block_size/16){
         return false;
       }
       candidate_it++;
@@ -675,14 +692,14 @@ namespace gr {
     void
     ic_critical_cc_impl::check_before_reset()
     {
-      std::map<uint64_t,int> base_map;
-      std::map<uint64_t,int>::iterator map_it;
+      std::map<int,int> base_map;
+      std::map<int,int>::iterator map_it;
       std::vector<intf_t> new_intf_stack;
       for(int i=0;i<d_retx_tag.size();++i){
         if(!d_retx_tag[i].empty()){
           pmt::pmt_t retx_msg = d_retx_tag[i].msg();
           int base = pmt::to_long(pmt::dict_ref(retx_msg,pmt::intern("base"),pmt::from_long(-1)));
-          base_map.insert(std::pair<uint64_t,int>(base,i));
+          base_map.insert(std::pair<int,int>(base,i));
         }
       }
       for(int i=0;i<d_intf_stack.size();++i){
@@ -760,6 +777,7 @@ namespace gr {
       int next_in_block_idx = d_in_block_idx + nin_s;
       int next_phase_block_idx = d_phase_block_idx + nin_p;
       if(!tags_s.empty() && !tags_p.empty()){
+        //DEBUG<<"<Crit> next_in:"<<next_in_block_idx<<" ,next_phase:"<<next_phase_block_idx<<std::endl;
         // next block tags is ready
         uint64_t bid_s = pmt::to_uint64(tags_s[0].value);
         uint64_t bid_p = pmt::to_uint64(tags_p[0].value);
@@ -891,7 +909,12 @@ namespace gr {
           // FIXME
           // this is sfd phase
           tmp_msg = pmt::dict_add(tmp_msg,pmt::intern("init_phase"),cross_tags[0].value);
-          hdr_t tmp_hdr( (current_in_idx+offset-d_prelen)%d_cap,tmp_msg);
+          int samp_idx = current_in_idx+offset-d_prelen;
+          while(samp_idx<0){
+            samp_idx+=d_cap;
+          }
+          hdr_t tmp_hdr( (samp_idx)%d_cap,tmp_msg);
+          //DEBUG<<"<IC Crit>Pending tag:"<<tmp_hdr<<std::endl;
           d_pending_list.push_back(tmp_hdr);
           cross_tags.erase(cross_tags.begin());
         }else{
@@ -917,34 +940,22 @@ namespace gr {
       hdr_t tmp_hdr;
       std::vector<hdr_t> new_tags;
       if(count_p!=0){
-        get_tags_in_window(hdr_tags,PHASE_PORT,0,count_p);
-      for(int i=0;i<hdr_tags.size();++i){
-        if(!pmt::eqv(d_block_tag,hdr_tags[i].key)){
+        get_tags_in_window(hdr_tags,PHASE_PORT,0,count_p,d_lsa_tag);
+        for(int i=0;i<hdr_tags.size();++i){
           int offset = hdr_tags[i].offset - nitems_read(PHASE_PORT);
-          if(tmp_hdr.index() == (offset + d_phase_block_idx) ){
-            tmp_hdr.add_msg(hdr_tags[i].key,hdr_tags[i].value);
-          }else{
-            // insert new tag
-            if(!tmp_hdr.empty()){
-              tmp_hdr.delete_msg(pmt::intern("pld_bytes"));
-              tmp_hdr.delete_msg(pmt::intern("LSA_hdr"));
-              new_tags.push_back(tmp_hdr);
-              tmp_hdr.reset();
-            }
-              tmp_hdr.init();
-              tmp_hdr.set_index(d_phase_block_idx+offset);
-              tmp_hdr.add_msg(hdr_tags[i].key,hdr_tags[i].value);
-              tmp_hdr.add_msg(pmt::intern("sync_block_id"),pmt::from_uint64(d_current_block));
-            // new tag
+          std::vector<tag_t> other_tags;
+          tmp_hdr.reset();
+          tmp_hdr.init();
+          tmp_hdr.set_index(d_phase_block_idx+offset%d_cap);
+          tmp_hdr.add_msg(pmt::intern("sync_block_id"),pmt::from_uint64(d_current_block));
+          get_tags_in_window(other_tags,PHASE_PORT,offset,offset+1);
+          for(int j=0;j<other_tags.size();++j){
+            tmp_hdr.add_msg(other_tags[j].key,other_tags[j].value);
           }
+          tmp_hdr.delete_msg(pmt::intern("pld_bytes"));
+          tmp_hdr.delete_msg(pmt::intern("LSA_hdr"));
+          new_tags.push_back(tmp_hdr);
         }
-      }
-      if(!tmp_hdr.empty()){
-        tmp_hdr.delete_msg(pmt::intern("pld_bytes"));
-        tmp_hdr.delete_msg(pmt::intern("LSA_hdr"));
-        // do header matching here
-        new_tags.push_back(tmp_hdr);
-      }
       }
       int residual = count_p;
       // tag size control
@@ -952,29 +963,30 @@ namespace gr {
         pmt::pmt_t temp_msg = new_tags[i].msg();
         int qsize = pmt::to_long(pmt::dict_ref(temp_msg,pmt::intern("queue_size"),pmt::from_long(-1)));
         bool valid_hdr = false;
+        //DEBUG<<"<IC Crit>Raw header:"<<new_tags[i]<<std::endl;
         if(preprocess_hdr(new_tags[i])){
           d_tag_list.push_back(new_tags[i]);
           valid_hdr = true;
         }
         if(d_state == SEARCH_RETX){
           if(qsize==0 && valid_hdr){
-              if(!d_retx_tag.empty()){
-                // retransmission ends
-                d_tag_list.clear();
-                // redo push back, for this new tag
-                d_tag_list.push_back(new_tags[i]);
-                d_reset_retx = true;
-              }
-            }else{
+            if(!d_retx_tag.empty()){
+              // retransmission ends
+              d_tag_list.clear();
+              // redo push back, for this new tag
+              d_tag_list.push_back(new_tags[i]);
+              d_reset_retx = true;
+            }
+          }else{
               d_do_ic = detect_ic_chance(new_tags[i]);
-            }
-            if(update_intf()){
-              // ready for one interference cancellation block
-              if(!d_current_intf_tag.empty())
-                d_intf_stack.push_back(d_current_intf_tag);
-              d_current_intf_tag.clear();
-              DEBUG<<"<IC Crit>Interference object complete!"<<std::endl;
-            }
+          }
+          if(update_intf()){
+            // ready for one interference cancellation block
+            if(!d_current_intf_tag.empty())
+              d_intf_stack.push_back(d_current_intf_tag);
+            d_current_intf_tag.clear();
+            DEBUG<<"<IC Crit>Interference object complete!"<<std::endl;
+          }
         }
       }
       // increment block index
@@ -1020,7 +1032,8 @@ namespace gr {
         }else if(offset>=d_out_idx+nout){
           break;
         }else{
-          throw std::runtime_error("WTF");
+          d_out_tags.erase(d_out_tags.begin());
+          //throw std::runtime_error("WTF");
         }
       }
       memcpy(out,d_out_mem+d_out_idx,sizeof(gr_complex)*nout);
