@@ -35,22 +35,22 @@ namespace gr {
     static const int d_rate = CHIPRATE*SYMBITS;
     static const int d_symbol_size = 16;
     static const CPX d_map[][16] = {
-{CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1)},
-{CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1)},
-{CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(1,1),CPX(1,-1)},
-{CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(-1,1)},
-{CPX(-1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,1)},
-{CPX(1,1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(1,1)},
-{CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1)},
-{CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1)},
-{CPX(1,-1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1)},
-{CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1)},
-{CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(1,1)},
-{CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(1,1),CPX(1,1)},
-{CPX(1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1)},
-{CPX(-1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(1,1),CPX(1,-1),CPX(-1,1)},
-{CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(1,1)},
-{CPX(1,1),CPX(1,1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1)} 
+{CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1)},
+{CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1)},
+{CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1)},
+{CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1)},
+{CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1)},
+{CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1)},
+{CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1)},
+{CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1)},
+{CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1)},
+{CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1)},
+{CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1)},
+{CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1)},
+{CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1)},
+{CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1)},
+{CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1)},
+{CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1)} 
     };
 
     byte_to_symbol_bc::sptr
