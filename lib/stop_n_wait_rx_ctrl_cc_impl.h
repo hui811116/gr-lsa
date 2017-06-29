@@ -41,7 +41,7 @@ namespace gr {
       bool d_burst_lock;
       int d_burst_voe_cnt;
       int d_target_burst_cnt;
-      clock_t d_clock_duration;
+      time_t d_time_duration;
       int d_intf_cnt;
 
       void enter_search_collision();

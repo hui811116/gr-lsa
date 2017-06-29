@@ -37,7 +37,7 @@ namespace gr {
     static int d_voe_valid = 128;
     static int d_min_gap = 8*8*8/2*4;
     static int d_burst_max_diff = 256;
-    static clock_t d_max_waiting = CLOCKS_PER_SEC * 10;
+    static int d_max_waiting = 20;
     static unsigned char d_sns_collision[] = {0x00,0xff};
     static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
 
@@ -105,7 +105,7 @@ namespace gr {
       d_burst_voe_cnt=0;
       d_burst_lock = false;
       d_voe_duration =0;
-      d_clock_duration = std::clock();
+      std::time(&d_time_duration);
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_wait_resume()
@@ -113,7 +113,7 @@ namespace gr {
       d_voe_duration =0;
       d_state = WAIT_RESUME;
       d_voe_cnt=0;
-      d_clock_duration = std::clock();
+      std::time(&d_time_duration);
     }
 
     void
@@ -213,6 +213,17 @@ namespace gr {
               }else{
                 d_burst_voe_cnt=0;
               }
+            }else{
+              if(voe[count]>d_high_thres){
+                d_burst_voe_cnt++;
+                if(d_burst_voe_cnt>=d_voe_valid){
+                  d_burst_lock = false;
+                  d_voe_duration=0;
+                  DEBUG<<"\033[34;1m"<<"<SNS RX CTRL>Detecting collision during waiting time..."<<"\033[0m"<<std::endl;
+                }
+              }else{
+                d_burst_voe_cnt=0;
+              }
             }
             if(voe[count]<d_low_thres){
               d_voe_cnt++;
@@ -250,7 +261,7 @@ namespace gr {
                 if(d_voe_cnt>=d_voe_valid){
                   if(abs(d_burst_voe_cnt-d_target_burst_cnt)<= d_burst_max_diff){
                     DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Detect a burst with matched length:"<<"\033[0m"
-                    <<" ,target:"<<d_target_burst_cnt<<" ,matched:"<<d_burst_voe_cnt<<std::endl;
+                    <<" ,target:"<<d_target_burst_cnt<<" ,matched:"<<d_burst_voe_cnt<<" ,pending:"<<d_intf_cnt<<std::endl;
                     d_intf_cnt--;
                     if(d_intf_cnt<=0){
                       pmt::pmt_t msg_out = pmt::cons(
@@ -273,8 +284,7 @@ namespace gr {
               }
             }
             out[nout++] = in[count++];
-            //d_voe_duration++;
-            if(std::clock()-d_clock_duration >= d_max_waiting){
+            if(std::difftime(std::time(NULL),d_time_duration) >= d_max_waiting){
               // waiting too long, maybe ProU is truned off...
               pmt::pmt_t msg_out = pmt::cons(
                 pmt::intern("SNS_hdr"),
@@ -282,7 +292,8 @@ namespace gr {
               );
               message_port_pub(d_out_port,msg_out);
               enter_wait_resume();
-              DEBUG<<"\033[33;1m"<<"<SNS RX CTRL>Waiting time exceed limit, notify tx to resume..."<<"\033[0m"<<std::endl;
+              DEBUG<<"\033[33;1m"<<"<SNS RX CTRL>Waiting time exceed limit, notify tx to resume..."
+              <<"\033[0m"<<" ,sec:"<<std::difftime(std::time(NULL),d_time_duration)<<std::endl;
               break;
             }
           }
