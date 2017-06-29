@@ -577,7 +577,7 @@ namespace gr {
         return false;
       }
       if(!matching_header(raw_hdr)){
-        //DEBUG<<"<IC Crit> header not match any candidates..."<<std::endl;
+        //DEBUG<<"<IC Crit::matching_header> header not match any candidates..."<<std::endl;
         return false;
       }
       return true;
@@ -612,16 +612,18 @@ namespace gr {
         }
       }
       if(rit == d_sync_list.rend()){
+        //DEBUG<<"sync off: first rit == end"<<std::endl;
         return std::make_pair(0,-1);
       }
       offset-=revdis;
-      while(revdis<0){
+      while(offset<0){
+        // subtract from previous block length
+        offset += std::get<1>(*rit);
         rit++;
         if(rit==d_sync_list.rend()){
+          //DEBUG<<"sync off: second rit == end"<<std::endl;
           return std::make_pair(0,-1);
         }
-        revdis += std::get<1>(*rit);
-        assert(bid!=0);
         bid = (std::get<0>(*rit)).id();
       }
       return std::make_pair(bid,offset);
@@ -648,13 +650,14 @@ namespace gr {
       int min_pend_id;
       int min_pend_offset;
       pmt::pmt_t min_phase;
-      // FIXME
       // Convert to begin index...
+      block_t tmp_b = std::get<0>(d_sync_list.back());
       std::pair<uint64_t, int> cvt = sync_block_offset_converter(block_id,block_offset,pkt_nominal);
       block_id = std::get<0>(cvt);
       block_offset = std::get<1>(cvt);
       if(block_offset<0){
         // conversion failed
+        DEBUG<<"<Matching packets> found no matching block"<<std::endl;
         return false;
       }
       for(it= d_pending_list.begin();it!=d_pending_list.end();++it){
@@ -675,7 +678,9 @@ namespace gr {
           min_phase = pmt::dict_ref(temp_msg,pmt::intern("init_phase"),pmt::from_float(0));
         }
       }
-      if(candidate_it==d_pending_list.end() || min_diff>= d_block_size/16){
+      // this part will cause system failure...
+      if(candidate_it==d_pending_list.end() || min_diff>= d_block_size){
+        //DEBUG<<"matching failed, min_diff="<<min_diff<<std::endl;
         return false;
       }
       candidate_it++;
@@ -788,7 +793,6 @@ namespace gr {
         nin_p++;
         d_smp_list.push_back(block_t(bid_s,d_in_idx));
         d_sync_list.push_back(std::pair<block_t,int>(block_t(bid_p,d_sync_idx),next_phase_block_idx+1));
-        //d_sync_list.push_back(block_t(bid_p,d_sync_idx));
         assert(bid_s == bid_p);
         next_block_id = bid_s;
         next_in_block_idx= 0;
@@ -967,8 +971,9 @@ namespace gr {
         pmt::pmt_t temp_msg = new_tags[i].msg();
         int qsize = pmt::to_long(pmt::dict_ref(temp_msg,pmt::intern("queue_size"),pmt::from_long(-1)));
         bool valid_hdr = false;
-        //DEBUG<<"<IC Crit>Raw header:"<<new_tags[i]<<std::endl;
+        //DEBUG<<"<IC Crit>Raw received packets"<<new_tags[i]<<std::endl;
         if(preprocess_hdr(new_tags[i])){
+          //DEBUG<<"<IC Crit>Processed packets"<<new_tags[i]<<std::endl;
           d_tag_list.push_back(new_tags[i]);
           valid_hdr = true;
         }

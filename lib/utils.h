@@ -36,6 +36,7 @@
       public:
        friend std::ostream& operator<<(std::ostream& out, const block_t& block){
          out<<"block_id:"<<block.d_id<<" ,index:"<<block.d_idx;
+         return out;
        }
        block_t(){d_id=0;d_idx=0;}
        block_t(const block_t& block){d_id = block.d_id; d_idx = block.d_idx;}

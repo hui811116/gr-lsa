@@ -29,12 +29,11 @@ namespace gr {
     class expand_symbol_to_sample_ff_impl : public expand_symbol_to_sample_ff
     {
      private:
-      // Nothing to declare in this block.
+      const pmt::pmt_t d_src_id;
       int d_sps;
 
      public:
      expand_symbol_to_sample_ff_impl(int sps);
-      //expand_symbol_to_sample_ff_impl(int sps, int nfilts);
       ~expand_symbol_to_sample_ff_impl();
 
       // Where all the action really happens

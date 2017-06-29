@@ -54,13 +54,14 @@ inline void phase_wrap(float& phase)
       int sps)
       : gr::block("expand_symbol_to_sample_ff",
               gr::io_signature::make2(2, 2, sizeof(float),sizeof(float)),
-              gr::io_signature::make2(2, 2, sizeof(float),sizeof(float)))
+              gr::io_signature::make2(2, 2, sizeof(float),sizeof(float))),
+              d_src_id(pmt::intern(alias()))
     {
       if(sps<0){
         throw std::invalid_argument("sample per symbol cannot be negative");
       }
       d_sps = sps;
-      set_relative_rate(d_sps);
+      //set_relative_rate(d_sps);
       set_min_noutput_items(d_sps);
       set_tag_propagation_policy(TPP_DONT);
       set_history(2);
@@ -77,7 +78,7 @@ inline void phase_wrap(float& phase)
     expand_symbol_to_sample_ff_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       for(int i=0;i<ninput_items_required.size();++i){
-        ninput_items_required[i] = noutput_items/relative_rate()+history();
+        ninput_items_required[i] = noutput_items/d_sps+history();
       }
     }
 
@@ -98,7 +99,6 @@ inline void phase_wrap(float& phase)
       float p_base, p_frac;
       float f_base, f_frac;
       std::vector<tag_t> tags;
-      get_tags_in_window(tags,0,0,nin);
       while(nout<nout_fix && (count< (nin-1)) ){
         f_frac = (freq[count+1]-freq[count])/(float)(d_sps*d_sps) ;
         f_base = freq[count]/(float)d_sps;
@@ -113,11 +113,10 @@ inline void phase_wrap(float& phase)
         nout+=d_sps;
         count++;
       }
+      get_tags_in_window(tags,0,0,count);
       for(int i=0;i<tags.size();++i){
         int offset = tags[i].offset-nitems_read(0);
-        if(offset>=0 && offset< count){
-          add_item_tag(0,nitems_written(0)+offset,tags[i].key,tags[i].value);
-        }
+        add_item_tag(0,nitems_written(0)+offset*d_sps,tags[i].key,tags[i].value,d_src_id);
       }
       consume_each(count);
       return nout;

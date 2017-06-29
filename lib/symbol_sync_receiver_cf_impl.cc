@@ -346,7 +346,7 @@ enum SYSTEMSTATE{
                   if(d_symbol_cnt/2 >= d_pkt_byte){
                     msg_out();
                     if(out_sync){
-                      int index= (count-1)/d_hdr_bps;
+                      int index= (count+1)/d_hdr_bps;
                       if(d_base>=0){
                         add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_index"),pmt::from_long(d_qidx));
                         add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_size"),pmt::from_long(d_qsize));
@@ -369,9 +369,6 @@ enum SYSTEMSTATE{
           break;
         }
       }
-
-      //std::cout<<"<symbol rx stream>noutput_items:"<<noutput_items<<" ninput_items[0]:"<<ninput_items[0]<<std::endl;
-      //std::cout<<" consume and out:"<<nfix<<std::endl;
       std::vector<tag_t> tags;
       get_tags_in_window(tags,0,0,nfix);
       if(have_sync){
