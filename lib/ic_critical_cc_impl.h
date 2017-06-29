@@ -23,6 +23,8 @@
 
 #include <lsa/ic_critical_cc.h>
 #include "utils.h"
+#include <tuple>
+#include <utility>
 
 namespace gr {
   namespace lsa {
@@ -57,7 +59,9 @@ namespace gr {
       uint32_t d_in_block_idx;                // for counting offset in stream 1
 
       std::list<block_t> d_smp_list;
-      std::list<block_t> d_sync_list;
+      //std::list<block_t> d_sync_list;
+      std::list< std::pair<block_t,int> > d_sync_list;
+
       std::list<hdr_t> d_tag_list;
       std::list<hdr_t> d_pending_list;        // used to record possible preambles.
  
@@ -91,9 +95,10 @@ namespace gr {
       void do_ic();                                   // main core to do interference cancellation
       bool matching_header(hdr_t& header);            // labeling bit level header information to preamble candidate
       void check_before_reset();                      // find ic avalability before resetting retx
-      std::list<block_t>::iterator search_id(uint64_t id);
+      int  search_id(uint64_t id);
       bool buffer_index_check(int idxToCheck, int duration,BUFFERTYPE type);
       bool preprocess_hdr(hdr_t& raw_hdr);
+      std::pair<uint64_t,int> sync_block_offset_converter(uint64_t bid, int offset, int revdis);
 
      public:
       ic_critical_cc_impl(int prelen,int sps,int block_size,bool d_debug);
