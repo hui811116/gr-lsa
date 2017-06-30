@@ -204,9 +204,9 @@ namespace gr {
         unsigned char d_buf[256];
     };
     simple_tx::sptr
-    simple_tx::make(const std::string& filename,float timeout,bool slow, bool verbose)
+    simple_tx::make(const std::string& filename,float timeout,int cnt,bool slow, bool verbose)
     {
-      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout,slow, verbose));
+      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout,cnt,slow, verbose));
     }
   } /* namespace lsa */
 } /* namespace gr */
