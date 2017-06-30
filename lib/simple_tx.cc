@@ -30,15 +30,17 @@
 namespace gr {
   namespace lsa {
     #define d_debug false
-    #define DEBUG d_debug && std::cout
     #define SEQLEN 4
     #define MAXLEN 123
     #define RETRYLIMIT 10
+    #define PKTCOUNTER 30
+    #define DEBUG d_debug && std::cout
+    #define VERBOSE d_verb && std::cout
     static const unsigned char d_seq_field[] = {0x00,0x00,0x00,0x00};
     class simple_tx_impl : public simple_tx
     {
       public:
-        simple_tx_impl(const std::string& filename, float timeout, bool slow): block("simple_tx",
+        simple_tx_impl(const std::string& filename, float timeout, bool slow, bool verbose): block("simple_tx",
                   gr::io_signature::make(0,0,0),
                   gr::io_signature::make(0,0,0)),
                   d_timeout(timeout),
@@ -58,6 +60,8 @@ namespace gr {
           set_msg_handler(d_in_port,boost::bind(&simple_tx_impl::msg_in,this,_1));
           d_seqno = 0;
           d_slow = slow;
+          d_pkt_cnt=0;
+          d_verb = verbose;
         }
         ~simple_tx_impl(){}
         bool start()
@@ -92,11 +96,17 @@ namespace gr {
             if(base1==base2){
               // crc passed
               if(base1 == d_seqno){
-                DEBUG<<"<SIMPLE TX>successfullt acked:"<<base1<<std::endl;
+                DEBUG<<"<SIMPLE TX>Acked successfully:"<<base1<<std::endl;
                 if(!d_slow){
                   d_ack_received.notify_one();
                 }
                 d_acked = true;
+                d_pkt_cnt++;
+                if(d_pkt_cnt==PKTCOUNTER){
+                  d_pkt_cnt=0;
+                  boost::posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time()-d_start_time;
+                  VERBOSE << diff.total_milliseconds() <<std::endl;
+                }
               }
             }
           }
@@ -132,14 +142,15 @@ namespace gr {
             DEBUG<<"<SIMPLE TX>sending seq:"<<d_seqno<<std::endl;
             d_acked = false;
             generate_msg();
+            if(d_pkt_cnt==0){
+              d_start_time = boost::posix_time::microsec_clock::local_time();
+            }
             message_port_pub(d_out_port,d_current_msg);
             retry++;
             gr::thread::scoped_lock lock(d_mutex);
             d_ack_received.timed_wait(lock,boost::posix_time::milliseconds(d_timeout));
             lock.unlock();
-            //boost::this_thread::sleep(boost::posix_time::milliseconds(d_timeout));
             if(d_finished){
-              //DEBUG<<"<SIMPLE TX>Finished called"<<std::endl;
               return;
             }
             if(d_acked || retry>d_retry_limit){
@@ -166,27 +177,30 @@ namespace gr {
           pmt::pmt_t blob = pmt::make_blob(d_buf,SEQLEN+d_data_src[d_seqno].size());
           d_current_msg = pmt::cons(pmt::PMT_NIL,blob);
         }
+        const int d_retry_limit;
+        const pmt::pmt_t d_in_port;
+        const pmt::pmt_t d_out_port;
         gr::thread::mutex d_mutex;
         gr::thread::condition_variable d_ack_received;
         boost::shared_ptr<gr::thread::thread> d_thread;
+        boost::posix_time::ptime d_start_time;
         bool d_finished;
         bool d_acked;
-        float d_timeout;
-        int d_retry_cnt;
-        const int d_retry_limit;
-        std::vector< std::vector<unsigned char> > d_data_src;
-        std::fstream d_file;
-        const pmt::pmt_t d_in_port;
-        const pmt::pmt_t d_out_port;
-        uint16_t d_seqno;
-        pmt::pmt_t d_current_msg;
-        unsigned char d_buf[256];
         bool d_slow;
+        bool d_verb;
+        int d_retry_cnt;
+        int d_pkt_cnt;
+        uint16_t d_seqno;
+        float d_timeout;
+        pmt::pmt_t d_current_msg;
+        std::fstream d_file;
+        std::vector< std::vector<unsigned char> > d_data_src;
+        unsigned char d_buf[256];
     };
     simple_tx::sptr
-    simple_tx::make(const std::string& filename,float timeout,bool slow)
+    simple_tx::make(const std::string& filename,float timeout,bool slow, bool verbose)
     {
-      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout,slow));
+      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout,slow, verbose));
     }
   } /* namespace lsa */
 } /* namespace gr */

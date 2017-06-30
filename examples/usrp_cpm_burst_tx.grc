@@ -1366,6 +1366,10 @@
       <value>lsa_simple_tx_0</value>
     </param>
     <param>
+      <key>slow</key>
+      <value>True</value>
+    </param>
+    <param>
       <key>maxoutbuf</key>
       <value>0</value>
     </param>
@@ -1376,6 +1380,10 @@
     <param>
       <key>timeout</key>
       <value>2000</value>
+    </param>
+    <param>
+      <key>verbose</key>
+      <value>True</value>
     </param>
   </block>
   <block>
