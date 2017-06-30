@@ -33,21 +33,25 @@ namespace gr {
     #define SEQLEN 4
     #define MAXLEN 123
     #define RETRYLIMIT 10
-    #define PKTCOUNTER 30
+    #define PKTCOUNTER d_countsize
     #define DEBUG d_debug && std::cout
     #define VERBOSE d_verb && std::cout
     static const unsigned char d_seq_field[] = {0x00,0x00,0x00,0x00};
     class simple_tx_impl : public simple_tx
     {
       public:
-        simple_tx_impl(const std::string& filename, float timeout, bool slow, bool verbose): block("simple_tx",
+        simple_tx_impl(const std::string& filename, float timeout,int cnt,bool slow, bool verbose): block("simple_tx",
                   gr::io_signature::make(0,0,0),
                   gr::io_signature::make(0,0,0)),
                   d_timeout(timeout),
+                  d_countsize(cnt),
                   d_retry_limit(RETRYLIMIT),
                   d_in_port(pmt::mp("ack_in")),
                   d_out_port(pmt::mp("pdu_out"))
         {
+          if(verbose && cnt<=0){
+            throw std::invalid_argument("Pkt count should be positive");
+          }
           if(timeout<=0){
             throw std::invalid_argument("Timeout should be positive");
           }
@@ -105,7 +109,8 @@ namespace gr {
                 if(d_pkt_cnt==PKTCOUNTER){
                   d_pkt_cnt=0;
                   boost::posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time()-d_start_time;
-                  VERBOSE << diff.total_milliseconds() <<std::endl;
+                  VERBOSE <<"[Event]"<<"\n<Count>\n"<<d_countsize<<"\n<Duration>\n"
+                  << diff.total_milliseconds()<<"\n[Event*]" <<std::endl;
                 }
               }
             }
@@ -178,6 +183,7 @@ namespace gr {
           d_current_msg = pmt::cons(pmt::PMT_NIL,blob);
         }
         const int d_retry_limit;
+        const int d_countsize;
         const pmt::pmt_t d_in_port;
         const pmt::pmt_t d_out_port;
         gr::thread::mutex d_mutex;
