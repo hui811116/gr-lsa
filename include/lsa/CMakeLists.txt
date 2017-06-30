@@ -59,5 +59,6 @@ install(FILES
     simple_rx.h
     phy_crc.h
     signal_power_tagger_cc.h
-    byte_to_symbol_bc.h DESTINATION include/lsa
+    byte_to_symbol_bc.h
+    throughput_file_sink.h DESTINATION include/lsa
 )

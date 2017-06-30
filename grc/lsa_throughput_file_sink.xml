@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<block>
+  <name>Throughput File Sink</name>
+  <key>lsa_throughput_file_sink</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.throughput_file_sink($filename,$sys,$verbose)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>File</name>
+    <key>filename</key>
+    <value></value>
+    <type>file_save</type>
+  </param>
+  <param>
+    <name>System</name>
+    <key>sys</key>
+    <value>0</value>
+    <type>int</type>
+    <option>
+      <name>ProU</name>
+      <key>0</key>
+    </option>
+    <option>
+      <name>SU</name>
+      <key>1</key>
+    </option>
+  </param>
+  <param>
+    <name>Verbose</name>
+    <key>verbose</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
+
+  <sink>
+    <name>thr_in</name>
+    <type>message</type>
+  </sink>
+  
+</block>

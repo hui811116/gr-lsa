@@ -63,7 +63,8 @@ list(APPEND lsa_sources
     simple_rx.cc
     phy_crc.cc
     signal_power_tagger_cc_impl.cc
-    byte_to_symbol_bc_impl.cc )
+    byte_to_symbol_bc_impl.cc
+    throughput_file_sink.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

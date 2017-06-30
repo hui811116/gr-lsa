@@ -19,8 +19,8 @@
  */
 
 
-#ifndef INCLUDED_LSA_SIMPLE_TX_H
-#define INCLUDED_LSA_SIMPLE_TX_H
+#ifndef INCLUDED_LSA_THROUGHPUT_FILE_SINK_H
+#define INCLUDED_LSA_THROUGHPUT_FILE_SINK_H
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
@@ -32,15 +32,15 @@ namespace gr {
      * \brief <+description+>
      *
      */
-    class LSA_API simple_tx : virtual public block
+    class LSA_API throughput_file_sink : virtual public block
     {
-      public:
-        typedef boost::shared_ptr<simple_tx> sptr;
-        static sptr make(const std::string& filename,float timeout,int cnt,bool slow);
+    public:
+      typedef boost::shared_ptr<throughput_file_sink> sptr;
+      static sptr make(const std::string& filename, int sys, bool verbose);
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SIMPLE_TX_H */
+#endif /* INCLUDED_LSA_THROUGHPUT_FILE_SINK_H */
 
