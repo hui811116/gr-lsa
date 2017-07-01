@@ -30,7 +30,6 @@
 namespace gr {
   namespace lsa {
 
-    #define VERBOSE d_verb && std::cout
     #define PERIOD 1000
     enum SYSTEM{
       PROU=0,
@@ -51,6 +50,7 @@ namespace gr {
         
         void msg_in(pmt::pmt_t msg)
         {
+          gr::thread::scoped_lock guard(d_mutex);
           pmt::pmt_t k = pmt::car(msg);
           pmt::pmt_t v = pmt::cdr(msg);
           long count,duration;
@@ -60,7 +60,8 @@ namespace gr {
               assert(pmt::is_dict(k));
               count = pmt::to_long(pmt::dict_ref(k,pmt::intern("pkt_count"),pmt::from_long(0)));
               duration = pmt::to_long(pmt::dict_ref(k,pmt::intern("duration"),pmt::from_long(0)));
-              d_file<<"\n[Event]\n<count>\n"<<count<<"\n<duration>\n"<<duration<<"\n[Event*]"<<std::endl<<std::flush;
+              d_file<<"\n[Event]\n<count>\n"<<count<<"\n<duration>\n"<<duration<<"\n[Event*]"<<std::endl;
+              d_file<<std::flush;
               d_iter_cnt++;
             break;
             case SU:
@@ -80,8 +81,10 @@ namespace gr {
               return;
             }
             boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time()-d_start_time;
-            VERBOSE<<"<Throughput file sink> Accumulated results:"<<d_iter_cnt
-            <<" ,Execution time:"<<diff.total_seconds()<<" secs"<<std::endl<<std::flush;
+            if(d_verb){
+              std::printf("<Throughput file sink> Accumulated results:%d ,Execution time:%d secs\n",d_iter_cnt,diff.total_seconds());
+              std::fflush(stdout);
+            }
           }
         }
 
