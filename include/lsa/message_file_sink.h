@@ -36,7 +36,7 @@ namespace gr {
     {
     public:
       typedef boost::shared_ptr<message_file_sink> sptr;
-      static sptr make(const std::string& filename, int sys, bool append);
+      static sptr make(const std::string& filename, int sys, bool append, bool verb);
 
       virtual void update_file(const std::string& filename)=0;
     

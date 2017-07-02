@@ -37,6 +37,7 @@ namespace gr {
     #define LSAMACLEN 6
     #define SNSMACLEN 4
     #define BYTES_PER_LINE 20
+    #define VERBOSEMS 1000
     enum SYSTEM{
       LSA=0,
       SNS=1,
@@ -45,13 +46,14 @@ namespace gr {
     class message_file_sink_impl : public message_file_sink
     {
       public:
-        message_file_sink_impl(const std::string& filename, int sys, bool append) : block("message_file_sink",
+        message_file_sink_impl(const std::string& filename, int sys, bool append, bool verb) : block("message_file_sink",
                       gr::io_signature::make(0,0,0),
                       gr::io_signature::make(0,0,0)),
                       d_in_port(pmt::mp("msg_in"))
         {
           d_file = NULL;
           d_append = append;
+          d_verb = verb;
           message_port_register_in(d_in_port);
           set_msg_handler(d_in_port,boost::bind(&message_file_sink_impl::msg_in,this,_1));
           update_file(filename);
@@ -68,6 +70,8 @@ namespace gr {
           }
           d_pkt_cnt =0;
           d_byte_cnt=0;
+          d_acc_pkt =0;
+          d_start_time = boost::posix_time::second_clock::local_time();
         }
         ~message_file_sink_impl()
         {
@@ -96,7 +100,35 @@ namespace gr {
           *d_file <<"\n[Event]\n<Time>\n"<< std::ctime(&d_timer)
           <<"<Bytes>\n"<<std::dec<<0<<"\n<Packets>\n"<<0<<"\n[Event*]"<<std::endl;
         }
+        bool start()
+        {
+          d_finished = false;
+          d_thread = boost::shared_ptr<gr::thread::thread>
+          (new gr::thread::thread(boost::bind(&message_file_sink_impl::run,this)));
+          return block::start();
+        }
+        bool stop()
+        {
+          d_finished = true;
+          d_thread->interrupt();
+          d_thread->join();
+          return block::stop();
+        }
       private:
+        void run()
+        {
+          while(!d_finished){
+            boost::this_thread::sleep(boost::posix_time::milliseconds(VERBOSEMS));
+            if(d_finished){
+              return;
+            }
+            boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time() - d_start_time;
+            if(d_verb){
+              std::printf("<Message File Sink> Accumulated results:%d, elapsed time:%d\n",d_acc_pkt,diff.total_seconds());
+              std::fflush(stdout);
+            }
+          }
+        }
         void msg_in(pmt::pmt_t msg)
         {
           gr::thread::scoped_lock guard(d_mutex);
@@ -165,21 +197,27 @@ namespace gr {
               throw std::runtime_error("Undefined system");
             break;
           }
+          d_acc_pkt++;
         }
         const pmt::pmt_t d_in_port;
         std::fstream* d_file;
         gr::thread::mutex d_mutex;
+        boost::shared_ptr<gr::thread::thread> d_thread;
+        boost::posix_time::ptime d_start_time;
         time_t d_timer;
         int d_sys;
         int d_pkt_cnt;
         int d_byte_cnt;
+        unsigned int d_acc_pkt;
         bool d_append;
+        bool d_verb;
+        bool d_finished;
     };
 
     message_file_sink::sptr 
-    message_file_sink::make(const std::string& filename, int sys, bool append)
+    message_file_sink::make(const std::string& filename, int sys, bool append,bool verb)
     {
-      return gnuradio::get_initial_sptr(new message_file_sink_impl(filename,sys,append));
+      return gnuradio::get_initial_sptr(new message_file_sink_impl(filename,sys,append,verb));
     }
 
   } /* namespace lsa */

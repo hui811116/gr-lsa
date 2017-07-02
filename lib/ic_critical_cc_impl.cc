@@ -211,8 +211,6 @@ namespace gr {
       int pkt_nominal = (payload + LSAPHYSYMBOLLEN)*d_sps;
       const int reserved_length = 8*d_sps;
       if(!buffer_index_check(tag.index(),pkt_nominal+reserved_length,SAMPLE)){
-        //DEBUG<<"<RETX Check> Sample check failed"<<std::endl;
-        //DEBUG<<"tag_index:"<<tag.index()<<" pkt_nominal+reserved_length:"<<pkt_nominal+reserved_length<<" ,d_in_idx:"<<d_in_idx<<std::endl;
         return false;
       }
       int bidx = search_id(block_id);
@@ -222,8 +220,6 @@ namespace gr {
       int sync_idx = (bidx+block_offset)%d_cap;
       int sync_iter = sync_idx;
       if(!buffer_index_check(sync_idx,pkt_nominal,SYNC)){
-        //DEBUG<<"<RETX Check> Sync check failed"<<std::endl;
-        //DEBUG<<"bit_p->index():"<<bit_p->index()<<" offset:"<<block_offset<<" ,d sync_idx:"<<d_sync_idx<<std::endl;
         return false;
       }
       int copy_len = pkt_nominal+reserved_length;

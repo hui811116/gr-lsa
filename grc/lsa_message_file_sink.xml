@@ -4,7 +4,7 @@
   <key>lsa_message_file_sink</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.message_file_sink($filename,$system,$app)</make>
+  <make>lsa.message_file_sink($filename,$system,$app,$verbose)</make>
   <callback>update_file($filename)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
@@ -49,12 +49,21 @@
       <key>False</key>
     </option>
   </param>
+  <param>
+    <name>Verbose</name>
+    <key>verbose</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
 
-  <!-- Make one 'sink' node per input. Sub-nodes:
-       * name (an identifier for the GUI)
-       * type
-       * vlen
-       * optional (set to 1 for optional inputs) -->
   <sink>
     <name>msg_in</name>
     <type>message</type>

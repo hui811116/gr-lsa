@@ -25,6 +25,7 @@
 #include <gnuradio/io_signature.h>
 #include "expand_symbol_to_sample_ff_impl.h"
 #include <gnuradio/math.h>
+#include <gnuradio/expj.h>
 #include <algorithm>
 
 namespace gr {
@@ -97,17 +98,17 @@ inline void phase_wrap(float& phase)
       int count =0;
       int nout=0;
       float p_base, p_frac;
-      float f_base, f_frac;
+      float f_frac;
+      gr_complex p_diff;
       std::vector<tag_t> tags;
       while(nout<nout_fix && (count< (nin-1)) ){
-        f_frac = (freq[count+1]-freq[count])/(float)(d_sps*d_sps) ;
-        f_base = freq[count]/(float)d_sps;
-        p_base= phase[count];
+        p_diff = gr_expj(phase[count+1])/gr_expj(phase[count]);
+        f_frac = std::arg(p_diff)/(float)d_sps;
+        p_base = phase[count];
         for(int i=0;i<d_sps;++i){
-          out_phase[nout+i]=p_base;
-          out_freq[nout+i] =f_base;
-          f_base += f_frac;
-          p_base += f_base;
+          out_phase[nout+i] = p_base;
+          out_freq[nout+i] = f_frac;
+          p_base+= f_frac;
           phase_wrap(p_base);
         }
         nout+=d_sps;
