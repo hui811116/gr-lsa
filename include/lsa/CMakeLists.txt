@@ -60,5 +60,7 @@ install(FILES
     phy_crc.h
     signal_power_tagger_cc.h
     byte_to_symbol_bc.h
-    throughput_file_sink.h DESTINATION include/lsa
+    throughput_file_sink.h
+    ic_resync_cc.h
+    su_block_receiver_c.h DESTINATION include/lsa
 )

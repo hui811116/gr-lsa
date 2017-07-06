@@ -165,7 +165,11 @@ enum SYSTEMSTATE{
     symbol_sync_receiver_cf_impl::msg_out()
     {
       pmt::pmt_t msg=pmt::PMT_NIL; 
-      msg = pmt::cons(pmt::intern("LSA_hdr"),pmt::make_blob(d_out_buf,d_pkt_byte));
+      pmt::pmt_t key = pmt::PMT_F;
+      if(d_base>=0 && !d_voe_do_not_pub){
+        key = pmt::PMT_T;
+      }
+      msg = pmt::cons(key,pmt::make_blob(d_out_buf,d_pkt_byte));
       // postfixing header information
       uint16_t base1,base2;
       d_qidx = d_out_buf[0]<<8;

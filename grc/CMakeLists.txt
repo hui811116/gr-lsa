@@ -55,5 +55,7 @@ install(FILES
     lsa_phy_crc.xml
     lsa_signal_power_tagger_cc.xml
     lsa_byte_to_symbol_bc.xml
-    lsa_throughput_file_sink.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_throughput_file_sink.xml
+    lsa_ic_resync_cc.xml
+    lsa_su_block_receiver_c.xml DESTINATION share/gnuradio/grc/blocks
 )

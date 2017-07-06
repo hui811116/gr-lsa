@@ -1,0 +1,78 @@
+/* -*- c++ -*- */
+/* 
+ * Copyright 2017 <+YOU OR YOUR COMPANY+>.
+ * 
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3, or (at your option)
+ * any later version.
+ * 
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this software; see the file COPYING.  If not, write to
+ * the Free Software Foundation, Inc., 51 Franklin Street,
+ * Boston, MA 02110-1301, USA.
+ */
+
+#ifndef INCLUDED_LSA_IC_RESYNC_CC_IMPL_H
+#define INCLUDED_LSA_IC_RESYNC_CC_IMPL_H
+
+#include <lsa/ic_resync_cc.h>
+#include "utils.h"
+
+namespace gr {
+  namespace lsa {
+
+    class ic_resync_cc_impl : public ic_resync_cc
+    {
+     private:
+      const size_t d_cap;
+      const pmt::pmt_t d_in_port;
+      gr_complex* d_in_mem;
+      gr_complex* d_out_mem;
+      gr_complex* d_intf_mem;
+      gr_complex* d_fir_buffer;
+      std::vector<float> d_taps;
+
+      int d_in_idx;
+      int d_out_idx;
+      int d_intf_idx;
+
+      int d_block_idx;
+      uint64_t d_block;
+      uint64_t d_nex_block;
+      int d_nex_block_idx;
+      std::list< std::pair<uint64_t,int> > d_block_list;
+      std::vector<tag_t> d_voe_tags;
+      int d_state;
+
+      std::list<hdr_t> d_hdr_list;
+      gr::thread::mutex d_mutex;
+      std::list< std::tuple<uint64_t,int,pmt::pmt_t> > d_pkt_history;
+
+      bool voe_update(int idx);
+      void msg_in(pmt::pmt_t msg);
+      bool matching_pkt(uint64_t bid,int offset,int pktlen);
+
+     public:
+      ic_resync_cc_impl(const std::vector<float>& taps);
+      ~ic_resync_cc_impl();
+
+      // Where all the action really happens
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+
+      int general_work(int noutput_items,
+           gr_vector_int &ninput_items,
+           gr_vector_const_void_star &input_items,
+           gr_vector_void_star &output_items);
+    };
+
+  } // namespace lsa
+} // namespace gr
+
+#endif /* INCLUDED_LSA_IC_RESYNC_CC_IMPL_H */
+
