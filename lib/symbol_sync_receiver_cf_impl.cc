@@ -33,7 +33,7 @@
 namespace gr {
   namespace lsa {
 
-#define d_debug false
+#define d_debug true
 #define DEBUG d_debug && std::cout
 static const unsigned int CHIPSET[16] = {
                                   3653456430,
@@ -55,6 +55,7 @@ static const unsigned int CHIPSET[16] = {
 static const int MAX_PLD = 127;
 static const int CODE_RATE_INV= 8;
 static const unsigned int d_mask = 0x7ffffffe;
+static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
 
 enum SYSTEMSTATE{
   SEARCH_ZERO,
@@ -95,6 +96,8 @@ enum SYSTEMSTATE{
       // coded 
       d_threshold = (threshold<0)? 0: threshold;
       d_current_time =0;
+      d_voe_state = false;
+      d_voe_do_not_pub =false;
     }
 
     /*
@@ -180,6 +183,21 @@ enum SYSTEMSTATE{
       }
       message_port_pub(d_msg_port, msg);
     }
+    void
+    symbol_sync_receiver_cf_impl::update_voe_state(int idx)
+    {
+      if(!d_tags.empty()){
+        if(idx==d_tags[0].offset){
+          d_voe_state = pmt::to_bool(d_tags[0].value);
+          if(d_state == SEARCH_ZERO){
+            d_voe_do_not_pub = false;
+          }else{
+            d_voe_do_not_pub = true;
+          }
+          d_tags.erase(d_tags.begin());
+        }
+      }
+    }
 
     void
     symbol_sync_receiver_cf_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
@@ -202,7 +220,8 @@ enum SYSTEMSTATE{
       float *out_freq = NULL;
       int nfix = (noutput_items<ninput_items[0])? noutput_items : ninput_items[0];
       nfix = std::min(nfix,(int)d_cap/d_hdr_bps);
-      //const uint64_t nread = nitems_read(0);
+      d_tags.clear();
+      get_tags_in_window(d_tags,0,0,nfix,d_voe_tag);
       bool have_sync = (input_items.size()>=3);
       bool out_sync = (output_items.size()>=2);
       if(have_sync){
@@ -219,15 +238,17 @@ enum SYSTEMSTATE{
         }
         //consume should also be moved to end
       }
-
-      //should add sensing tags
-        for(int i=0;i<nfix;++i){
-          unsigned char temp =d_hdr_const->decision_maker(&in[i]);
-          for(int j =0;j<d_hdr_bps;++j){
-            // MSB endianess
-            d_bytes_buf[i*d_hdr_bps+j] = (temp>> (d_hdr_bps-1-j)) & 0x01;
-          }
+      // convert indexes to bits based
+      for(int i=0;i<d_tags.size();++i){
+        d_tags[i].offset = (d_tags[i].offset-nitems_read(0))*d_hdr_bps;
+      }
+      for(int i=0;i<nfix;++i){
+        unsigned char temp =d_hdr_const->decision_maker(&in[i]);
+        for(int j =0;j<d_hdr_bps;++j){
+          // MSB endianess
+          d_bytes_buf[i*d_hdr_bps+j] = (temp>> (d_hdr_bps-1-j)) & 0x01;
         }
+      }
       int nin = nfix * d_hdr_bps;
       int count=0;
       while(count < nin)
@@ -235,8 +256,8 @@ enum SYSTEMSTATE{
         switch(d_state)
         {
           case SEARCH_ZERO:
-            while(count < nin)
-            {
+            while(count < nin){
+              update_voe_state(count);
               d_data_reg = (d_data_reg<<1) | (0x01 & d_bytes_buf[count++]);
               if(d_pre_cnt >0){
                 d_chip_cnt++;
@@ -286,57 +307,56 @@ enum SYSTEMSTATE{
           break;
           case HAVE_SYNC:
           while(count <nin){
-              d_data_reg = (d_data_reg<<1) | (0x01&d_bytes_buf[count++]);
-              d_chip_cnt++;
-              if(d_chip_cnt==32){
-                d_chip_cnt=0;
-                unsigned char c = decode_chip(d_data_reg);
-              if(c==0xff){
-                enter_search();
-                break;
-              }
-              else{
-                //check header
-                  if(d_symbol_cnt==0){
-                    // first symbol of header
-                    d_pkt_byte = (c<<4);
-                    d_symbol_cnt++;
-                  }
-                  else{
-                    d_pkt_byte |= c;
-                    // for special length settings
-                    if(d_pkt_byte == 0){
-                      // length 0 means NACK
-                      d_pkt_pld = 0;
-                      enter_search();
-                      break;
-                    }
-                    else if(d_pkt_byte <= MAX_PLD){
-                      d_pkt_pld = d_pkt_byte;
-                      enter_load_payload();
-                      break;
-                    }
-                    else{
-                      enter_search();
-                      break;
-                    }
+            update_voe_state(count);
+            d_data_reg = (d_data_reg<<1) | (0x01&d_bytes_buf[count++]);
+            d_chip_cnt++;
+            if(d_chip_cnt==32){
+              d_chip_cnt=0;
+              unsigned char c = decode_chip(d_data_reg);
+            if(c==0xff){
+              enter_search();
+              break;
+            }
+            else{
+              //check header
+                if(d_symbol_cnt==0){
+                  // first symbol of header
+                  d_pkt_byte = (c<<4);
+                  d_symbol_cnt++;
+                }
+                else{
+                  d_pkt_byte |= c;
+                  // for special length settings
+                  if(d_pkt_byte == 0){
+                    // length 0 means NACK
+                    d_pkt_pld = 0;
+                    enter_search();
+                    break;
+                  }else if(d_pkt_byte <= MAX_PLD){
+                    d_pkt_pld = d_pkt_byte;
+                    enter_load_payload();
+                    break;
+                  }else{
+                    enter_search();
+                    break;
                   }
                 }
               }
             }
-          break;
-          case LOAD_PAYLOAD:
+          }
+        break;
+        case LOAD_PAYLOAD:
           while(count < nin){
-              d_data_reg = (d_data_reg<<1) | (d_bytes_buf[count++]&0x01);
-              d_chip_cnt++;
+            update_voe_state(count);
+            d_data_reg = (d_data_reg<<1) | (d_bytes_buf[count++]&0x01);
+            d_chip_cnt++;
               if(d_chip_cnt==32){
                 d_chip_cnt=0;
                 unsigned char c = decode_chip(d_data_reg);
                 if(c==0xff){
                   enter_search();
                   break;
-                }
-                else{
+                }else{
                   if(d_symbol_cnt%2==0){
                     d_out_buf[d_symbol_cnt/2] = (c<<4);
                   }else{
@@ -347,7 +367,7 @@ enum SYSTEMSTATE{
                     msg_out();
                     if(out_sync){
                       int index= (count+1)/d_hdr_bps;
-                      if(d_base>=0){
+                      if(d_base>=0 && !d_voe_do_not_pub){
                         add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_index"),pmt::from_long(d_qidx));
                         add_item_tag(0,nitems_written(0)+index,pmt::intern("queue_size"),pmt::from_long(d_qsize));
                         add_item_tag(0,nitems_written(0)+index,pmt::intern("base"),pmt::from_long(d_base));

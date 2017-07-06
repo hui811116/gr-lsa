@@ -60,6 +60,12 @@ namespace gr {
       unsigned char d_pkt_pld;
       unsigned char d_symbol_cnt;
 
+      // voe tag state
+      bool d_voe_state;
+      bool d_voe_do_not_pub;
+      std::vector<tag_t> d_tags;
+      void update_voe_state(int idx);
+
       void msg_out();
       unsigned char decode_chip(const unsigned int& reg);
       void enter_search();

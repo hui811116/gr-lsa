@@ -10,7 +10,7 @@
     </param>
     <param>
       <key>window_size</key>
-      <value>2000,2000</value>
+      <value>3000,1800</value>
     </param>
     <param>
       <key>category</key>
@@ -294,7 +294,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>2.4e9</value>
+      <value>2.6e9</value>
     </param>
   </block>
   <block>
@@ -1889,7 +1889,7 @@
     </param>
     <param>
       <key>debug</key>
-      <value>True</value>
+      <value>False</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -2257,7 +2257,7 @@
     </param>
     <param>
       <key>explen</key>
-      <value>144*4</value>
+      <value>1024</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -3179,11 +3179,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1792, 368)</value>
+      <value>(1944, 368)</value>
     </param>
     <param>
       <key>gui_hint</key>

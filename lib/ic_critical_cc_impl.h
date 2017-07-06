@@ -59,16 +59,13 @@ namespace gr {
       uint32_t d_in_block_idx;                // for counting offset in stream 1
 
       std::list<block_t> d_smp_list;
-      //std::list<block_t> d_sync_list;
       std::list< std::pair<block_t,int> > d_sync_list;
-
       std::list<hdr_t> d_tag_list;
       std::list<hdr_t> d_pending_list;        // used to record possible preambles.
  
       std::vector<tag_t> d_voe_tags;
       bool d_voe_state;
       int d_state;
-      
       int d_prelen;
       int d_sps;
 
@@ -85,7 +82,7 @@ namespace gr {
       float* d_intf_freq;
       intf_t d_current_intf_tag;
       
-      void update_voe_state(int idx);                 // variance of energy tag capturing
+      void update_voe_state(int idx,const uint64_t nread);                 // variance of energy tag capturing
       bool detect_ic_chance(const hdr_t& new_tag);    // update retransmission
       void reset_retx();                              // clear retransmission registers
       bool check_and_copy_retx(hdr_t& tag);           // copy and compensate retransmission signals

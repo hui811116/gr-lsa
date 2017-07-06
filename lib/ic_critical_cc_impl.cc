@@ -580,9 +580,8 @@ namespace gr {
     }
 
     void
-    ic_critical_cc_impl::update_voe_state(int idx)
+    ic_critical_cc_impl::update_voe_state(int idx, const uint64_t nread)
     {
-      const uint64_t nread = nitems_read(SAMPLE_PORT);
       while(!d_voe_tags.empty()){
         int offset = d_voe_tags[0].offset - nread;
         if(offset == idx){
@@ -758,6 +757,7 @@ namespace gr {
       const gr_complex *in = (const gr_complex *) input_items[SAMPLE_PORT];
       const float* phase= (const float*) input_items[PHASE_PORT];
       const float* freq = (const float*) input_items[FREQ_PORT];
+      const uint64_t nread = nitems_read(SAMPLE_PORT);
       gr_complex *out = (gr_complex *) output_items[0];
       gr_complex *demo= (gr_complex *) output_items[1];
       int nout = 0;
@@ -769,7 +769,7 @@ namespace gr {
       d_voe_tags.clear(); //
       get_tags_in_window(tags_s,SAMPLE_PORT,0,nin_s,d_block_tag);
       get_tags_in_window(tags_p,PHASE_PORT,0,nin_p,d_block_tag);
-      get_tags_in_window(d_voe_tags,SAMPLE_PORT,0,nin_s,d_voe_tag); //
+      get_tags_in_window(d_voe_tags,SAMPLE_PORT,0,nin_s,d_voe_tag);
       get_tags_in_window(cross_tags,SAMPLE_PORT,0,nin_s,pmt::intern("phase_est"));
       int next_block_id = d_current_block;
       if(!tags_s.empty()){
@@ -807,7 +807,7 @@ namespace gr {
         case FREE:
           for(count_s=0;count_s<nin_s;++count_s){
             assert(d_voe_state == false);
-            update_voe_state(count_s);
+            update_voe_state(count_s,nread);
             if(d_voe_state){
                 next_state = SUFFERING;
                 DEBUG<<"\033[33m"<<"<IC Crit>Detect interfering signals"<<"\033[0m"
@@ -815,7 +815,7 @@ namespace gr {
                 <<" , d_in_idx="<<d_in_idx<<std::endl;
                 init_intf();
                 if(new_intf()){ 
-                  d_current_intf_tag.add_msg(pmt::intern("voe_begin_idx"),pmt::from_long(d_intf_idx+count_s));
+                  d_current_intf_tag.add_msg(pmt::intern("voe_begin_idx"),pmt::from_long( (d_intf_idx+count_s)%d_cap ));
                   DEBUG<<"Initialize an interference object...d_intf_idx="<<d_intf_idx<<std::endl;
                 }
                 state_interrupt = true;
@@ -826,7 +826,7 @@ namespace gr {
         case SUFFERING:
           for(count_s=0;count_s <nin_s;++count_s){
             assert(d_voe_state == true);
-            update_voe_state(count_s);
+            update_voe_state(count_s,nread);
               if(!d_voe_state){
                 reset_retx();
                 next_state = SEARCH_RETX;
@@ -836,7 +836,7 @@ namespace gr {
                 state_interrupt = true;
                 // FIXME
                 if(!d_current_intf_tag.empty()){
-                  d_current_intf_tag.add_msg(pmt::intern("voe_end_idx"),pmt::from_long(d_intf_idx+count_s));
+                  d_current_intf_tag.add_msg(pmt::intern("voe_end_idx"),pmt::from_long( (d_intf_idx+count_s)%d_cap ));
                 }
                 break; // jump out from loop
               }
@@ -847,20 +847,20 @@ namespace gr {
             // intf queue
             // add something to detect interference during retransmission process
             bool prev_state = d_voe_state;
-            update_voe_state(count_s);
+            update_voe_state(count_s,nread);
             if(d_voe_state && !prev_state){
                 DEBUG<<"\033[33m"<<"<IC Crit> Detect an interfering event during retransmission state"<<"\033[0m"
                   <<" ,block_id="<<d_current_block<<" ,block_idx="<<d_phase_block_idx<<std::endl;
                 if(d_current_intf_tag.empty()){
                   //already store at least one intf_t
                   if(new_intf()){
-                    d_current_intf_tag.add_msg(pmt::intern("voe_begin_idx"),pmt::from_long(d_intf_idx+count_s));
+                    d_current_intf_tag.add_msg(pmt::intern("voe_begin_idx"),pmt::from_long( (d_intf_idx+count_s)%d_cap ));
                     DEBUG<<"<IC Crit> new intferference object Created"<<std::endl;
                   }
                 }
             }else if(!d_voe_state && prev_state){
               if(!d_current_intf_tag.empty()){
-                d_current_intf_tag.add_msg(pmt::intern("voe_end_idx"),pmt::from_long(d_intf_idx+count_s));
+                d_current_intf_tag.add_msg(pmt::intern("voe_end_idx"),pmt::from_long( (d_intf_idx+count_s)%d_cap ));
               }
                 DEBUG<<"\033[33m"<<"<Ic Crit> Interfering event during retransmission ends"<<"\033[0m"
                 <<" ,block_id="<<d_current_block<<" ,phase_block_idx="<<d_phase_block_idx<<std::endl;
@@ -876,7 +876,6 @@ namespace gr {
         d_in_idx %=d_cap;
         if(it1!=d_smp_list.end()){
           if(d_in_idx == it1->index()){
-            // wrap around detected
             it1 = d_smp_list.erase(it1);
           }
         }
