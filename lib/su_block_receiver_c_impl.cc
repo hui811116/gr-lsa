@@ -28,7 +28,8 @@
 
 namespace gr {
   namespace lsa {
-
+    #define d_debug false
+    #define DEBUG d_debug && std::cout
     enum SYSTEMSTATE{
       SEARCH_ZERO,
       HAVE_SYNC,
@@ -72,7 +73,8 @@ namespace gr {
       int threshold)
       : gr::sync_block("su_block_receiver_c",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(0, 0, 0))
+              gr::io_signature::make(0, 0, 0)),
+              d_out_port(pmt::mp("pkt_out"))
     {
       d_hdr_const = hdr_const->base();
       d_hdr_bps = hdr_const->bits_per_symbol();
@@ -109,6 +111,9 @@ namespace gr {
       d_symbol_cnt =0;
       d_chip_cnt =0;
       d_pkt_byte = 0;
+      // for block tracking
+      d_latest_bid = d_block;
+      d_latest_offset=d_offset;
     }
     void
     su_block_receiver_c_impl::enter_load_payload()
@@ -166,6 +171,8 @@ namespace gr {
         if(!block_tags.empty()){
           int offset = block_tags[0].offset-nitems_read(0);
           if(offset==ii){
+            DEBUG<<"<Block RX>\033[32;1mUpdate to block id="<<pmt::to_uint64(block_tags[0].value)
+            <<" ,prev_id and size:"<<d_block<<" ,"<<d_offset<<"\033[0m"<<std::endl;
             d_block = pmt::to_uint64(block_tags[0].value);
             d_offset = 0;
             block_tags.erase(block_tags.begin());
@@ -264,10 +271,11 @@ namespace gr {
                   if(d_symbol_cnt/2 >= d_pkt_byte){
                       if(!d_voe_do_not_pub){
                         pmt::pmt_t dict = pmt::make_dict();
-                        dict = pmt::dict_add(dict,pmt::intern("block_id"),pmt::from_uint64(d_block));
-                        dict = pmt::dict_add(dict,pmt::intern("offset"),pmt::from_long(d_offset));
+                        dict = pmt::dict_add(dict,pmt::intern("block_id"),pmt::from_uint64(d_latest_bid));
+                        dict = pmt::dict_add(dict,pmt::intern("offset"),pmt::from_long(d_latest_offset));
                         pmt::pmt_t blob = pmt::make_blob(d_out_buf,d_pkt_byte);
                         message_port_pub(d_out_port,pmt::cons(dict,blob));
+                        DEBUG<<"<Block RX>\033[32;1mPublishing pkt, bid="<<d_latest_bid<<" ,offset="<<d_latest_offset<<"\033[0m"<<std::endl;
                       }
                     // reason: header may be intact
                     enter_search();

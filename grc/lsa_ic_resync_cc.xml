@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 <block>
-  <name>ic_resync_cc</name>
+  <name>IC Resync</name>
   <key>lsa_ic_resync_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.ic_resync_cc()</make>
+  <make>lsa.ic_resync_cc($taps)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <param>
-    <name>...</name>
-    <key>...</key>
-    <type>...</type>
+    <name>Filter taps</name>
+    <key>taps</key>
+    <type>float_vector</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -23,7 +23,11 @@
        * optional (set to 1 for optional inputs) -->
   <sink>
     <name>in</name>
-    <type><!-- e.g. int, float, complex, byte, short, xxx_vector, ...--></type>
+    <type>complex</type>
+  </sink>
+  <sink>
+    <name>pkt_in</name>
+    <type>message</type>
   </sink>
 
   <!-- Make one 'source' node per output. Sub-nodes:
@@ -33,6 +37,10 @@
        * optional (set to 1 for optional inputs) -->
   <source>
     <name>out</name>
-    <type><!-- e.g. int, float, complex, byte, short, xxx_vector, ...--></type>
+    <type>complex</type>
+  </source>
+  <source>
+    <name>comp</name>
+    <type>complex</type>
   </source>
 </block>

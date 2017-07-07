@@ -28,6 +28,7 @@
 
 namespace gr {
   namespace lsa {
+    #define d_debug true
     #define DEBUG d_debug && std::cout
     #define CAPACITY 128*1024*1024
     #define FIRCAPACITY 256*128
@@ -62,9 +63,11 @@ namespace gr {
       d_in_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
       d_in_idx =0;
       d_out_idx=0;
+      d_out_size=0;
       d_intf_idx=0;
       d_intf_mem = new gr_complex[d_cap];
       d_out_mem = new gr_complex[d_cap];
+      d_demo_mem = new gr_complex[d_cap];
       d_state = VOE_CLEAR;
     }
 
@@ -77,6 +80,7 @@ namespace gr {
       volk_free(d_in_mem);
       delete [] d_intf_mem;
       delete [] d_out_mem;
+      delete [] d_demo_mem;
     }
 
     bool
@@ -96,6 +100,21 @@ namespace gr {
       }
       return false;
     }
+    void
+    ic_resync_cc_impl::system_update(int idx)
+    {
+      d_offset++;
+      if(!d_sfd_list.empty()){
+        if(std::get<0>(d_sfd_list.front())==idx){
+          d_sfd_list.pop_front();
+        }
+      }
+      if(!d_block_list.empty()){
+        if(std::get<1>(d_block_list.front())==idx){
+          d_block_list.pop_front();
+        }
+      }
+    }
 
     void
     ic_resync_cc_impl::msg_in(pmt::pmt_t msg)
@@ -112,13 +131,120 @@ namespace gr {
       offset*= d_sps;
       int payload = pmt::to_long(pmt::dict_ref(k,pmt::intern("payload"),pmt::from_long(0)));
       int pktlen = (payload+d_phylen)*d_sps;
-      matching_pkt(block,offset,pktlen);
+      uint16_t base,base_crc, qsize,qidx;
+      qidx = uvec[0]<<8;
+      qidx|= uvec[1];
+      qsize= uvec[2]<<8;
+      qsize|-uvec[3];
+      base = uvec[4]<<8;
+      base|= uvec[5];
+      base_crc=uvec[6]<<8;
+      base_crc|=uvec[7];
+      if( (qsize!=0 && qidx>=qsize) || (base!=base_crc) ){
+        return; // low quality packets
+      }
+      hdr_t hdr;
+      if(!pkt_validate(hdr,block,offset,pktlen, qidx,qsize,base)){
+        // invalid
+        return;
+      }
+      // critical information added
+      if(!matching_pkt(hdr)){
+        // not matched
+        return;
+      }
+
     }
 
     bool
-    ic_resync_cc_impl::matching_pkt(uint64_t bid, int offset, int pktlen)
+    ic_resync_cc_impl::pkt_validate(hdr_t& hdr,uint64_t bid, int offset, int pktlen,uint16_t qidx,uint16_t qsize,uint16_t base)
     {
       std::list< std::pair<uint64_t, int> >::reverse_iterator rit;
+      for(rit = d_block_list.rbegin();rit!=d_block_list.rend();++rit){
+        if(std::get<0>(*rit)==bid){
+          break;
+        }
+      }
+      if(rit==d_block_list.rend()){
+        return false;
+      }
+      // bid and offset at SHR, should track back to preamble
+      int begin = (std::get<1>(*rit) + offset)%d_cap;
+      for(int i=0;i<d_prelen;++i){
+        begin = (begin==0)? d_cap-1 : begin--;
+        if(begin==d_in_idx)
+          return false;
+      }
+      int end = begin;
+      for(int i=0;i<pktlen;++i){
+        end= (end+1)%d_cap;
+        if(end==d_in_idx)
+          return false;
+      }
+      pmt::pmt_t msg = pmt::make_dict();
+      msg = pmt::dict_add(msg,pmt::intern("packet_len"),pmt::from_long(pktlen));
+      msg = pmt::dict_add(msg,pmt::intern("queue_index"),pmt::from_long(qidx));
+      msg = pmt::dict_add(msg,pmt::intern("queue_size"),pmt::from_long(qsize));
+      msg = pmt::dict_add(msg,pmt::intern("base"),pmt::from_long(base));
+      hdr_t tmp_hdr(begin,msg);
+      hdr = tmp_hdr;
+      return true;
+    }
+
+    bool
+    ic_resync_cc_impl::matching_pkt(hdr_t hdr)
+    {
+      const int min_dis = 8192;
+      std::list< std::pair<int,hdr_t> >::reverse_iterator rit;
+      int idx = hdr.index();
+      for(rit=d_sfd_list.rbegin();rit!=d_sfd_list.rend();rit++){
+        int distance1 = std::abs(std::get<0>(*rit)-idx);
+        int distance2 = std::abs(std::get<0>(*rit)+d_cap-idx);
+        if(std::min(distance1,distance2)<=min_dis){
+          DEBUG<<"<Resync>\033[34;1mMatching packets: dist1="<<distance1<<" ,dist2="<<distance2<<"\033[0m"<<std::endl;
+          // possible matched case
+          // remove other headers?
+          break;
+        }
+      }
+      return true;
+    }
+
+    bool
+    ic_resync_cc_impl::create_intf()
+    {
+      if(!d_cur_intf.empty()){
+        // still finding end tag
+        return false;
+      }
+      std::list<hdr_t>::reverse_iterator rit;
+      intf_t obj;
+      for(rit = d_hdr_list.rbegin();rit!=d_hdr_list.rend();++rit){
+        int count=(*rit).index();
+        pmt::pmt_t msg = (*rit).msg();
+        int pktlen = pmt::to_long(pmt::dict_ref(msg,pmt::intern("packet_len"),pmt::from_long(0)));
+        for(count;count!=d_in_idx;++count){
+          if(count==d_cap)
+            count=0;
+        }
+        if(count<pktlen){
+          return false;
+        }else{
+          break;
+        }
+      }
+      obj.set_begin(d_intf_idx);
+      obj.set_front((*rit));
+      int pkt_begin= (*rit).index();
+      for(pkt_begin;pkt_begin!=d_in_idx;++pkt_begin){
+        d_intf_mem[d_intf_idx++] = d_in_mem[pkt_begin++];
+        pkt_begin%=d_cap;
+        if(d_intf_idx==d_cap){
+          d_intf_idx=d_cap-1;
+          return false;
+        }
+      }
+      d_cur_intf= obj;
       return true;
     }
 
@@ -141,31 +267,60 @@ namespace gr {
       int nout = 0;
       int count =0;
       d_voe_tags.clear();
-      std::vector<tag_t> tags;
+      std::vector<tag_t> tags, sfd_tags;
       get_tags_in_window(tags,0,0,nin,pmt::intern("block_tag"));
       get_tags_in_window(d_voe_tags,0,0,nin,pmt::intern("voe_tag"));
-      d_nex_block_idx = d_block_idx+nin;
-      if(!tags.empty()){
-        count = tags[0].offset - nitems_read(0);
-        count++;
-        d_block_list.push_back(std::make_pair(d_block,d_block_idx+count));
-        d_nex_block_idx=0;
-        d_nex_block = pmt::to_uint64(tags[0].value);
-      }
+      get_tags_in_window(sfd_tags,0,0,nin,pmt::intern("sfd_est"));
       while(count<nin){
+        if(!tags.empty()){
+          int offset = tags[0].offset - nitems_read(0);
+          if(offset == count){
+            d_offset =0;
+            d_block = pmt::to_uint64(tags[0].value);
+            d_block_list.push_back(std::make_pair(d_block,d_in_idx));
+            tags.erase(tags.begin());
+          }
+        }
+        if(!sfd_tags.empty()){
+          int offset = sfd_tags[0].offset-nitems_read(0);
+          if(offset == count){
+            pmt::pmt_t sfd_msg = pmt::make_dict();
+            sfd_msg = pmt::dict_add(sfd_msg,pmt::intern("init_phase"),sfd_tags[0].value);
+            hdr_t sfd_hdr(d_in_idx,sfd_msg);
+            d_sfd_list.push_back(std::make_pair(d_in_idx,sfd_hdr) );
+            sfd_tags.erase(sfd_tags.begin());
+            DEBUG<<"<Resync>\033[33;1m"<<"found sfd at block:"<<d_block<<" ,offset:"<<d_offset<<std::endl;
+          }
+        }
         switch(d_state)
         {
           case VOE_CLEAR:
             while(count<nin){
               if(voe_update(count)){
                 d_state = VOE_TRIGGERED;
+                d_latest_voe_begin = d_in_idx;
                 // try to locate a header in advance?
                 // use SFD? Correlation?
                 // should record the block and idx of the event for back tracking
+                // create intf object here. 
+                /*if(create_intf()){
+
+                }else{
+                  // somthing wrong
+                }*/
+                DEBUG<<"<Resync>\033[36;1m"<<"Detecting start of VoE signal...at:"<<d_in_idx<<"\033[0m"<<std::endl;
                 break;
+              }
+              if(!d_cur_intf.front_tag_empty() && d_cur_intf.back_tag_empty()){
+                d_intf_mem[d_intf_idx++] = in[count];
+                if(d_intf_idx==d_cap){
+                  d_intf_idx = d_cur_intf.begin();
+                  d_cur_intf.clear();
+                }
               }
               d_in_mem[d_in_idx++] = in[count++];
               d_in_idx%=d_cap;
+              system_update(d_in_idx);
             }
           break;
           case VOE_TRIGGERED:
@@ -173,11 +328,21 @@ namespace gr {
               if(voe_update(count)){
                 d_state = VOE_CLEAR;
                 // should record the block and idx of the event for back tracking
+                // change state to receive a end header
+                DEBUG<<"<Resync>\033[36;1m"<<"Detecting end of VoE signal...at:"<<d_in_idx<<"\033[0m"<<std::endl;
+                d_latest_voe_end = d_in_idx;
                 break;
               }
-              d_in_mem[d_in_idx++] = in[count];
+              if(!d_cur_intf.front_tag_empty() && d_cur_intf.back_tag_empty()){
+                d_intf_mem[d_intf_idx++] = in[count];
+                if(d_intf_idx==d_cap){
+                  d_intf_idx = d_cur_intf.begin();
+                  d_cur_intf.clear();
+                }
+              }
+              d_in_mem[d_in_idx++] = in[count++];
               d_in_idx%=d_cap;
-              count = (count+1)%d_cap;
+              system_update(d_in_idx);
             }
           break;
           default:
@@ -185,8 +350,10 @@ namespace gr {
           break;
         }
       }
-      d_block_idx=d_nex_block_idx;
-      d_block = d_nex_block;
+      nout = std::min(noutput_items,std::max(d_out_size-d_out_idx,0));
+      memcpy(out,d_out_mem+d_out_idx,sizeof(gr_complex)*nout);
+      memcpy(demo,d_demo_mem+d_out_idx,sizeof(gr_complex)*nout);
+      d_out_idx+=nout;
       consume_each (count);
       return nout;
     }

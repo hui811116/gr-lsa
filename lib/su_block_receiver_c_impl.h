@@ -33,10 +33,8 @@ namespace gr {
       const pmt::pmt_t d_out_port;
       int d_state;
       int d_hdr_bps;
-      //int d_threshold;
       unsigned char d_out_buf[256];
       unsigned char d_mod_buf;
-      //unsigned char* d_byte_buf;
       gr::digital::constellation_sptr d_hdr_const;
       int d_threshold;
       unsigned int d_data_reg;
@@ -50,6 +48,8 @@ namespace gr {
 
       uint64_t d_block;
       int d_offset;
+      uint64_t d_latest_bid;
+      int d_latest_offset;
       bool d_voe_state;
       bool d_voe_do_not_pub;
 
