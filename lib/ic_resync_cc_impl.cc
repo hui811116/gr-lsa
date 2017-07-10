@@ -32,6 +32,9 @@ namespace gr {
     #define DEBUG d_debug && std::cout
     #define CAPACITY 128*1024*1024
     #define FIRCAPACITY 256*128
+    #define CHIPRATE 8
+    #define MODBPS 2
+    #define LSAPHYLEN 6
     static int d_sps = 4;
     static int d_prelen = 128; // symbols 16*8
     static int d_phylen = 192; // 0x00,0x00,0x00,0x00,0xe6,0xXX
@@ -86,19 +89,20 @@ namespace gr {
     bool
     ic_resync_cc_impl::voe_update(int idx)
     {
-      if(d_voe_tags.empty()){
+      bool result = false;
+      if(!d_voe_tags.empty()){
         int offset = d_voe_tags[0].offset - nitems_read(0);
         if(offset == idx){
-          d_voe_tags.erase(d_voe_tags.begin());
-          bool result = pmt::to_bool(d_voe_tags[0].value);
+          result = pmt::to_bool(d_voe_tags[0].value);
           if(d_state == VOE_CLEAR && result){
-            return true;
+            result= true;
           }else if(d_state == VOE_TRIGGERED && !result){
-            return true;
+            result = true;
           }
+          d_voe_tags.erase(d_voe_tags.begin());
         }
       }
-      return false;
+      return result;
     }
     void
     ic_resync_cc_impl::system_update(int idx)
@@ -114,6 +118,37 @@ namespace gr {
           d_block_list.pop_front();
         }
       }
+      if(!d_pkt_history.empty()){
+        if(d_pkt_history.front().index()==idx){
+          d_pkt_history.pop_front();
+        }
+      }
+    }
+    void
+    ic_resync_cc_impl::tags_update(int idx)
+    {
+      if(!d_block_tags.empty()){
+        int offset = d_block_tags[0].offset-nitems_read(0);
+        if(offset == idx){
+          d_offset =0;
+          d_block = pmt::to_uint64(d_block_tags[0].value);
+          d_block_list.push_back(std::make_pair(d_block,d_in_idx));
+          d_block_tags.erase(d_block_tags.begin());
+        }
+      }
+      if(!d_sfd_tags.empty()){
+        int offset = d_sfd_tags[0].offset-nitems_read(0);
+        if(offset == idx){
+          pmt::pmt_t sfd_msg = pmt::make_dict();
+          sfd_msg = pmt::dict_add(sfd_msg,pmt::intern("init_phase"),d_sfd_tags[0].value);
+          int idx_fix = d_in_idx-d_prelen*d_sps;
+          idx_fix = (idx_fix<0)? idx_fix+d_cap : idx_fix;
+          hdr_t sfd_hdr(idx_fix,sfd_msg);
+          d_sfd_list.push_back(std::make_pair(idx_fix,sfd_hdr) );
+          d_sfd_tags.erase(d_sfd_tags.begin());
+          //DEBUG<<"<Resync>\033[33;1m"<<"found sfd at block:"<<d_block<<" ,offset:"<<d_offset<<"\033[0m"<<std::endl;
+        }
+      }
     }
 
     void
@@ -126,34 +161,36 @@ namespace gr {
       assert(pmt::is_blob(v));
       size_t io(0);
       const uint8_t* uvec = u8vector_elements(v,io);
-      uint64_t block = pmt::to_uint64(pmt::dict_ref(k,pmt::intern("block"),pmt::from_uint64(0)));
+      uint64_t block = pmt::to_uint64(pmt::dict_ref(k,pmt::intern("block_id"),pmt::from_uint64(0)));
       int offset = pmt::to_long(pmt::dict_ref(k,pmt::intern("offset"),pmt::from_long(0)));
       offset*= d_sps;
-      int payload = pmt::to_long(pmt::dict_ref(k,pmt::intern("payload"),pmt::from_long(0)));
-      int pktlen = (payload+d_phylen)*d_sps;
+      int pktlen = (io+LSAPHYLEN)*CHIPRATE*8/MODBPS*d_sps;
       uint16_t base,base_crc, qsize,qidx;
       qidx = uvec[0]<<8;
       qidx|= uvec[1];
       qsize= uvec[2]<<8;
-      qsize|-uvec[3];
+      qsize|=uvec[3];
       base = uvec[4]<<8;
       base|= uvec[5];
       base_crc=uvec[6]<<8;
       base_crc|=uvec[7];
       if( (qsize!=0 && qidx>=qsize) || (base!=base_crc) ){
+        DEBUG<<"<Low quality>"<<std::endl;
         return; // low quality packets
       }
       hdr_t hdr;
       if(!pkt_validate(hdr,block,offset,pktlen, qidx,qsize,base)){
         // invalid
+        DEBUG<<"<Invalid packet>"<<std::endl;
         return;
       }
       // critical information added
       if(!matching_pkt(hdr)){
         // not matched
+        DEBUG<<"<Not matched>"<<std::endl;
         return;
       }
-
+      d_pkt_history.push_back(hdr);
     }
 
     bool
@@ -168,18 +205,14 @@ namespace gr {
       if(rit==d_block_list.rend()){
         return false;
       }
-      // bid and offset at SHR, should track back to preamble
+      // bid and offset at PKTLEN, should track back to preamble
       int begin = (std::get<1>(*rit) + offset)%d_cap;
-      for(int i=0;i<d_prelen;++i){
-        begin = (begin==0)? d_cap-1 : begin--;
-        if(begin==d_in_idx)
+      for(int i=0;i<(d_prelen+16*2)*d_sps;++i){
+        begin = (begin==0)? d_cap-1 : begin-1;
+        if(begin==d_in_idx){
+          DEBUG<<"<PKTVALID>failed at front"<<std::endl;
           return false;
-      }
-      int end = begin;
-      for(int i=0;i<pktlen;++i){
-        end= (end+1)%d_cap;
-        if(end==d_in_idx)
-          return false;
+        }
       }
       pmt::pmt_t msg = pmt::make_dict();
       msg = pmt::dict_add(msg,pmt::intern("packet_len"),pmt::from_long(pktlen));
@@ -192,7 +225,7 @@ namespace gr {
     }
 
     bool
-    ic_resync_cc_impl::matching_pkt(hdr_t hdr)
+    ic_resync_cc_impl::matching_pkt(hdr_t& hdr)
     {
       const int min_dis = 8192;
       std::list< std::pair<int,hdr_t> >::reverse_iterator rit;
@@ -201,13 +234,16 @@ namespace gr {
         int distance1 = std::abs(std::get<0>(*rit)-idx);
         int distance2 = std::abs(std::get<0>(*rit)+d_cap-idx);
         if(std::min(distance1,distance2)<=min_dis){
-          DEBUG<<"<Resync>\033[34;1mMatching packets: dist1="<<distance1<<" ,dist2="<<distance2<<"\033[0m"<<std::endl;
+          //DEBUG<<"<Resync>\033[34;1mMatching packets: dist1="<<distance1<<" ,dist2="<<distance2<<"\033[0m"<<std::endl;
           // possible matched case
           // remove other headers?
-          break;
+          pmt::pmt_t tmp = (std::get<1>(*rit)).msg();
+          hdr.set_index(std::get<1>(*rit).index());
+          hdr.add_msg(pmt::intern("init_phase"),pmt::dict_ref(tmp,pmt::intern("init_phase"),pmt::from_float(0)));
+          return true;
         }
       }
-      return true;
+      return false;
     }
 
     bool
@@ -267,35 +303,17 @@ namespace gr {
       int nout = 0;
       int count =0;
       d_voe_tags.clear();
-      std::vector<tag_t> tags, sfd_tags;
-      get_tags_in_window(tags,0,0,nin,pmt::intern("block_tag"));
+      d_block_tags.clear();
+      d_sfd_tags.clear();
+      get_tags_in_window(d_block_tags,0,0,nin,pmt::intern("block_tag"));
       get_tags_in_window(d_voe_tags,0,0,nin,pmt::intern("voe_tag"));
-      get_tags_in_window(sfd_tags,0,0,nin,pmt::intern("sfd_est"));
+      get_tags_in_window(d_sfd_tags,0,0,nin,pmt::intern("phase_est"));
       while(count<nin){
-        if(!tags.empty()){
-          int offset = tags[0].offset - nitems_read(0);
-          if(offset == count){
-            d_offset =0;
-            d_block = pmt::to_uint64(tags[0].value);
-            d_block_list.push_back(std::make_pair(d_block,d_in_idx));
-            tags.erase(tags.begin());
-          }
-        }
-        if(!sfd_tags.empty()){
-          int offset = sfd_tags[0].offset-nitems_read(0);
-          if(offset == count){
-            pmt::pmt_t sfd_msg = pmt::make_dict();
-            sfd_msg = pmt::dict_add(sfd_msg,pmt::intern("init_phase"),sfd_tags[0].value);
-            hdr_t sfd_hdr(d_in_idx,sfd_msg);
-            d_sfd_list.push_back(std::make_pair(d_in_idx,sfd_hdr) );
-            sfd_tags.erase(sfd_tags.begin());
-            DEBUG<<"<Resync>\033[33;1m"<<"found sfd at block:"<<d_block<<" ,offset:"<<d_offset<<std::endl;
-          }
-        }
         switch(d_state)
         {
           case VOE_CLEAR:
             while(count<nin){
+              tags_update(count);
               if(voe_update(count)){
                 d_state = VOE_TRIGGERED;
                 d_latest_voe_begin = d_in_idx;
@@ -325,6 +343,7 @@ namespace gr {
           break;
           case VOE_TRIGGERED:
             while(count<nin){
+              tags_update(count);
               if(voe_update(count)){
                 d_state = VOE_CLEAR;
                 // should record the block and idx of the event for back tracking

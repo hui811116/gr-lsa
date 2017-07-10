@@ -50,13 +50,15 @@ namespace gr {
       int d_nex_block_idx;
       std::list< std::pair<uint64_t,int> > d_block_list;
       std::vector<tag_t> d_voe_tags;
+      std::vector<tag_t> d_sfd_tags;
+      std::vector<tag_t> d_block_tags;
       int d_latest_voe_end;
       int d_latest_voe_begin;
       int d_state;
 
       std::list<hdr_t> d_hdr_list;
       gr::thread::mutex d_mutex;
-      std::list< std::tuple<uint64_t,int,pmt::pmt_t> > d_pkt_history;
+      std::list<hdr_t> d_pkt_history;
       std::list< std::pair<int, hdr_t> > d_sfd_list;
 
       intf_t d_cur_intf;
@@ -65,9 +67,9 @@ namespace gr {
       void system_update(int idx);
       void msg_in(pmt::pmt_t msg);
       bool pkt_validate(hdr_t& hdr,uint64_t bid,int offset,int pktlen, uint16_t qidx,uint16_t qsize, uint16_t base);
-      bool matching_pkt(hdr_t hdr);
+      bool matching_pkt(hdr_t& hdr);
       bool create_intf();
-      
+      void tags_update(int idx);
 
      public:
       ic_resync_cc_impl(const std::vector<float>& taps);
