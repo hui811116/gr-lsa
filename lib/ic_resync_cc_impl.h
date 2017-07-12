@@ -32,6 +32,8 @@ namespace gr {
      private:
       const size_t d_cap;
       const pmt::pmt_t d_in_port;
+      bool d_intf_protect;
+      int d_protect_cnt;
       gr_complex* d_in_mem;
       gr_complex* d_out_mem;
       gr_complex* d_demo_mem;
@@ -56,12 +58,17 @@ namespace gr {
       int d_latest_voe_begin;
       int d_state;
 
-      std::list<hdr_t> d_hdr_list;
+      
       gr::thread::mutex d_mutex;
       std::list<hdr_t> d_pkt_history;
       std::list< std::pair<int, hdr_t> > d_sfd_list;
 
       intf_t d_cur_intf;
+      std::list<intf_t> d_intf_list;
+      std::list<std::pair<intf_t,std::vector<int> > > d_ic_list;
+
+      int d_retx_cnt;
+      std::vector< std::tuple<int,pmt::pmt_t,uint16_t> > d_retx_stack;
 
       bool voe_update(int idx);
       void system_update(int idx);
@@ -70,6 +77,9 @@ namespace gr {
       bool matching_pkt(hdr_t& hdr);
       bool create_intf();
       void tags_update(int idx);
+      void retx_detector(uint16_t qidx,uint16_t qsize,uint16_t base,pmt::pmt_t blob, int pktlen);
+      void intf_detector();
+      void do_ic(std::pair<intf_t,std::vector<int> > obj);
 
      public:
       ic_resync_cc_impl(const std::vector<float>& taps);
