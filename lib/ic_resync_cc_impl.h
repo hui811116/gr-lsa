@@ -22,6 +22,7 @@
 #define INCLUDED_LSA_IC_RESYNC_CC_IMPL_H
 
 #include <lsa/ic_resync_cc.h>
+#include <gnuradio/filter/mmse_fir_interpolator_ff.h>
 #include "utils.h"
 
 namespace gr {
@@ -39,13 +40,14 @@ namespace gr {
       gr_complex* d_demo_mem;
       gr_complex* d_intf_mem;
       gr_complex* d_fir_buffer;
-      std::vector<float> d_taps;
-
+      gr_complex* d_ic_mem;
+      std::vector<gr_complex> d_taps;
+      std::vector<gr_complex> d_tap_buffer;
+      std::vector<gr_complex> d_su_rebuild;
       int d_in_idx;
       int d_out_idx;
       int d_intf_idx;
       int d_out_size;
-
       int d_offset;
       uint64_t d_block;
       uint64_t d_nex_block;
@@ -57,18 +59,33 @@ namespace gr {
       int d_latest_voe_end;
       int d_latest_voe_begin;
       int d_state;
-
-      
       gr::thread::mutex d_mutex;
       std::list<hdr_t> d_pkt_history;
       std::list< std::pair<int, hdr_t> > d_sfd_list;
-
       intf_t d_cur_intf;
       std::list<intf_t> d_intf_list;
       std::list<std::pair<intf_t,std::vector<int> > > d_ic_list;
-
       int d_retx_cnt;
       std::vector< std::tuple<int,pmt::pmt_t,uint16_t> > d_retx_stack;
+      // synchronizers
+      filter::mmse_fir_interpolator_ff * d_interp;
+      float d_mu;
+      float d_omega;
+      float d_last_sample;
+      float d_omega_mid;
+      float d_omega_lim;
+      // registers and counters
+      float* d_mm_mem;
+      int d_mm_size;
+      int d_mm_cnt;
+      int d_chunk_size;
+      int d_cancel_idx;
+      float d_su_phase;
+      float d_su_cfo;
+      float d_pu_cfo;
+      float d_pu_phase;
+      gr_complex d_corr_test[1024];
+      gr_complex d_chunk_buf[1024];
 
       bool voe_update(int idx);
       void system_update(int idx);
@@ -80,6 +97,14 @@ namespace gr {
       void retx_detector(uint16_t qidx,uint16_t qsize,uint16_t base,pmt::pmt_t blob, int pktlen);
       void intf_detector();
       void do_ic(std::pair<intf_t,std::vector<int> > obj);
+
+      // functions to reconstruct both su and pu signal
+      void rebuild_su(bool retx,const std::vector<int>& retx_idx);
+      void reset_sync(); // reset clock, registers
+      // normalized cross correlation
+      // normalized autocorrelation
+      
+
 
      public:
       ic_resync_cc_impl(const std::vector<float>& taps);
@@ -93,6 +118,28 @@ namespace gr {
            gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
     };
+
+    // su header and physical layer info
+    typedef std::complex<float> CPX;
+    static const CPX d_map[][16] = {
+{CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1)},
+{CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1)},
+{CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1)},
+{CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1)},
+{CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1)},
+{CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1)},
+{CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1),CPX(1,-1),CPX(-1,1)},
+{CPX(1,-1),CPX(-1,1),CPX(1,1),CPX(-1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,1),CPX(-1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,-1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(-1,1)},
+{CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1)},
+{CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1)},
+{CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1)},
+{CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1)},
+{CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1)},
+{CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1)},
+{CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1),CPX(1,1),CPX(-1,-1)},
+{CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1)} 
+    };
+    static const int d_lsaphy_idx[] = {0,0,0,0,0,0,0,0,14,6}; //0x00 0x00 0x00 0x00 0xe6
 
   } // namespace lsa
 } // namespace gr
