@@ -27,6 +27,12 @@
 
 namespace gr {
   namespace lsa {
+    // pu decoder state
+    enum PUDECSTATE{
+      SEARCH,
+      SYNC,
+      PAYLOAD
+    };
 
     class ic_resync_cc_impl : public ic_resync_cc
     {
@@ -68,25 +74,66 @@ namespace gr {
       int d_retx_cnt;
       std::vector< std::tuple<int,pmt::pmt_t,uint16_t> > d_retx_stack;
       // synchronizers
+      int d_last_su_sync_idx;
+      bool d_found_first_pu;
+      float d_pu_gain_gain;
+      float d_pu_cfo_gain;
+      // MM_ff
       filter::mmse_fir_interpolator_ff * d_interp;
       float d_mu;
       float d_omega;
       float d_last_sample;
       float d_omega_mid;
       float d_omega_lim;
-      // registers and counters
       float* d_mm_mem;
       int d_mm_size;
       int d_mm_cnt;
+      int d_mm_consume;
+      // single pole
+      float d_pole_alpha;
+      float d_pole_one_alpha;
+      float d_pole_prevo;
+      // quadrature demod
+      float* d_qmod_mem;
+      int d_qmod_cnt;
+      std::vector<gr_complex> d_qmod_tmp;
+      // registers and counters
       int d_chunk_size;
       int d_cancel_idx;
       float d_su_phase;
       float d_su_cfo;
       float d_pu_cfo;
       float d_pu_phase;
+      float d_su_gain;
+      float d_pu_gain;
+      float d_tracking_gain;
+      float d_gain_gain;
       gr_complex d_corr_test[1024];
       gr_complex d_chunk_buf[1024];
+      // prou regen
+      float d_offset_d1;
+      float d_offset_d2;
+      std::vector<gr_complex> d_pu_rebuild;
+      std::vector<gr_complex> d_pu_tmp;
+      std::vector<gr_complex> d_pu_cancel_buf;
+      std::vector<float> d_kay_taps;
+      std::vector<gr_complex> d_kay_tmp;
+      // prou decoder
+      int d_dec_threshold;
+      PUDECSTATE d_dec_state;
+      int d_dec_pre_cnt;
+      int d_dec_chip_cnt;
+      int d_dec_symbol_cnt;
+      int d_dec_pld_len;
+      unsigned int d_dec_data_reg;
+      unsigned char d_dec_buf[1024];
+      unsigned char d_dec_byte_reg;
+      void enter_search();
+      void enter_sync();
+      void enter_payload(const unsigned char& pld_len);
+      unsigned char chip_decoder(const unsigned int& c, int& quality);
 
+      // stream functions
       bool voe_update(int idx);
       void system_update(int idx);
       void msg_in(pmt::pmt_t msg);
@@ -101,10 +148,8 @@ namespace gr {
       // functions to reconstruct both su and pu signal
       void rebuild_su(bool retx,const std::vector<int>& retx_idx);
       void reset_sync(); // reset clock, registers
-      // normalized cross correlation
-      // normalized autocorrelation
-      
-
+      void rebuild_pu(int chip_id);
+      void cancel_pu_and_resync(int cur_sync_idx,int ic_mem_idx,int su_mem_idx,int prev_mm_size,int cur_mm_idx);
 
      public:
       ic_resync_cc_impl(const std::vector<float>& taps);
@@ -140,6 +185,26 @@ namespace gr {
 {CPX(1,1),CPX(-1,-1),CPX(1,-1),CPX(-1,1),CPX(-1,1),CPX(1,-1),CPX(-1,-1),CPX(-1,-1),CPX(-1,1),CPX(1,1),CPX(-1,1),CPX(1,1),CPX(1,-1),CPX(1,1),CPX(1,-1),CPX(-1,-1)} 
     };
     static const int d_lsaphy_idx[] = {0,0,0,0,0,0,0,0,14,6}; //0x00 0x00 0x00 0x00 0xe6
+    static const unsigned int d_mask = 0x7ffffffe;
+    static const int MAXPLD = 128-1;
+    static const unsigned int CHIPSET[16] = {
+      3765939820,
+      3456596710,
+      1826650030,
+      1724778362,
+      778887287,
+      2061946375,
+      4155403488,
+      2272978638,
+      2676511123,
+      2985854233,
+      320833617,
+      422705285,
+      1368596360,
+      85537272,
+      2287047455,
+      4169472305
+    };
 
   } // namespace lsa
 } // namespace gr

@@ -27,6 +27,7 @@
 #include <volk/volk.h>
 #include <gnuradio/math.h>
 #include <gnuradio/expj.h>
+#include <gnuradio/blocks/count_bits.h>
 
 namespace gr {
   namespace lsa {
@@ -37,11 +38,12 @@ namespace gr {
     #define CHIPRATE 8
     #define MODBPS 2
     #define LSAPHYLEN 6
+    #define TWO_PI M_PI*2.0F
     static int d_sps = 4;
     static int d_prelen = 128; // symbols 16*8
     static int d_phylen = 192; // 0x00,0x00,0x00,0x00,0xe6,0xXX
     static int d_protect_len = 512;
-
+    static const gr_complex d_pu_taps[] = {gr_complex(0,0),gr_complex(std::sin(M_PI/4.0F),0),gr_complex(1.0F,0),gr_complex(std::sin(3*M_PI/4.0F))};
     // parameters for sync
     static float d_gain_mu = 0.03;
     static float d_gain_omega = 2.25e-4;
@@ -51,6 +53,16 @@ namespace gr {
     static inline float slice(float x){
       return x<0?-1.0F:1.0F;
     }
+    static inline unsigned char byte_slice(const float& f){
+      return (f>0)? 0x01 : 0x00;
+    }
+    static inline void phase_wrap(float& phase){
+      while(phase>TWO_PI)
+        phase-=TWO_PI;
+      while(phase<-TWO_PI)
+        phase+=TWO_PI;
+    }
+    
     enum VOESTATE{
       VOE_CLEAR,
       VOE_TRIGGERED
@@ -84,14 +96,17 @@ namespace gr {
       d_fir_buffer = (gr_complex*)volk_malloc(sizeof(gr_complex)*FIRCAPACITY,volk_get_alignment());
       d_in_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
       d_ic_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap/4,volk_get_alignment());
+      d_mm_mem = (float*)volk_malloc(sizeof(float)*d_cap/4,volk_get_alignment());
+      d_qmod_mem = (float*)volk_malloc(sizeof(float)*d_cap/4,volk_get_alignment());
+      d_pu_rebuild.resize(64);
       d_su_rebuild.resize(d_cap/4,gr_complex(0,0));
       d_in_idx =0;
       d_out_idx=0;
       d_out_size=0;
       d_intf_idx=0;
       d_intf_mem = new gr_complex[d_cap];
-      d_out_mem = new gr_complex[d_cap];
-      d_demo_mem = new gr_complex[d_cap];
+      d_out_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
+      d_demo_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
       d_state = VOE_CLEAR;
       d_intf_protect = false;
       d_protect_cnt=0;
@@ -105,6 +120,24 @@ namespace gr {
         d_taps.push_back(gr_complex(taps[i],0));
       }
       d_tap_buffer.resize(taps.size()); // set for tap buffer
+      d_chunk_size=128;
+      d_gain_gain = 0.02;
+      d_tracking_gain = 0.000628;
+      d_pole_alpha = 160e-6;
+      d_pole_one_alpha=1-d_pole_alpha;
+      d_dec_threshold = 10;
+      d_qmod_tmp.resize(d_chunk_size,gr_complex(0,0));
+      d_pu_tmp.resize(64,gr_complex(0,0));
+      d_pu_cancel_buf.resize(64,gr_complex(0,0));
+      d_pu_gain_gain = 0.02;
+      d_pu_cfo_gain = 0.000628;
+      d_kay_taps.resize(64,0);
+      d_kay_tmp.resize(64,gr_complex(0,0));
+      float kay_len = d_chunk_size-1;
+      float kay_const = 1.5*(kay_len)/(kay_len*kay_len-1);
+      for(int i=0;i<kay_len;++i){
+        d_kay_taps[i] = (1-( (2* ((float)i+1)-kay_len)/kay_len )*( (2* ((float)i+1)-kay_len)/kay_len ));
+      }
     }
 
     /*
@@ -115,10 +148,14 @@ namespace gr {
       volk_free(d_fir_buffer);
       volk_free(d_in_mem);
       volk_free(d_ic_mem);
+      volk_free(d_mm_mem);
+      volk_free(d_out_mem);
+      volk_free(d_demo_mem);
+      volk_free(d_qmod_mem);
       delete [] d_intf_mem;
-      delete [] d_out_mem;
-      delete [] d_demo_mem;
       d_su_rebuild.clear();
+      d_pu_rebuild.clear();
+      d_qmod_tmp.clear();
       delete d_interp;
     }
 
@@ -376,6 +413,7 @@ namespace gr {
         return false;
       }
       intf_t obj;
+      int intf_begin = d_intf_idx;
       obj.set_begin(d_intf_idx);
       obj.set_front((*rit));
       int pkt_begin= (*rit).index();
@@ -392,6 +430,8 @@ namespace gr {
         d_intf_mem[d_intf_idx++] = d_in_mem[pkt_begin++];
         pkt_begin%=d_cap;
       }
+      // record voe tag begin for ease of cancellation
+      obj.add_msg(pmt::intern("voe_begin"),pmt::from_long(d_intf_idx-intf_begin));
       obj.set_end(d_intf_idx-1);
       d_cur_intf= obj;
       return true;
@@ -465,6 +505,19 @@ namespace gr {
       // additional taps for fir 
       memcpy(d_su_rebuild.data(),d_su_rebuild.data()+20,sizeof(gr_complex)*size_cnt*d_sps);
     }
+    void
+    ic_resync_cc_impl::rebuild_pu(int chip_id)
+    {
+      const gr_complex* chip_ptr = d_map[chip_id];
+      for(int i=0;i<16;++i){
+        volk_32fc_s32fc_multiply_32fc(d_pu_tmp.data()+d_sps*i,d_pu_taps,chip_ptr[i],4);
+      }
+      for(int i=0;i<64;++i){
+        d_pu_rebuild[i] = gr_complex(d_pu_tmp[i].real(),d_offset_d1);
+        d_offset_d1 = d_offset_d2;
+        d_offset_d2 = std::imag(d_pu_tmp[i]);
+      }
+    }
 
     void
     ic_resync_cc_impl::reset_sync()
@@ -476,18 +529,33 @@ namespace gr {
       d_omega_mid = d_ori_omega;
       d_omega_lim = d_omega_mid * d_omega_relative_limit;
       // counters and registers
+      d_cancel_idx=0;
       d_mm_size=0;
       d_mm_cnt=0;
+      // mm
+      d_mm_size=0;
+      d_mm_cnt=0;
+      d_mm_consume=0;
+      // pole
+      d_pole_prevo=0;
+      // qmod
+      d_qmod_cnt=0;
+      // dec
+      enter_search();
+      // pu
+      d_offset_d1 = 0;
+      d_offset_d2 = 0;
+      d_found_first_pu = false;
       
-      d_chunk_size=128;
-      d_cancel_idx=0;
     }
 
     void
     ic_resync_cc_impl::do_ic(std::pair<intf_t,std::vector<int> > obj)
     {
       int begin = std::get<0>(obj).begin();
-      int size = std::get<0>(obj).size();
+      const int size = std::get<0>(obj).size();
+      pmt::pmt_t intf_msg = std::get<0>(obj).msg();
+      int voe_begin = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_begin"),pmt::from_long(-1)));
       assert(size<=d_cap/4);
       memcpy(d_ic_mem,d_intf_mem+begin,sizeof(gr_complex)*size);
       std::vector<int> retx_idx = std::get<1>(obj);
@@ -495,6 +563,7 @@ namespace gr {
       DEBUG<<"Calling do ic:"<<std::endl;
       DEBUG<<"front tag:"<<std::get<0>(obj).front()<<std::endl;
       DEBUG<<"intf_begin="<<begin<<" ,intf_size="<<size<<std::endl;
+      DEBUG<<"voe begin="<<voe_begin<<std::endl;
       DEBUG<<"Retransmissions:"<<std::endl;
       // required retransmissions 
       int length_cnt=0;
@@ -503,22 +572,20 @@ namespace gr {
         pmt::pmt_t blob = std::get<1>(d_retx_stack[retx_idx[i]]);
         length_cnt+= std::get<0>(d_retx_stack[retx_idx[i]]);
       }
-      //DEBUG<<"End of do ic"<<std::endl;
-      
       if(length_cnt>=d_cap/4){
         DEBUG<<"DO IC ERROR: rebuild length greater than available memory size"<<std::endl;
         return;
       }
       pmt::pmt_t front_msg = (std::get<0>(obj)).front().msg();
       bool is_retx = pmt::to_long(pmt::dict_ref(front_msg,pmt::intern("queue_size"),pmt::from_long(-1)))!=0;
-      rebuild_su(is_retx,std::get<1>(obj)); // store samples of su in d_su_rebuild
+      rebuild_su(is_retx,retx_idx); // store samples of su in d_su_rebuild
       reset_sync();
       // note that there are residual samples due to fir interpolation
       // intf samples: d_intf_mem[begin] and size;
       // autocorrelation for first cfo estimate, search e6 for phase, use e6 for gain estimation
-      gr_complex cross_corr, corr_eng, auto_corr, su_eng;
+      gr_complex cross_corr, corr_eng, auto_corr, su_eng, diff;
       uint16_t max_idx = 0;
-      int delay = 128;
+      const int delay = 128;
       gr_complex max_corr(0,0);
       //gr_complex corr_test[1024];
       for(int i=0;i<1024;i++){
@@ -528,17 +595,17 @@ namespace gr {
       }
       volk_32fc_index_max_16u(&max_idx,d_corr_test,1024);
       if(std::abs(d_corr_test[max_idx])>0.9){
-        d_su_cfo = fast_atan2f(d_corr_test[max_idx].imag(),d_corr_test[max_idx].real())/(float)delay;
         DEBUG<<"Step1 passed: Autocorrelation found: idx="<<max_idx<<" cfo:"<<d_su_cfo<<std::endl;
       }else{
         // warning autocorrelation is weak
         DEBUG<<"Step1 failed: Autocorrelation of first 1024 samples does not reach threshold 0.9, abort---"<<std::abs(d_corr_test[max_idx])<<std::endl;
         return;
       }
+      d_su_cfo = fast_atan2f(d_corr_test[max_idx].imag(),d_corr_test[max_idx].real())/(float)delay;
       uint16_t sfd_idx = 512-32;
-      gr_complex zero_phase(1,0);
+      gr_complex init_phase(1,0);
       for(int i=0;i<64;++i){
-        volk_32fc_s32fc_x2_rotator_32fc(d_chunk_buf,d_su_rebuild.data()+512,gr_expj(d_su_cfo),&zero_phase,d_chunk_size);
+        volk_32fc_s32fc_x2_rotator_32fc(d_chunk_buf,d_su_rebuild.data()+512,gr_expj(d_su_cfo),&init_phase,d_chunk_size);
         volk_32fc_x2_conjugate_dot_prod_32fc(&cross_corr,d_ic_mem+sfd_idx+i,d_chunk_buf,d_chunk_size);
         volk_32fc_x2_conjugate_dot_prod_32fc(&corr_eng,d_ic_mem+sfd_idx+i,d_ic_mem+sfd_idx+i,d_chunk_size);
         volk_32fc_x2_conjugate_dot_prod_32fc(&su_eng,d_chunk_buf,d_chunk_buf,d_chunk_size);
@@ -546,14 +613,289 @@ namespace gr {
       }
       volk_32fc_index_max_16u(&sfd_idx,d_corr_test,64);
       if(std::abs(d_corr_test[sfd_idx])>0.9){
-        d_su_cfo = fast_atan2f(d_corr_test[sfd_idx].imag(),d_corr_test[sfd_idx].real());
         DEBUG<<"Step2 passed: Cross correlation found SFD(0xE6) idx="<<sfd_idx<<" ,correlation="<<std::abs(d_corr_test[sfd_idx])<<std::endl;
       }else{
         DEBUG<<"Step2 failed: Cross correlation of SFD (0xE6) does not show up at expected value... abort"<<std::endl;
         return;
       }
+      d_su_phase = fast_atan2f(d_corr_test[sfd_idx].imag(),d_corr_test[sfd_idx].real());
+      d_su_gain = std::real(std::sqrt(corr_eng/su_eng));
       sfd_idx+=480; // estimated sfd begin
+      // begin to cancel
+      d_cancel_idx = 512;
+      while(d_cancel_idx<(d_su_rebuild.size()-d_chunk_size) && sfd_idx<(size-d_chunk_size) && (sfd_idx+2*d_chunk_size<voe_begin) ){
+        volk_32fc_s32fc_x2_rotator_32fc(d_chunk_buf,d_su_rebuild.data()+d_cancel_idx,gr_expj(d_su_cfo),&init_phase,d_chunk_size);
+        for(size_t t=0;t<d_chunk_size;++t){
+          d_out_mem[d_out_idx++]=d_ic_mem[sfd_idx+t] - d_su_gain*gr_expj(d_su_phase)*d_chunk_buf[t];
+        }
+        // update phase, gain and cfo
+        volk_32fc_x2_conjugate_dot_prod_32fc(&cross_corr,d_ic_mem+sfd_idx,d_chunk_buf,d_chunk_size);
+        volk_32fc_x2_conjugate_dot_prod_32fc(&corr_eng,d_ic_mem+sfd_idx,d_ic_mem+sfd_idx,d_chunk_size);
+        volk_32fc_x2_conjugate_dot_prod_32fc(&su_eng,d_chunk_buf,d_chunk_buf,d_chunk_size);
+        diff = cross_corr * gr_expj(-d_su_phase);
+        d_su_cfo  = d_su_cfo + d_tracking_gain * fast_atan2f(diff.imag(),diff.real());
+        d_su_gain = std::exp(std::log(d_su_gain)+d_gain_gain*(std::log(std::real(std::sqrt(corr_eng/su_eng)))-std::log(d_su_gain)));
+        d_su_phase = fast_atan2f(cross_corr.imag(),cross_corr.real());  
+        d_cancel_idx+=d_chunk_size;
+        sfd_idx+=d_chunk_size;
+      }
+      d_last_su_sync_idx = sfd_idx;
+      // next chunk contains interfering signal
+      while(d_cancel_idx<(d_su_rebuild.size()-d_chunk_size) && sfd_idx<(size-d_chunk_size)){
+        bool found_pu_symbol = false;
+        float extend_phase = d_su_phase + (sfd_idx-d_last_su_sync_idx)*d_su_cfo;
+        phase_wrap(extend_phase);
+        gr_complex phase_est = gr_expj(extend_phase);
+        volk_32fc_s32fc_x2_rotator_32fc(d_chunk_buf,d_su_rebuild.data()+d_cancel_idx,gr_expj(d_su_cfo),&phase_est,d_chunk_size);
+        for(size_t t=0;t<d_chunk_size;++t){
+          d_out_mem[d_out_idx+t]=d_ic_mem[sfd_idx+t]-d_su_gain*gr_expj(d_su_phase)*d_chunk_buf[t];
+        }
+        // qmod and single pole iir filter
+        volk_32fc_x2_multiply_conjugate_32fc(&d_qmod_tmp[0],&d_out_mem[d_out_idx],&d_out_mem[d_out_idx-1],d_chunk_size);
+        for(size_t p=0;p<d_chunk_size;++p){
+          float qmod_out = gr::fast_atan2f(imag(d_qmod_tmp[p]),real(d_qmod_tmp[p]));
+          d_qmod_mem[d_qmod_cnt+p] = d_pole_alpha*qmod_out + d_pole_one_alpha*d_pole_prevo;
+          d_pole_prevo = qmod_out;
+        }
+        d_qmod_cnt+=d_chunk_size;
+        // MM clock recovery on qmod output
+        float mm_val;
+        int prev_mm_size = d_mm_size;
+        while(d_mm_consume<(d_qmod_cnt-d_interp->ntaps())){
+          d_mm_mem[d_mm_size] = d_interp->interpolate(&d_qmod_mem[d_mm_consume],d_mu);
+          mm_val = slice(d_last_sample)*d_mm_mem[d_mm_size]-slice(d_mm_mem[d_mm_size])*d_last_sample;
+          d_last_sample = d_mm_mem[d_mm_size];
+          d_omega = d_omega + d_gain_omega * mm_val;
+          d_omega = d_omega_mid + gr::branchless_clip(d_omega-d_omega_mid,d_omega_lim);
+          d_mu = d_mu + d_omega + d_gain_mu * mm_val;
+          d_mm_consume += (int)floor(d_mu);
+          d_mu = d_mu - floor(d_mu);
+          d_mm_size++;
+        }
+        // check accumulated zig_diff bits according to state
+        // if unfound, search on one bit basis
+        // if found, move on for every 32 bits
+        // once a symbol detected, rebuild MSK and cancel back
+        // SU should record the latest channel estimators. update accordingly.
+        while(d_mm_cnt<d_mm_size){
+          switch(d_dec_state){
+            case SEARCH:
+              while(d_mm_cnt<d_mm_size){
+                d_dec_data_reg = (d_dec_data_reg<<1) | (byte_slice(d_mm_mem[d_mm_cnt++])&0x01);
+                if(d_dec_pre_cnt>0){
+                  d_dec_chip_cnt++;
+                }
+                if(d_dec_pre_cnt==0){
+                  int thres = gr::blocks::count_bits32( (d_dec_data_reg&d_mask)^(CHIPSET[0] & d_mask));
+                  if(thres<d_dec_threshold){
+                    d_dec_pre_cnt++;
+                    // found first zero, double check to do first cancellation
+                    rebuild_pu(0);
+                    cancel_pu_and_resync(d_out_idx,d_cancel_idx,sfd_idx,prev_mm_size,d_mm_cnt);
+                    found_pu_symbol = true;
+                  }
+                }else{
+                  // have some preamble found
+                  if(d_dec_chip_cnt==32){
+                    d_dec_chip_cnt=0;
+                    if(d_dec_byte_reg==0x00){
+                      if(gr::blocks::count_bits32((d_dec_data_reg&d_mask)^(CHIPSET[0]&d_mask))<=d_dec_threshold){
+                        d_dec_pre_cnt++;
+                        d_dec_byte_reg = 0x00;
+                        rebuild_pu(0);
+                        cancel_pu_and_resync(d_out_idx,d_cancel_idx,sfd_idx,prev_mm_size,d_mm_cnt);
+                    found_pu_symbol = true;
+                      }else if(gr::blocks::count_bits32((d_dec_data_reg&d_mask)^(CHIPSET[7]&d_mask))<d_dec_threshold){
+                        d_dec_byte_reg = 0x70;
+                        rebuild_pu(7);
+                        cancel_pu_and_resync(d_out_idx,d_cancel_idx,sfd_idx,prev_mm_size,d_mm_cnt);
+                        found_pu_symbol = true;
+                      }else{
+                        enter_search();
+                        break;
+                      }
+                    }else{
+                      if(gr::blocks::count_bits32((d_dec_data_reg&d_mask)^(CHIPSET[10]&d_mask))<d_dec_threshold){
+                        d_dec_byte_reg |= 0x0A;
+                        enter_sync();
+                        rebuild_pu(10);
+                        cancel_pu_and_resync(d_out_idx,d_cancel_idx,sfd_idx,prev_mm_size,d_mm_cnt);
+                        found_pu_symbol = true;
+                        break;
+                      }else{
+                        enter_search();
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+            break;
+            case SYNC:
+              while(d_mm_cnt<d_mm_size){
+                d_dec_data_reg = (d_dec_data_reg<<1) | (byte_slice(d_mm_mem[d_mm_cnt++])&0x01);
+                d_dec_chip_cnt++;
+                if(d_dec_chip_cnt==32){
+                  d_dec_chip_cnt=0;
+                  int quality=33;
+                  unsigned char c = chip_decoder(d_dec_data_reg,quality);
+                  if(quality>=d_dec_threshold){
+                    // low quality warning
+                  }
+                  rebuild_pu((int)c);
+                  cancel_pu_and_resync(d_out_idx,d_cancel_idx,sfd_idx,prev_mm_size,d_mm_cnt);
+                  found_pu_symbol = true;
+                  if(d_dec_symbol_cnt==0){
+                    d_dec_byte_reg = c<<4;
+                    d_dec_symbol_cnt++;
+                  }else{
+                    d_dec_byte_reg |= c;
+                    if(d_dec_byte_reg <= MAXPLD){
+                      enter_payload(d_dec_byte_reg);
+                      break;
+                    }else{
+                      enter_search();
+                      break;
+                    }
+                  }
+                }
+              }
+            break;
+            case PAYLOAD:
+              while(d_mm_cnt<d_mm_size){
+                d_dec_data_reg = (d_dec_data_reg<<1)| (byte_slice(d_mm_mem[d_mm_cnt++])&0x01);
+                d_dec_chip_cnt++;
+                if(d_dec_chip_cnt==32){
+                  d_dec_chip_cnt=0;
+                  int quality=33;
+                  unsigned char c = chip_decoder(d_dec_data_reg,quality);
+                  if(quality>=d_dec_threshold){
+                    // low quality warning
+                  }
+                  rebuild_pu((int)c);
+                  cancel_pu_and_resync(d_out_idx,d_cancel_idx,sfd_idx,prev_mm_size,d_mm_cnt);
+                  found_pu_symbol = true;
+                  if(d_dec_symbol_cnt%2==0){
+                    d_dec_buf[d_dec_symbol_cnt/2] = c<<4;
+                  }else{
+                    d_dec_buf[d_dec_symbol_cnt/2] |=c;
+                  }
+                  d_dec_symbol_cnt++;
+                  if(d_dec_symbol_cnt/2>=d_dec_pld_len){
+                    pmt::pmt_t blob = pmt::make_blob(d_dec_buf,d_dec_pld_len);
+                    enter_search();
+                    break;
+                  }
+                }
+              }
+            break;
+            default:
+              throw std::runtime_error("Undefined state of inner decoder");
+            break;
+          }
+        }
+        d_out_idx+=d_chunk_size;
+        d_cancel_idx+=d_chunk_size;
+        sfd_idx+=d_chunk_size;
+      }
+    }
 
+    void
+    ic_resync_cc_impl::cancel_pu_and_resync(int cur_sync_idx,int ic_mem_idx,int su_mem_idx,int prev_mm_size,int cur_mm_idx)
+    {
+      //32 for a symbol of chips
+      int offset = cur_mm_idx-prev_mm_size-32;
+      int symbol_begin = cur_sync_idx+offset*2;  // x/32*64
+      int ic_begin = ic_mem_idx+offset*2;
+      int su_begin = su_mem_idx+offset*2;
+      memcpy(d_pu_cancel_buf.data(),d_out_mem+symbol_begin,sizeof(gr_complex)*64);
+      // kay cfo
+      volk_32fc_x2_multiply_conjugate_32fc(d_kay_tmp.data(),d_pu_cancel_buf.data(),d_pu_rebuild.data(),64);
+      std::vector<gr_complex> kay_diff(64);
+      volk_32fc_x2_multiply_conjugate_32fc(kay_diff.data(),d_kay_tmp.data()+1,d_kay_tmp.data(),63);
+      float kay_cfo=0;
+      for(int i=0;i<63;++i){
+        kay_cfo+= fast_atan2f(kay_diff[i].imag(),kay_diff[i].real()) * d_kay_taps[i];
+      }
+      d_pu_cfo = (d_found_first_pu)? kay_cfo : d_pu_cfo+(kay_cfo-d_pu_cfo)*d_pu_cfo_gain;
+      gr_complex pu_eng, ori_eng, cross, init_phase(1,0);
+      volk_32fc_x2_conjugate_dot_prod_32fc(&pu_eng,d_pu_cancel_buf.data(),d_pu_cancel_buf.data(),64);
+      volk_32fc_x2_conjugate_dot_prod_32fc(&ori_eng,d_pu_rebuild.data(),d_pu_rebuild.data(),64);
+      float tmp_gain = std::real(std::sqrt(pu_eng/ori_eng));
+      d_pu_gain = (d_found_first_pu)? tmp_gain  : std::exp(std::log(d_pu_gain)+d_pu_gain_gain*(std::log(tmp_gain)-std::log(d_pu_gain)));
+      d_found_first_pu = (d_found_first_pu)? true : false;
+      volk_32fc_s32fc_x2_rotator_32fc(d_pu_cancel_buf.data(),d_pu_rebuild.data(),gr_expj(d_pu_cfo),&init_phase,d_chunk_size);
+      volk_32fc_x2_conjugate_dot_prod_32fc(&cross,d_out_mem+symbol_begin,d_pu_cancel_buf.data(),64);
+      // phase
+      d_pu_phase = fast_atan2f(cross.imag(),cross.real());
+      for(int i=0;i<64;++i){
+        d_ic_mem[ic_begin+i] = d_ic_mem[ic_begin+i] - d_pu_gain*gr_expj(d_pu_phase)* d_pu_cancel_buf[i];
+      }
+      // su resync
+      int distance = su_begin-d_last_su_sync_idx;
+      float phase_est = d_su_phase + distance*d_su_cfo;
+      phase_wrap(phase_est);
+      std::vector<gr_complex> su_buf(64);
+      gr_complex su_eng, diff;
+      volk_32fc_s32fc_x2_rotator_32fc(su_buf.data(),d_su_rebuild.data()+su_begin,gr_expj(d_su_cfo),&init_phase,64);
+      volk_32fc_x2_conjugate_dot_prod_32fc(&cross,d_ic_mem+ic_begin,su_buf.data(),64);
+      volk_32fc_x2_conjugate_dot_prod_32fc(&su_eng,d_ic_mem+ic_begin,d_ic_mem+ic_begin,64);
+      volk_32fc_x2_conjugate_dot_prod_32fc(&ori_eng,d_su_rebuild.data(),d_su_rebuild.data(),64);
+      tmp_gain  = std::real(su_eng/ori_eng);
+      diff = cross * gr_expj(-phase_est);
+      d_su_cfo = d_su_cfo+d_tracking_gain*fast_atan2f(diff.imag(),diff.real());
+      d_su_gain = std::exp(std::log(d_su_gain)+d_gain_gain*(std::log(tmp_gain)-std::log(d_su_gain)));
+      d_su_phase = fast_atan2f(cross.imag(),cross.real());
+      d_last_su_sync_idx = su_begin+64;
+    }
+
+    unsigned char
+    ic_resync_cc_impl::chip_decoder(const unsigned int& c, int& quality)
+    {
+      unsigned char d;
+      int min_thres = 33;
+      int thres;
+      for(int i=0;i<16;++i){
+        thres = gr::blocks::count_bits32( (c&d_mask)^(CHIPSET[i]&d_mask) );
+        if(thres<min_thres){
+          min_thres = thres;
+          d = (unsigned char)i;
+        }
+      }
+      quality = min_thres;
+      //if(min_thres<d_dec_threshold){
+        //return d& 0x0f;
+      //}
+      return d&0x0f;
+    }
+    void
+    ic_resync_cc_impl::enter_search()
+    {
+      d_dec_state = SEARCH;
+      d_dec_pre_cnt=0;
+      d_dec_data_reg = 0x00000000;
+      d_dec_chip_cnt=0;
+      d_dec_byte_reg = 0x00;
+    }
+    void
+    ic_resync_cc_impl::enter_sync()
+    {
+      d_dec_state = SYNC;
+      d_dec_pre_cnt=0;
+      d_dec_data_reg = 0x00000000;
+      d_dec_symbol_cnt=0;
+      d_dec_pld_len =0;
+      d_dec_byte_reg= 0x00;
+    }
+    void
+    ic_resync_cc_impl::enter_payload(const unsigned char& pld_len)
+    {
+      d_dec_pld_len = pld_len;
+      d_dec_state = PAYLOAD;
+      d_dec_data_reg = 0x00000000;
+      d_dec_chip_cnt=0;
+      d_dec_symbol_cnt=0;
+      d_dec_byte_reg =0x00;
     }
 
     void
@@ -611,7 +953,6 @@ namespace gr {
                   d_intf_protect = false;
                   d_protect_cnt=0;
                   DEBUG<<"<Resync>complete a intf tag,...total size="<<d_cur_intf.size()<<std::endl;
-                  //DEBUG<<"front header:"<<d_cur_intf.front()<<std::endl;
                   d_intf_list.push_back(d_cur_intf);
                   d_cur_intf.clear();
                 }
