@@ -63,15 +63,15 @@ namespace gr {
     }
 
     ic_critical_cc::sptr
-    ic_critical_cc::make(int prelen, int sps,int block_size,bool debug)
+    ic_critical_cc::make(int prelen, int sps,int block_size,bool usesync,bool debug)
     {
       return gnuradio::get_initial_sptr
-        (new ic_critical_cc_impl(prelen,sps,block_size,debug));
+        (new ic_critical_cc_impl(prelen,sps,block_size,usesync,debug));
     }
 
     static int ios[] = {sizeof(gr_complex),sizeof(float),sizeof(float)};
     static std::vector<int> iosig(ios,ios+sizeof(ios)/sizeof(int));
-    ic_critical_cc_impl::ic_critical_cc_impl(int prelen,int sps,int block_size,bool debug)
+    ic_critical_cc_impl::ic_critical_cc_impl(int prelen,int sps,int block_size,bool usesync,bool debug)
       : gr::block("ic_critical_cc",
               gr::io_signature::makev(3, 3, iosig),
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(gr_complex))),
@@ -79,6 +79,7 @@ namespace gr {
               d_out_msg_port(pmt::mp("SINR"))
     {
       d_debug = debug;
+      d_usesync= usesync;
       d_in_mem = new gr_complex[d_cap];
       d_comp_mem = new gr_complex[d_cap];
       d_phase_mem = new float[d_cap];
@@ -242,7 +243,8 @@ namespace gr {
       sync_iter = sync_idx; // reset
       for(int i=0;i<copy_len;++i){
         d_retx_mem[d_retx_idx++] = d_in_mem[samp_iter++] * gr_expj(-init_phase);
-        init_phase+= d_freq_mem[sync_iter++];
+        //init_phase+= d_freq_mem[sync_iter++];
+        init_phase = (d_usesync)? init_phase+d_freq_mem[sync_iter++] : init_phase;
         phase_wrap(init_phase);
         samp_iter%=d_cap;
       }
@@ -454,7 +456,8 @@ namespace gr {
           // for DEMO
           d_comp_mem[d_out_size] = d_intf_mem[intf_cnt]*gr_expj(-init_phase);
           d_out_mem[d_out_size++] = d_intf_mem[intf_cnt++]*gr_expj(-init_phase) - d_retx_mem[retx_idx++];
-          init_phase+=freq_mean;
+          //init_phase+=freq_mean;
+          init_phase = (d_usesync)? init_phase+freq_mean : init_phase;
           phase_wrap(init_phase);
           pkt_cnt++;
           if(pkt_cnt==pkt_len){

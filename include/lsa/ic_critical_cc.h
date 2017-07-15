@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::ic_critical_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(int prelen,int sps,int block_size, bool debug);
+      static sptr make(int prelen,int sps,int block_size,bool usesync, bool debug);
     };
 
   } // namespace lsa

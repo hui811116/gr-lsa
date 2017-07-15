@@ -40,6 +40,7 @@ namespace gr {
     {
      private:
       bool d_debug;
+      bool d_usesync;
       const int d_cap;
       gr_complex* d_in_mem;
       gr_complex* d_out_mem;
@@ -98,7 +99,7 @@ namespace gr {
       std::pair<uint64_t,int> sync_block_offset_converter(uint64_t bid, int offset, int revdis);
 
      public:
-      ic_critical_cc_impl(int prelen,int sps,int block_size,bool d_debug);
+      ic_critical_cc_impl(int prelen,int sps,int block_size,bool usesync,bool d_debug);
       ~ic_critical_cc_impl();
       
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);
