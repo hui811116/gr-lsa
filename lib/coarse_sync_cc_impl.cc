@@ -41,6 +41,7 @@ namespace gr {
     static const int MAXLEN = (127+6)*8*8/2*4;
     static const int MINGAP = (8+12*8)*8/2*4;
     static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
+    static const float d_cfo_gain = 0.00628;
 
     inline void phase_wrap(float& phase){
       while(phase>=TWO_PI)
@@ -150,7 +151,7 @@ namespace gr {
           if(d_auto_cnt>=d_valid_len){
             if(d_copy_cnt>=d_mingap){
               if(!d_voe_state && (d_voe_duration_cnt>=d_maxlen)){
-                d_coarse_cfo = arg(in_corr[count])/(float)d_delay;
+                d_coarse_cfo = d_coarse_cfo + (arg(in_corr[count])/(float)d_delay-d_coarse_cfo)*d_cfo_gain;
                 d_auto_cnt =0;
                 d_copy_cnt =0;
                 add_item_tag(0,nwrite+nout,d_cfo_key,pmt::from_float(d_coarse_cfo));

@@ -39,6 +39,7 @@ namespace gr {
      private:
       const size_t d_cap;
       const pmt::pmt_t d_in_port;
+      const pmt::pmt_t d_out_port;
       bool d_intf_protect;
       int d_protect_cnt;
       gr_complex* d_in_mem;
@@ -118,6 +119,8 @@ namespace gr {
       std::vector<gr_complex> d_pu_cancel_buf;
       std::vector<float> d_kay_taps;
       std::vector<gr_complex> d_kay_tmp;
+      // debug and demo purpose
+      std::list<tag_t> d_out_tags;
       // prou decoder
       int d_dec_threshold;
       PUDECSTATE d_dec_state;
@@ -146,7 +149,7 @@ namespace gr {
       void do_ic(std::pair<intf_t,std::vector<int> > obj);
 
       // functions to reconstruct both su and pu signal
-      void rebuild_su(bool retx,const std::vector<int>& retx_idx);
+      void rebuild_su(bool retx,const std::vector<int>& retx_idx,std::vector<int>& pkt_len);
       void reset_sync(); // reset clock, registers
       void rebuild_pu(int chip_id);
       void cancel_pu_and_resync(int cur_sync_idx,int ic_mem_idx,int su_mem_idx,int prev_mm_size,int cur_mm_idx);

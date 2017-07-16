@@ -681,6 +681,7 @@ namespace gr {
         //DEBUG<<"matching failed, min_diff="<<min_diff<<std::endl;
         return false;
       }
+      //DEBUG<<"matching success, min_diff="<<min_diff<<std::endl;
       candidate_it++;
       d_pending_list.erase(d_pending_list.begin(),candidate_it);
       // update matched header

@@ -43,4 +43,9 @@
     <name>comp</name>
     <type>complex</type>
   </source>
+  <source>
+    <name>pdu_out</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
 </block>

@@ -106,12 +106,16 @@ namespace gr {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
       gr_complex *corr = NULL;
-      int nin = std::min(std::min(ninput_items[0]-(int)history(),noutput_items), d_cap) ;
+      int nin = std::min(std::max(ninput_items[0]-(int)history(),0), noutput_items);
       int count =0;
       int nout =nin;
       bool have_corr = (output_items.size()>=2);
       if(have_corr){
         corr = (gr_complex*) output_items[1];
+      }
+      if(nin==0){
+        consume_each(0);
+        return 0;
       }
       memcpy(out,in,sizeof(gr_complex)* nin);
       // calculate cross correlation
