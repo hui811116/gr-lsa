@@ -76,6 +76,7 @@ namespace gr {
             }
             msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_ACK));
             msg_out = pmt::dict_add(msg_out,pmt::intern("base"),pmt::from_long(base1));
+            message_port_pub(d_out_port,msg_out);
           }else{
             // tx should not recive other type of pdu length
             return;
