@@ -38,22 +38,25 @@ namespace gr {
     static int d_retx_retry_limit = 20;
 
     su_sr_transmitter_bb::sptr
-    su_sr_transmitter_bb::make(const std::string& tagname, const std::string& filename, bool usef)
+    su_sr_transmitter_bb::make(const std::string& tagname, const std::string& filename, bool usef, bool verb)
     {
       return gnuradio::get_initial_sptr
-        (new su_sr_transmitter_bb_impl(tagname, filename,usef));
+        (new su_sr_transmitter_bb_impl(tagname, filename,usef,verb));
     }
 
     /*
      * The private constructor
      */
-    su_sr_transmitter_bb_impl::su_sr_transmitter_bb_impl(const std::string& tagname, const std::string& filename, bool usef)
+    su_sr_transmitter_bb_impl::su_sr_transmitter_bb_impl(const std::string& tagname, const std::string& filename, bool usef, bool verb)
       : gr::tagged_stream_block("su_sr_transmitter_bb",
               gr::io_signature::make(1, 1, sizeof(unsigned char)),
               gr::io_signature::make(1, 1, sizeof(unsigned char)), tagname),
               d_tagname(tagname),
               d_msg_in(pmt::mp("msg_in"))
     {
+      d_verb = verb;
+      d_pkt_success_cnt=0;
+      d_pkt_failed_cnt=0;
       d_usef = usef;
       if(usef){
         if(!read_data(filename)){
@@ -234,6 +237,7 @@ namespace gr {
             if(it->inc_retry()){
               // reaching limit, should abort...
               DEBUG<<"<SU SR TX>"<<"\033[32;1m"<<"timeout..."<<*it<<"\033[0m"<<std::endl;
+              d_pkt_failed_cnt++;
               d_arq_queue.pop_front();
               it = d_arq_queue.begin();
             }else{
@@ -257,7 +261,8 @@ namespace gr {
       std::list<srArq_t>::iterator it;
       for(it = d_arq_queue.begin();it!=d_arq_queue.end();++it){
         if(it->seq()==seq){
-          it = d_arq_queue.erase(it);          
+          d_pkt_success_cnt++;
+          it = d_arq_queue.erase(it);    
           return true;
         }
       }
@@ -311,6 +316,7 @@ namespace gr {
         throw std::runtime_error("WTF......");
       }
       if(d_retx_table[idx]==false){
+        d_pkt_success_cnt++;
         d_retx_cnt++;
         d_retx_table[idx] = true;
         return true;
@@ -401,7 +407,38 @@ namespace gr {
       // Tell runtime system how many output items we produced.
       return nout;
     }
-
+    bool 
+    su_sr_transmitter_bb_impl::start()
+    {
+      d_finished = false;
+      d_start_time = boost::posix_time::second_clock::local_time();
+      d_thread = boost::shared_ptr<gr::thread::thread>
+        (new gr::thread::thread(boost::bind(&su_sr_transmitter_bb_impl::run,this)));
+      return block::start();
+    }
+    bool
+    su_sr_transmitter_bb_impl::stop()
+    {
+      d_finished = true;
+      d_thread->interrupt();
+      d_thread->join();
+      return block::stop();
+    }
+    void
+    su_sr_transmitter_bb_impl::run()
+    {
+      while(!d_finished){
+        boost::this_thread::sleep(boost::posix_time::milliseconds(10000));
+        if(d_finished){
+          return;
+        }
+        boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time()-d_start_time;
+        if(d_verb){
+          std::cout<<"<LSA TX>Execution time:"<<diff.total_seconds();
+          std::cout<<" ,success packets:"<<d_pkt_success_cnt<<" ,failed packets:"<<d_pkt_failed_cnt<<std::endl;
+        }
+      }
+    }
   } /* namespace lsa */
 } /* namespace gr */
 

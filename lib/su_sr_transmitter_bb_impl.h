@@ -46,6 +46,12 @@ namespace gr {
       unsigned char d_buf[1024];
       bool d_usef;
       std::fstream d_file;
+      long int d_pkt_success_cnt;
+      long int d_pkt_failed_cnt;
+      bool d_verb;
+      boost::shared_ptr<gr::thread::thread> d_thread;
+      boost::posix_time::ptime d_start_time;
+      bool d_finished;
 
       // thread functions for d_arq_queue;
       void clear_queue();
@@ -64,12 +70,12 @@ namespace gr {
       // file operation
       std::vector< std::vector<unsigned char> > d_data_src;
       bool read_data(const std::string& filename);
-
+      void run();
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
-      su_sr_transmitter_bb_impl(const std::string& tagname, const std::string& filename, bool usef);
+      su_sr_transmitter_bb_impl(const std::string& tagname, const std::string& filename, bool usef, bool verb);
       ~su_sr_transmitter_bb_impl();
 
       void msg_in(pmt::pmt_t);
@@ -78,6 +84,8 @@ namespace gr {
            gr_vector_int &ninput_items,
            gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
+      bool start();
+      bool stop();
     };
 
   } // namespace lsa

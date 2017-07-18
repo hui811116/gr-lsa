@@ -4,7 +4,7 @@
   <key>lsa_stop_n_wait_tx_bb</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.stop_n_wait_tx_bb($tagname,$filename,$usef)</make>
+  <make>lsa.stop_n_wait_tx_bb($tagname,$filename,$usef,$verb)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -25,6 +25,20 @@
   <param>
     <name>Use file</name>
     <key>usef</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Verbose</name>
+    <key>verb</key>
     <value>False</value>
     <type>bool</type>
     <option>

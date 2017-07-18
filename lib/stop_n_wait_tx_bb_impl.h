@@ -31,7 +31,6 @@ namespace gr {
     class stop_n_wait_tx_bb_impl : public stop_n_wait_tx_bb
     {
      private:
-      // Nothing to declare in this block.
       const pmt::pmt_t d_in_port;
       const pmt::pmt_t d_tagname;
       std::list<srArq_t> d_arq_list;
@@ -40,20 +39,26 @@ namespace gr {
       bool d_state_change;
       unsigned char d_buf[256];
       uint16_t d_seq;
-
       std::fstream d_file;
       std::vector< std::vector<unsigned char> > d_data_src;
       bool d_usef;
+      bool d_verb;
+      long int d_pkt_success_cnt;
+      long int d_pkt_failed_cnt;
+
+      boost::shared_ptr<gr::thread::thread> d_thread;
+      boost::posix_time::ptime d_start_time;
+      bool d_finished;
 
       bool read_data(const std::string& filename);
       void msg_handler(pmt::pmt_t msg);
       void generate_new_pkt(const unsigned char* in, int nin);
-
+      void run();
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
-      stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef);
+      stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef, bool verb);
       ~stop_n_wait_tx_bb_impl();
 
       // Where all the action really happens
@@ -61,6 +66,9 @@ namespace gr {
            gr_vector_int &ninput_items,
            gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
+
+      bool start();
+      bool stop();
     };
 
   } // namespace lsa

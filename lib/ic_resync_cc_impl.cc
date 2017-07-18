@@ -31,7 +31,7 @@
 
 namespace gr {
   namespace lsa {
-    #define d_debug true
+    #define d_debug false
     #define DEBUG d_debug && std::cout
     #define CAPACITY 128*1024*1024
     #define FIRCAPACITY 256*128
@@ -121,7 +121,7 @@ namespace gr {
       for(int i=0;i<taps.size();++i){
         d_taps.push_back(gr_complex(taps[i],0));
       }
-      d_chunk_size=128;
+      d_chunk_size=64;
       d_gain_gain = 0.02;
       d_tracking_gain = 0.00628;
       d_pole_alpha = 160e-6;
@@ -600,14 +600,14 @@ namespace gr {
       uint16_t max_idx = 0;
       const int delay = 128;
       int pkt_begin=0;
-      for(int i=0;i<pkt_len.size();++i){
+      /*for(int i=0;i<pkt_len.size();++i){
         if(pkt_begin+pkt_len[i]<voe_begin-640){
           pkt_begin+=pkt_len[i];
         }else{
           break;
         }
-      }
-      DEBUG<<"Coarse estimated begin index:"<<pkt_begin<<std::endl;
+      }*/
+      //DEBUG<<"Coarse estimated begin index:"<<pkt_begin<<std::endl;
       // coarse estimate of pkt_begin
       gr_complex auto_eng;
       for(int i=0;i<512;i++){
@@ -615,7 +615,7 @@ namespace gr {
         volk_32fc_x2_conjugate_dot_prod_32fc(&auto_corr,d_ic_mem+auto_idx,d_ic_mem+auto_idx+delay,delay);
         volk_32fc_x2_conjugate_dot_prod_32fc(&corr_eng,d_ic_mem+auto_idx,d_ic_mem+auto_idx,delay);
         volk_32fc_x2_conjugate_dot_prod_32fc(&auto_eng,d_ic_mem+auto_idx+delay,d_ic_mem+auto_idx+delay,delay);
-        d_corr_test[i] = auto_corr/std::abs(corr_eng*auto_eng);
+        d_corr_test[i] = auto_corr/std::sqrt(corr_eng*auto_eng);
       }
       volk_32fc_index_max_16u(&max_idx,d_corr_test,512);
       if(std::abs(d_corr_test[max_idx])>0.9){
@@ -632,7 +632,7 @@ namespace gr {
       volk_32fc_x2_conjugate_dot_prod_32fc(&su_eng,d_chunk_buf,d_chunk_buf,d_chunk_size);
       volk_32fc_x2_conjugate_dot_prod_32fc(&cross_corr,d_ic_mem+sfd_idx,d_chunk_buf,d_chunk_size);
       volk_32fc_x2_conjugate_dot_prod_32fc(&corr_eng,d_ic_mem+sfd_idx,d_ic_mem+sfd_idx,d_chunk_size);
-      d_corr_test[512] = cross_corr/(std::sqrt(corr_eng*su_eng)+gr_complex(1e-8,0));
+      d_corr_test[512] = cross_corr/std::sqrt(corr_eng*su_eng);
       if(std::abs(d_corr_test[512])>0.9){
         DEBUG<<"Step2 passed: Cross correlation found SFD(0xE6) idx="<<sfd_idx+pkt_begin<<" ,correlation="<<std::abs(d_corr_test[sfd_idx])<<std::endl;
       }else{
@@ -671,7 +671,6 @@ namespace gr {
         d_su_cfo  = (loosing_track)? fast_atan2f(auto_corr.imag(),auto_corr.real())/(float)delay :
          (d_su_cfo + d_tracking_gain * fast_atan2f(diff.imag(),diff.real())/(float)d_chunk_size);
         d_su_gain = std::exp(std::log(d_su_gain)+d_gain_gain*(std::log(std::real(std::sqrt(corr_eng/su_eng)))-std::log(d_su_gain)));
-
         d_cancel_idx+=d_chunk_size;
         sfd_idx+=d_chunk_size;
       }

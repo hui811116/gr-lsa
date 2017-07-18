@@ -152,7 +152,7 @@
         return *this;
       }
       const srArq_t& operator*()const{return *this;}
-      clock_t time()const {return d_time;}
+      time_t time()const {return d_time;}
       uint16_t seq()const {return d_noseq;}
       uint32_t retry()const{return d_retry;}
       pmt::pmt_t msg()const{return d_msg;}

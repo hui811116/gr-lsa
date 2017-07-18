@@ -41,16 +41,16 @@ namespace gr {
     static unsigned char d_mac_field[] = {0x00,0x00,0x00,0x00};
    
     stop_n_wait_tx_bb::sptr
-    stop_n_wait_tx_bb::make(const std::string& tagname, const std::string& filename, bool usef)
+    stop_n_wait_tx_bb::make(const std::string& tagname, const std::string& filename, bool usef,bool verb)
     {
       return gnuradio::get_initial_sptr
-        (new stop_n_wait_tx_bb_impl(tagname,filename,usef));
+        (new stop_n_wait_tx_bb_impl(tagname,filename,usef,verb));
     }
 
     /*
      * The private constructor
      */
-    stop_n_wait_tx_bb_impl::stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef)
+    stop_n_wait_tx_bb_impl::stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef,bool verb)
       : gr::tagged_stream_block("stop_n_wait_tx_bb",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(1, 1, sizeof(char)), tagname),
@@ -64,11 +64,14 @@ namespace gr {
       memcpy(d_buf,d_phy_field,sizeof(char)*PHYLEN);
       d_seq = 0x0000;
       d_usef = usef;
+      d_verb = verb;
       if(usef){
         if(!read_data(filename)){
           d_usef = false;
         }
       }
+      d_pkt_success_cnt=0;
+      d_pkt_failed_cnt=0;
     }
 
     /*
@@ -142,6 +145,7 @@ namespace gr {
       for(it = d_arq_list.begin();it!=d_arq_list.end();++it){
         if(seqno == it->seq()){
           it = d_arq_list.erase(it);
+          d_pkt_success_cnt++;
           break;
         }
       }
@@ -225,6 +229,7 @@ namespace gr {
             if(it->inc_retry()){
               d_arq_list.pop_front();
               it = d_arq_list.begin();
+              d_pkt_failed_cnt++;
             }else{
               blob = it->msg();
               it->update_time();
@@ -254,6 +259,38 @@ namespace gr {
         }
       }
       return nout;
+    }
+    bool 
+    stop_n_wait_tx_bb_impl::start()
+    {
+      d_finished = false;
+      d_start_time = boost::posix_time::second_clock::local_time();
+      d_thread = boost::shared_ptr<gr::thread::thread>
+        (new gr::thread::thread(boost::bind(&stop_n_wait_tx_bb_impl::run,this)));
+      return block::start();
+    }
+    bool
+    stop_n_wait_tx_bb_impl::stop()
+    {
+      d_finished = true;
+      d_thread->interrupt();
+      d_thread->join();
+      return block::stop();
+    }
+    void
+    stop_n_wait_tx_bb_impl::run()
+    {
+      while(!d_finished){
+        boost::this_thread::sleep(boost::posix_time::milliseconds(10000));
+        if(d_finished){
+          return;
+        }
+        boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time()-d_start_time;
+        if(d_verb){
+          std::cout<<"<SNS TX>Execution time:"<<diff.total_seconds();
+          std::cout<<" ,success packets:"<<d_pkt_success_cnt<<" ,failed packets:"<<d_pkt_failed_cnt<<std::endl;
+        }
+      }
     }
 
   } /* namespace lsa */
