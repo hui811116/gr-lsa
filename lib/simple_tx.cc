@@ -35,11 +35,12 @@ namespace gr {
     #define RETRYLIMIT 10
     #define PKTCOUNTER d_countsize
     #define DEBUG d_debug && std::cout
+    #define VERBOSE d_verb && std::cout
     static const unsigned char d_seq_field[] = {0x00,0x00,0x00,0x00};
     class simple_tx_impl : public simple_tx
     {
       public:
-        simple_tx_impl(const std::string& filename, float timeout,int cnt,bool slow): block("simple_tx",
+        simple_tx_impl(const std::string& filename, float timeout,int cnt,bool slow, bool verb): block("simple_tx",
                   gr::io_signature::make(0,0,0),
                   gr::io_signature::make(0,0,0)),
                   d_timeout(timeout),
@@ -62,14 +63,20 @@ namespace gr {
           set_msg_handler(d_in_port,boost::bind(&simple_tx_impl::msg_in,this,_1));
           d_seqno = 0;
           d_slow = slow;
+          d_verb = verb;
           d_pkt_cnt=0;
+          d_pkt_success_cnt=0;
+          d_pkt_failed_cnt=0;
         }
         ~simple_tx_impl(){}
         bool start()
         {
           d_finished = false;
+          d_system_time = boost::posix_time::second_clock::local_time();
           d_thread = boost::shared_ptr<gr::thread::thread>
             (new gr::thread::thread(boost::bind(&simple_tx_impl::run,this)));
+          d_status_thread = boost::shared_ptr<gr::thread::thread>
+            (new gr::thread::thread(boost::bind(&simple_tx_impl::status,this)));
           return block::start();
 
         }
@@ -77,7 +84,9 @@ namespace gr {
         {
           d_finished = true;
           d_thread->interrupt();
+          d_status_thread->interrupt();
           d_thread->join();
+          d_status_thread->join();
           return block::stop();
         }
         void msg_in(pmt::pmt_t msg)
@@ -97,7 +106,6 @@ namespace gr {
             if(base1==base2){
               // crc passed
               if(base1 == d_seqno){
-                DEBUG<<"<SIMPLE TX>Acked successfully:"<<base1<<std::endl;
                 if(!d_slow){
                   d_ack_received.notify_one();
                 }
@@ -110,8 +118,6 @@ namespace gr {
                   dict = pmt::dict_add(dict,pmt::intern("pkt_count"),pmt::from_long(d_countsize));
                   dict = pmt::dict_add(dict,pmt::intern("duration"),pmt::from_long(diff.total_milliseconds()));
                   message_port_pub(d_thr_port,pmt::cons(dict,pmt::PMT_NIL));
-                  DEBUG <<"[Event]"<<"\n<Count>\n"<<d_countsize<<"\n<Duration>\n"
-                  << diff.total_milliseconds()<<"\n[Event*]" <<std::endl;
                 }
               }
             }
@@ -141,6 +147,17 @@ namespace gr {
           d_file.close();
           return true;
         }
+        void status()
+        {
+          while(!d_finished){
+            boost::this_thread::sleep(boost::posix_time::milliseconds(10000));
+            if(d_finished){
+              return;
+            }
+            boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time()-d_system_time;
+            VERBOSE<<"<Simple TX>Time(sec):"<<diff.total_seconds()<<" ,success:"<<d_pkt_success_cnt<<" ,failed:"<<d_pkt_failed_cnt<<std::endl;
+          }
+        }
         void run()
         {
           int retry =0;
@@ -159,11 +176,14 @@ namespace gr {
             if(d_finished){
               return;
             }
-            if(d_acked || retry>d_retry_limit){
+            if(d_acked || retry>=d_retry_limit){
               // successfully acked or exceed retry limit
               if(d_acked){
+                d_pkt_success_cnt++;
+                d_pkt_failed_cnt = (retry>1)? d_pkt_failed_cnt+retry-1:d_pkt_failed_cnt;
                 DEBUG<<"<SIMPLE TX>Acked"<<std::endl;
               }else{
+                d_pkt_failed_cnt += retry;
                 DEBUG<<"Exceed retry limit"<<std::endl;
               }
               retry=0;
@@ -191,7 +211,9 @@ namespace gr {
         gr::thread::mutex d_mutex;
         gr::thread::condition_variable d_ack_received;
         boost::shared_ptr<gr::thread::thread> d_thread;
+        boost::shared_ptr<gr::thread::thread> d_status_thread;
         boost::posix_time::ptime d_start_time;
+        boost::posix_time::ptime d_system_time;
         bool d_finished;
         bool d_acked;
         bool d_slow;
@@ -204,11 +226,13 @@ namespace gr {
         std::fstream d_file;
         std::vector< std::vector<unsigned char> > d_data_src;
         unsigned char d_buf[256];
+        long int d_pkt_success_cnt;
+        long int d_pkt_failed_cnt;
     };
     simple_tx::sptr
-    simple_tx::make(const std::string& filename,float timeout,int cnt,bool slow)
+    simple_tx::make(const std::string& filename,float timeout,int cnt,bool slow,bool verb)
     {
-      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout,cnt,slow));
+      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout,cnt,slow,verb));
     }
   } /* namespace lsa */
 } /* namespace gr */

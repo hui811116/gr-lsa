@@ -4,7 +4,7 @@
   <key>lsa_simple_tx</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.simple_tx($filename,$timeout,$cnt,$slow)</make>
+  <make>lsa.simple_tx($filename,$timeout,$cnt,$slow,$verb)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -42,6 +42,20 @@
       <key>False</key>
     </option>
   </param>
+  <param>
+    <name>Verbose</name>
+    <key>verb</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
   
 
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -52,6 +66,7 @@
   <sink>
     <name>ack_in</name>
     <type>message</type>
+    <optional>1</optional>
   </sink>
 
   <!-- Make one 'source' node per output. Sub-nodes:

@@ -36,7 +36,7 @@ namespace gr {
     {
       public:
         typedef boost::shared_ptr<simple_tx> sptr;
-        static sptr make(const std::string& filename,float timeout,int cnt,bool slow);
+        static sptr make(const std::string& filename,float timeout,int cnt,bool slow,bool verb);
     };
 
   } // namespace lsa
