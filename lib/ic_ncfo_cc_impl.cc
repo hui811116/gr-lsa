@@ -58,6 +58,7 @@ namespace gr {
               d_cap(CAPACITY),
               d_buff_lim(CAPACITY/16)
     {
+      set_tag_propagation_policy(TPP_DONT);
       message_port_register_in(d_in_port);
       set_msg_handler(d_in_port,boost::bind(&ic_ncfo_cc_impl::msg_in,this,_1));
       d_in_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
@@ -425,33 +426,38 @@ namespace gr {
         DEBUG<<"Step 1 failed: value:"<<std::abs(d_corr_test[max_idx])<<std::endl;
         return;
       }
-      uint16_t sfd_idx = pkt_begin+512;
-      gr_complex init_phase(1,0);
-      volk_32fc_x2_conjugate_dot_prod_32fc(&su_eng,d_chunk_buf,d_chunk_buf,delay);
-      volk_32fc_x2_conjugate_dot_prod_32fc(&cross_corr,d_ic_mem+sfd_idx,d_chunk_buf,delay);
-      volk_32fc_x2_conjugate_dot_prod_32fc(&corr_eng,d_ic_mem+sfd_idx,d_ic_mem+sfd_idx,delay);
-      d_corr_test[sfd_idx] = cross_corr/std::sqrt(corr_eng*su_eng);
-      if(std::abs(d_corr_test[sfd_idx])>0.9){
-        DEBUG<<"Step 2 passed: cross correlation idx:"<<max_idx<<" ,value"<<std::abs(d_corr_test[max_idx])<<std::endl;
+      uint16_t sfd_idx = pkt_begin+512-d_sps;
+      volk_32fc_x2_conjugate_dot_prod_32fc(&su_eng,&d_su_rebuild[512],&d_su_rebuild[512],delay);
+      for(int i=0;i<2*d_sps;++i){
+        int cross_idx = sfd_idx +i;
+        volk_32fc_x2_conjugate_dot_prod_32fc(&cross_corr,d_ic_mem+cross_idx,&d_su_rebuild[512],delay);
+        volk_32fc_x2_conjugate_dot_prod_32fc(&corr_eng,d_ic_mem+cross_idx,d_ic_mem+cross_idx,delay);
+        d_corr_test[i] = cross_corr/std::sqrt(corr_eng*su_eng);
+      }
+      volk_32fc_index_max_16u(&max_idx,d_corr_test,2*d_sps);
+      if(std::abs(d_corr_test[max_idx])>0.9){
+        DEBUG<<"Step 2 passed: cross correlation idx:"<<sfd_idx+max_idx<<" ,value"<<std::abs(d_corr_test[max_idx])<<std::endl;
       }else{
-        DEBUG<<"Step 2 passed: failed value:"<<std::abs(d_corr_test[max_idx])<<std::endl;
+        DEBUG<<"Step 2 failed: failed value:"<<std::abs(d_corr_test[max_idx])<<std::endl;
         return;
       }
-      d_su_phase = fast_atan2f(d_corr_test[sfd_idx].imag(),d_corr_test[sfd_idx].real());
+      sfd_idx+=max_idx;
+      d_cancel_idx = 512;
+      d_su_phase = fast_atan2f(d_corr_test[max_idx].imag(),d_corr_test[max_idx].real());
       d_su_gain = std::real(std::sqrt(corr_eng/su_eng));
-      d_cancel_idx = sfd_idx;
       tag_t tmp_tag;
       tmp_tag.offset = d_out_size;
       tmp_tag.key= pmt::intern("ic_out");
       tmp_tag.value = pmt::PMT_T;
       d_out_tags.push_back(tmp_tag);
-      tmp_tag.offset = std::max(voe_begin-sfd_idx,0);
+      tmp_tag.offset = d_out_size+ std::max(voe_begin-sfd_idx,0);
       tmp_tag.key = pmt::intern("voe_begin");
       d_out_tags.push_back(tmp_tag);
       for(sfd_idx;sfd_idx<size;++sfd_idx){
-        d_demo_mem[d_out_idx] = d_ic_mem[sfd_idx];
-        d_out_mem[d_out_idx++] = d_ic_mem[sfd_idx] - d_su_gain*gr_expj(d_su_phase)*d_su_rebuild[d_cancel_idx++];
+        d_demo_mem[d_out_size] = d_ic_mem[sfd_idx];
+        d_out_mem[d_out_size++] = d_ic_mem[sfd_idx] - d_su_gain*gr_expj(d_su_phase)*d_su_rebuild[d_cancel_idx++];
       }
+      DEBUG<<"<NCFO IC>IC Done, Output size:"<<d_out_size<<std::endl;
     }
     void
     ic_ncfo_cc_impl::rebuild_su(bool retx, const std::vector<int>& retx_idx, std::vector<int>& pkt_len)
@@ -620,8 +626,7 @@ namespace gr {
                 d_cur_intf.clear();
                 DEBUG<<"\033[35;1m<NCFO_IC>Complete collect additional samples to avoid trimming ProU signal\033[0m"<<std::endl;
                 break;
-              }
-              if(d_intf_idx==d_buff_lim){
+              }else if(d_intf_idx==d_buff_lim){
                 d_intf_idx = d_cur_intf.begin();
                 d_cur_intf.clear();
                 d_voe_state = VOE_CLEAR;
@@ -645,8 +650,9 @@ namespace gr {
             break;
           }
         }
+        d_ic_list.pop_front();
       }
-      int nout = std::min(d_out_size-d_out_idx,noutput_items);
+      int nout = std::min(std::max(d_out_size-d_out_idx,0),noutput_items);
       memcpy(out,d_out_mem+d_out_idx,sizeof(gr_complex)*nout);
       memcpy(demo,d_demo_mem+d_out_idx,sizeof(gr_complex)*nout);
       std::list<tag_t>::iterator oit = d_out_tags.begin();
@@ -662,6 +668,7 @@ namespace gr {
       }
       d_out_idx+=nout;
       if(d_out_idx!=0 && (d_out_idx==d_out_size)){
+        DEBUG<<"Number of Tags:"<<d_out_tags.size()<<std::endl;
         oit = d_out_tags.begin();
         while(oit!=d_out_tags.end()){
           tag_t tmp_tag = *oit;

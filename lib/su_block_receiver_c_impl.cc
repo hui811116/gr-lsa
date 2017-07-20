@@ -84,6 +84,7 @@ namespace gr {
       message_port_register_out(d_out_port);
       // coded 
       d_threshold = (threshold<0)? 0: threshold;
+      d_voe_do_not_pub = false;
     }
 
     /*

@@ -77,7 +77,6 @@ namespace gr {
       std::list<tag_t> d_out_tags;
 
       gr_complex d_corr_test[1024];
-      gr_complex d_chunk_buf[1024];
       float d_su_gain;
       float d_su_phase;
       int d_cancel_idx;
