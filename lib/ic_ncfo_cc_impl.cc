@@ -30,7 +30,7 @@
 
 namespace gr {
   namespace lsa {
-    #define d_debug true
+    #define d_debug false
     #define DEBUG d_debug && std::cout
     #define CAPACITY 1000*128*64
     #define LSAPHYLEN 6
