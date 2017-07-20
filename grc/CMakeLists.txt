@@ -57,5 +57,6 @@ install(FILES
     lsa_byte_to_symbol_bc.xml
     lsa_throughput_file_sink.xml
     lsa_ic_resync_cc.xml
-    lsa_su_block_receiver_c.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_su_block_receiver_c.xml
+    lsa_ic_ncfo_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

@@ -34,8 +34,7 @@ namespace gr {
     #define d_debug false
     #define DEBUG d_debug && std::cout
     #define CAPACITY 128*1024*1024
-    #define FIRCAPACITY 256*128
-    #define BUFCAP 1024*128
+    #define BUFCAP 1024*1024
     #define CHIPRATE 8
     #define MODBPS 2
     #define LSAPHYLEN 6
@@ -91,20 +90,21 @@ namespace gr {
               d_in_port(pmt::intern("pkt_in")),
               d_out_port(pmt::intern("pdu_out")),
               d_cap(CAPACITY),
+              d_buf_lim(BUFCAP),
               d_interp(new filter::mmse_fir_interpolator_ff())
     {
       set_tag_propagation_policy(TPP_DONT);
       message_port_register_in(d_in_port);
       message_port_register_out(d_out_port);
       set_msg_handler(d_in_port,boost::bind(&ic_resync_cc_impl::msg_in,this,_1));
-      d_fir_buffer = (gr_complex*)volk_malloc(sizeof(gr_complex)*FIRCAPACITY,volk_get_alignment());
+      d_fir_buffer = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_buf_lim/d_sps,volk_get_alignment());
       d_in_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
-      d_ic_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*BUFCAP,volk_get_alignment());
-      d_mm_mem = (float*)volk_malloc(sizeof(float)*BUFCAP,volk_get_alignment());
-      d_qmod_mem = (float*)volk_malloc(sizeof(float)*BUFCAP,volk_get_alignment());
+      d_ic_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_buf_lim,volk_get_alignment());
+      d_mm_mem = (float*)volk_malloc(sizeof(float)*d_buf_lim,volk_get_alignment());
+      d_qmod_mem = (float*)volk_malloc(sizeof(float)*d_buf_lim,volk_get_alignment());
       d_intf_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
-      d_out_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap/4,volk_get_alignment());
-      d_demo_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_cap/4,volk_get_alignment());
+      d_out_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_buf_lim,volk_get_alignment());
+      d_demo_mem = (gr_complex*)volk_malloc(sizeof(gr_complex)*d_buf_lim,volk_get_alignment());
       d_in_idx =0;
       d_out_idx=0;
       d_out_size=0;
@@ -131,7 +131,7 @@ namespace gr {
       d_pu_cfo_gain = 0.00628;
       d_tap_buffer = std::vector<gr_complex>(taps.size());
       d_pu_rebuild = std::vector<gr_complex>(64);
-      d_su_rebuild = std::vector<gr_complex>(BUFCAP);
+      d_su_rebuild = std::vector<gr_complex>(d_buf_lim);
       d_kay_taps = std::vector<float>(64);
       d_kay_tmp = std::vector<gr_complex>(64);
       d_qmod_tmp = std::vector<gr_complex>(d_chunk_size);
@@ -568,7 +568,13 @@ namespace gr {
       const int size = std::get<0>(obj).size();
       pmt::pmt_t intf_msg = std::get<0>(obj).msg();
       int voe_begin = pmt::to_long(pmt::dict_ref(intf_msg,pmt::intern("voe_begin"),pmt::from_long(-1)));
-      assert(size<=d_cap/4);
+      if(size>d_buf_lim){
+        return;
+      }else if(size>(d_buf_lim-d_out_size) ){
+        d_out_size=0;
+        d_out_idx=0;
+        d_out_tags.clear();
+      }
       memcpy(d_ic_mem,d_intf_mem+begin,sizeof(gr_complex)*size);
       std::vector<int> retx_idx = std::get<1>(obj);
       // result are stored in d_intf_idx[begin] up to d_intf_idx[begin+size-1];
@@ -576,7 +582,6 @@ namespace gr {
       DEBUG<<"front tag:"<<std::get<0>(obj).front()<<std::endl;
       DEBUG<<"intf_begin="<<begin<<" ,intf_size="<<size<<std::endl;
       DEBUG<<"voe begin="<<voe_begin<<std::endl;
-      //DEBUG<<"Retransmissions:"<<std::endl;
       // required retransmissions 
       int length_cnt=0;
       for(int i=0;i<retx_idx.size();++i){
@@ -584,7 +589,7 @@ namespace gr {
         pmt::pmt_t blob = std::get<1>(d_retx_stack[retx_idx[i]]);
         length_cnt+= std::get<0>(d_retx_stack[retx_idx[i]]);
       }
-      if(length_cnt>=d_cap/4){
+      if(length_cnt>=d_buf_lim){
         DEBUG<<"DO IC ERROR: rebuild length greater than available memory size"<<std::endl;
         return;
       }
@@ -632,8 +637,8 @@ namespace gr {
       volk_32fc_x2_conjugate_dot_prod_32fc(&su_eng,d_chunk_buf,d_chunk_buf,d_chunk_size);
       volk_32fc_x2_conjugate_dot_prod_32fc(&cross_corr,d_ic_mem+sfd_idx,d_chunk_buf,d_chunk_size);
       volk_32fc_x2_conjugate_dot_prod_32fc(&corr_eng,d_ic_mem+sfd_idx,d_ic_mem+sfd_idx,d_chunk_size);
-      d_corr_test[512] = cross_corr/std::sqrt(corr_eng*su_eng);
-      if(std::abs(d_corr_test[512])>0.9){
+      d_corr_test[sfd_idx] = cross_corr/std::sqrt(corr_eng*su_eng);
+      if(std::abs(d_corr_test[sfd_idx])>0.9){
         DEBUG<<"Step2 passed: Cross correlation found SFD(0xE6) idx="<<sfd_idx+pkt_begin<<" ,correlation="<<std::abs(d_corr_test[sfd_idx])<<std::endl;
       }else{
         DEBUG<<"Step2 failed: Cross correlation of SFD (0xE6) does not show up at expected value... abort val:"<<std::abs(d_corr_test[sfd_idx])<<std::endl;
@@ -986,7 +991,6 @@ namespace gr {
               tags_update(count);
               if(voe_update(count)){
                 d_state = VOE_TRIGGERED;
-                d_latest_voe_begin = d_in_idx;
                 DEBUG<<"<Resync>\033[36;1m"<<"Detecting start of VoE signal...at:"<<d_in_idx<<"\033[0m"<<std::endl;
                 if(create_intf()){
                   DEBUG<<"<Resync>\033[34;1m"<<"Create New Interference tag..."<<"\033[0m"<<std::endl;
@@ -1004,6 +1008,12 @@ namespace gr {
               if(!d_cur_intf.front_tag_empty() && d_intf_protect){
                 d_intf_mem[d_intf_idx++] = in[count];
                 d_cur_intf.increment();
+                if(d_intf_idx==d_cap){
+                  d_intf_idx = d_cur_intf.begin();
+                  d_cur_intf.clear();
+                  d_intf_protect = false;
+                  d_protect_cnt=0;
+                }
                 d_protect_cnt++;
                 if(d_protect_cnt==d_protect_len){
                   d_intf_protect = false;
@@ -1011,12 +1021,6 @@ namespace gr {
                   DEBUG<<"<Resync>complete a intf tag,...total size="<<d_cur_intf.size()<<std::endl;
                   d_intf_list.push_back(d_cur_intf);
                   d_cur_intf.clear();
-                }
-                if(d_intf_idx==d_cap){
-                  d_intf_idx = d_cur_intf.begin();
-                  d_cur_intf.clear();
-                  d_intf_protect = false;
-                  d_protect_cnt=0;
                 }
               }
               d_in_mem[d_in_idx++] = in[count++];
@@ -1032,7 +1036,6 @@ namespace gr {
                 // should record the block and idx of the event for back tracking
                 // change state to receive a end header
                 DEBUG<<"<Resync>\033[36;1m"<<"Detecting end of VoE signal...at:"<<d_in_idx<<"\033[0m"<<std::endl;
-                d_latest_voe_end = d_in_idx;
                 d_intf_protect = true;
                 d_protect_cnt=0;
                 break;

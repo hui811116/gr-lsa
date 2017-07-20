@@ -56,6 +56,7 @@
 #include "lsa/throughput_file_sink.h"
 #include "lsa/ic_resync_cc.h"
 #include "lsa/su_block_receiver_c.h"
+#include "lsa/ic_ncfo_cc.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -140,3 +141,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, throughput_file_sink);
 GR_SWIG_BLOCK_MAGIC2(lsa, ic_resync_cc);
 %include "lsa/su_block_receiver_c.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, su_block_receiver_c);
+%include "lsa/ic_ncfo_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, ic_ncfo_cc);

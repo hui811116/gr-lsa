@@ -62,5 +62,6 @@ install(FILES
     byte_to_symbol_bc.h
     throughput_file_sink.h
     ic_resync_cc.h
-    su_block_receiver_c.h DESTINATION include/lsa
+    su_block_receiver_c.h
+    ic_ncfo_cc.h DESTINATION include/lsa
 )
