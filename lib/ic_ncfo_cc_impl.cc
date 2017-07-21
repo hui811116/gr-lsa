@@ -36,7 +36,7 @@ namespace gr {
     #define LSAPHYLEN 6
     #define MODBPS 2
     #define CHIPRATEINV 8
-    static const int d_protect_size = 1000;
+    static const int d_protect_size = 512;
     static const int d_sps =4;
     static const int d_prelen = 128;
     
@@ -56,7 +56,7 @@ namespace gr {
               gr::io_signature::make(2, 2, sizeof(gr_complex))),
               d_in_port(pmt::mp("pkt_in")),
               d_cap(CAPACITY),
-              d_buff_lim(CAPACITY/16)
+              d_buff_lim(CAPACITY)
     {
       set_tag_propagation_policy(TPP_DONT);
       message_port_register_in(d_in_port);
@@ -309,7 +309,7 @@ namespace gr {
       }else{
         length = d_in_idx-pkt_begin;
       }
-      if(d_intf_idx+length>=d_cap){
+      if(d_intf_idx+length>=d_buff_lim){
         return false;
       }
       while(pkt_begin!=d_in_idx){
