@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<block>
+  <name>ARQ TX</name>
+  <key>lsa_arq_tx</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.arq_tx($filename,$timeout,$period,$avgsize,$verb)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>File</name>
+    <key>filename</key>
+    <value></value>
+    <type>file_open</type>
+  </param>
+  <param>
+    <name>Timeout</name>
+    <key>timeout</key>
+    <value>5000</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Period</name>
+    <key>period</key>
+    <value>1000</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Avg size</name>
+    <key>avgsize</key>
+    <value>30</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Verbose</name>
+    <key>verb</key>
+    <value>True</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>ack_in</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>pdu_out</name>
+    <type>message</type>
+  </source>
+</block>

@@ -63,5 +63,6 @@ install(FILES
     throughput_file_sink.h
     ic_resync_cc.h
     su_block_receiver_c.h
-    ic_ncfo_cc.h DESTINATION include/lsa
+    ic_ncfo_cc.h
+    arq_tx.h DESTINATION include/lsa
 )

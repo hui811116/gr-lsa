@@ -58,5 +58,6 @@ install(FILES
     lsa_throughput_file_sink.xml
     lsa_ic_resync_cc.xml
     lsa_su_block_receiver_c.xml
-    lsa_ic_ncfo_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_ic_ncfo_cc.xml
+    lsa_arq_tx.xml DESTINATION share/gnuradio/grc/blocks
 )

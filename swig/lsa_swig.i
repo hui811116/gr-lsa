@@ -57,6 +57,7 @@
 #include "lsa/ic_resync_cc.h"
 #include "lsa/su_block_receiver_c.h"
 #include "lsa/ic_ncfo_cc.h"
+#include "lsa/arq_tx.h"
 %}
 
 %include "lsa/eng_det_cc.h"
@@ -143,3 +144,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, ic_resync_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, su_block_receiver_c);
 %include "lsa/ic_ncfo_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, ic_ncfo_cc);
+%include "lsa/arq_tx.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, arq_tx);

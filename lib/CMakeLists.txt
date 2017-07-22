@@ -67,7 +67,8 @@ list(APPEND lsa_sources
     throughput_file_sink.cc
     ic_resync_cc_impl.cc
     su_block_receiver_c_impl.cc
-    ic_ncfo_cc_impl.cc )
+    ic_ncfo_cc_impl.cc
+    arq_tx.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
