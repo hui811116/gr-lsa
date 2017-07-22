@@ -24,30 +24,22 @@ install(FILES
     api.h
     eng_det_cc.h
     interference_energy_detector_cc.h
-    modified_polyphase_time_sync_cc.h
     modified_costas_loop_cc.h
     burst_tagger_cc.h
     correlate_sync_cc.h
-    expand_symbol_to_sample_ff.h
-    symbol_sync_receiver_cf.h
     preamble_prefixer.h
     su_ctrl.h
     chip_mapper.h
-    packet_sink.h
-    chip_mapper_bb.h
     moving_average_cc.h
     moving_average_ff.h
     coarse_sync_cc.h
-    stat_report.h
     prou_packet_sink_f.h
     interference_tagger_cc.h
     block_tagger_cc.h
     su_sr_transmitter_bb.h
     su_tx_helper.h
-    ic_critical_cc.h
     su_packet_sink_c.h
     throughput_report.h
-    sinr_helper.h
     stop_n_wait_tx_bb.h
     stop_n_wait_rx_ctrl_cc.h
     stop_n_wait_ack.h
@@ -58,7 +50,6 @@ install(FILES
     simple_tx.h
     simple_rx.h
     phy_crc.h
-    signal_power_tagger_cc.h
     byte_to_symbol_bc.h
     throughput_file_sink.h
     ic_resync_cc.h

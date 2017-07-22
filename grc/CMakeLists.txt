@@ -19,30 +19,22 @@
 install(FILES
     lsa_eng_det_cc.xml
     lsa_interference_energy_detector_cc.xml
-    lsa_modified_polyphase_time_sync_cc.xml
     lsa_modified_costas_loop_cc.xml
     lsa_burst_tagger_cc.xml
     lsa_correlate_sync_cc.xml
-    lsa_expand_symbol_to_sample_ff.xml
-    lsa_symbol_sync_receiver_cf.xml
     lsa_preamble_prefixer.xml
     lsa_su_ctrl.xml
     lsa_chip_mapper.xml
-    lsa_packet_sink.xml
-    lsa_chip_mapper_bb.xml
     lsa_moving_average_cc.xml
     lsa_moving_average_ff.xml
     lsa_coarse_sync_cc.xml
-    lsa_stat_report.xml
     lsa_prou_packet_sink_f.xml
     lsa_interference_tagger_cc.xml
     lsa_block_tagger_cc.xml
     lsa_su_sr_transmitter_bb.xml
     lsa_su_tx_helper.xml
-    lsa_ic_critical_cc.xml
     lsa_su_packet_sink_c.xml
     lsa_throughput_report.xml
-    lsa_sinr_helper.xml
     lsa_stop_n_wait_tx_bb.xml
     lsa_stop_n_wait_rx_ctrl_cc.xml
     lsa_stop_n_wait_ack.xml
@@ -53,7 +45,6 @@ install(FILES
     lsa_simple_tx.xml
     lsa_simple_rx.xml
     lsa_phy_crc.xml
-    lsa_signal_power_tagger_cc.xml
     lsa_byte_to_symbol_bc.xml
     lsa_throughput_file_sink.xml
     lsa_ic_resync_cc.xml

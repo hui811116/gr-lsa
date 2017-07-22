@@ -27,30 +27,22 @@ link_directories(${Boost_LIBRARY_DIRS})
 list(APPEND lsa_sources
     eng_det_cc_impl.cc
     interference_energy_detector_cc_impl.cc
-    modified_polyphase_time_sync_cc_impl.cc
     modified_costas_loop_cc_impl.cc
     burst_tagger_cc_impl.cc
     correlate_sync_cc_impl.cc
-    expand_symbol_to_sample_ff_impl.cc
-    symbol_sync_receiver_cf_impl.cc
     preamble_prefixer.cc
     su_ctrl.cc
     chip_mapper.cc
-    packet_sink_impl.cc
-    chip_mapper_bb_impl.cc
     moving_average_cc_impl.cc
     moving_average_ff_impl.cc 
     coarse_sync_cc_impl.cc
-    stat_report.cc
     prou_packet_sink_f_impl.cc
     interference_tagger_cc_impl.cc
     block_tagger_cc_impl.cc
     su_sr_transmitter_bb_impl.cc
     su_tx_helper.cc
-    ic_critical_cc_impl.cc
     su_packet_sink_c_impl.cc
     throughput_report.cc
-    sinr_helper.cc
     utils.cc
     stop_n_wait_tx_bb_impl.cc
     stop_n_wait_rx_ctrl_cc_impl.cc
@@ -62,7 +54,6 @@ list(APPEND lsa_sources
     simple_tx.cc
     simple_rx.cc
     phy_crc.cc
-    signal_power_tagger_cc_impl.cc
     byte_to_symbol_bc_impl.cc
     throughput_file_sink.cc
     ic_resync_cc_impl.cc
