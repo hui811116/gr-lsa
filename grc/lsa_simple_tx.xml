@@ -78,9 +78,4 @@
     <name>pdu_out</name>
     <type>message</type>
   </source>
-  <source>
-    <name>thr_out</name>
-    <type>message</type>
-    <optional>1</optional>
-  </source>
 </block>

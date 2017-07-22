@@ -33,22 +33,19 @@ namespace gr {
     #define SEQLEN 4
     #define MAXLEN 123
     #define RETRYLIMIT 10
-    #define PKTCOUNTER d_countsize
     #define DEBUG d_debug && std::cout
     #define VERBOSE d_verb && std::cout
     static const unsigned char d_seq_field[] = {0x00,0x00,0x00,0x00};
     class simple_tx_impl : public simple_tx
     {
       public:
-        simple_tx_impl(const std::string& filename, float timeout,int cnt,bool slow, bool verb): block("simple_tx",
+        simple_tx_impl(const std::string& filename, float timeout,bool slow, bool verb): block("simple_tx",
                   gr::io_signature::make(0,0,0),
                   gr::io_signature::make(0,0,0)),
                   d_timeout(timeout),
-                  d_countsize(cnt),
                   d_retry_limit(RETRYLIMIT),
                   d_in_port(pmt::mp("ack_in")),
-                  d_out_port(pmt::mp("pdu_out")),
-                  d_thr_port(pmt::mp("thr_out"))
+                  d_out_port(pmt::mp("pdu_out"))
         {
           if(timeout<=0){
             throw std::invalid_argument("Timeout should be positive");
@@ -59,12 +56,10 @@ namespace gr {
           }
           message_port_register_in(d_in_port);
           message_port_register_out(d_out_port);
-          message_port_register_out(d_thr_port);
           set_msg_handler(d_in_port,boost::bind(&simple_tx_impl::msg_in,this,_1));
           d_seqno = 0;
           d_slow = slow;
           d_verb = verb;
-          d_pkt_cnt=0;
           d_pkt_success_cnt=0;
           d_pkt_failed_cnt=0;
         }
@@ -110,15 +105,6 @@ namespace gr {
                   d_ack_received.notify_one();
                 }
                 d_acked = true;
-                d_pkt_cnt++;
-                if(d_pkt_cnt==PKTCOUNTER){
-                  d_pkt_cnt=0;
-                  boost::posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time()-d_start_time;
-                  pmt::pmt_t dict = pmt::make_dict();
-                  dict = pmt::dict_add(dict,pmt::intern("pkt_count"),pmt::from_long(d_countsize));
-                  dict = pmt::dict_add(dict,pmt::intern("duration"),pmt::from_long(diff.total_milliseconds()));
-                  message_port_pub(d_thr_port,pmt::cons(dict,pmt::PMT_NIL));
-                }
               }
             }
           }
@@ -165,9 +151,6 @@ namespace gr {
             DEBUG<<"<SIMPLE TX>sending seq:"<<d_seqno<<std::endl;
             d_acked = false;
             generate_msg();
-            if(d_pkt_cnt==0){
-              d_start_time = boost::posix_time::microsec_clock::local_time();
-            }
             message_port_pub(d_out_port,d_current_msg);
             retry++;
             gr::thread::scoped_lock lock(d_mutex);
@@ -204,22 +187,18 @@ namespace gr {
           d_current_msg = pmt::cons(pmt::PMT_NIL,blob);
         }
         const int d_retry_limit;
-        const int d_countsize;
         const pmt::pmt_t d_in_port;
         const pmt::pmt_t d_out_port;
-        const pmt::pmt_t d_thr_port;
         gr::thread::mutex d_mutex;
         gr::thread::condition_variable d_ack_received;
         boost::shared_ptr<gr::thread::thread> d_thread;
         boost::shared_ptr<gr::thread::thread> d_status_thread;
-        boost::posix_time::ptime d_start_time;
         boost::posix_time::ptime d_system_time;
         bool d_finished;
         bool d_acked;
         bool d_slow;
         bool d_verb;
         int d_retry_cnt;
-        int d_pkt_cnt;
         uint16_t d_seqno;
         float d_timeout;
         pmt::pmt_t d_current_msg;
@@ -230,9 +209,9 @@ namespace gr {
         long int d_pkt_failed_cnt;
     };
     simple_tx::sptr
-    simple_tx::make(const std::string& filename,float timeout,int cnt,bool slow,bool verb)
+    simple_tx::make(const std::string& filename,float timeout,bool slow,bool verb)
     {
-      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout,cnt,slow,verb));
+      return gnuradio::get_initial_sptr(new simple_tx_impl(filename,timeout,slow,verb));
     }
   } /* namespace lsa */
 } /* namespace gr */

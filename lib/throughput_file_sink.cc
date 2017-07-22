@@ -53,14 +53,16 @@ namespace gr {
           gr::thread::scoped_lock guard(d_mutex);
           pmt::pmt_t k = pmt::car(msg);
           pmt::pmt_t v = pmt::cdr(msg);
-          long count,duration;
+          long int acc_delay,acc_ch_use,acc_size,total_suc;
           switch(d_system)
           {
             case PROU:
               assert(pmt::is_dict(k));
-              count = pmt::to_long(pmt::dict_ref(k,pmt::intern("pkt_count"),pmt::from_long(0)));
-              duration = pmt::to_long(pmt::dict_ref(k,pmt::intern("duration"),pmt::from_long(0)));
-              d_file<<"\n[Event]\n<count>\n"<<count<<"\n<duration>\n"<<duration<<"\n[Event*]"<<std::endl;
+              acc_delay = pmt::to_long(pmt::dict_ref(k,pmt::intern("acc_delay"),pmt::from_long(0)));
+              acc_ch_use= pmt::to_long(pmt::dict_ref(k,pmt::intern("acc_ch_use"),pmt::from_long(0)));
+              acc_size  = pmt::to_long(pmt::dict_ref(k,pmt::intern("acc_size"),pmt::from_long(0)));
+              total_suc = pmt::to_long(pmt::dict_ref(k,pmt::intern("total_suc"),pmt::from_long(0)));
+              d_file<<acc_size<<","<<acc_delay<<","<<acc_ch_use<<","<<total_suc<<std::endl;
               d_file<<std::flush;
               d_iter_cnt++;
             break;
@@ -115,6 +117,7 @@ namespace gr {
           if(!d_file.is_open()){
             throw std::invalid_argument("Throughput file cannot be opened, abort execution...");
           }
+          d_file<<"acc_size,acc_delay,acc_channel_use,total_success"<<std::endl;
           switch(sys){
             case PROU:
             case SU:

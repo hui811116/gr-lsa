@@ -45,6 +45,7 @@ namespace gr {
                   d_period((long)period),
                   d_ack_port(pmt::mp("ack_in")),
                   d_pdu_port(pmt::mp("pdu_out")),
+                  d_data_port(pmt::mp("data_out")),
                   d_avg_size(avg_size)
         {
           if(timeout<0 || period<0 || avg_size<=0){
@@ -56,6 +57,7 @@ namespace gr {
           }
           message_port_register_in(d_ack_port);
           message_port_register_out(d_pdu_port);
+          message_port_register_out(d_data_port);
           set_msg_handler(d_ack_port,boost::bind(&arq_tx_impl::msg_in,this,_1));
           d_seq_no =0;
           d_ack_no =0;
@@ -105,13 +107,19 @@ namespace gr {
                   boost::posix_time::time_duration diff= boost::posix_time::microsec_clock::local_time()-std::get<1>(*it);
                   d_acc_delay += diff.total_milliseconds();
                   it=d_pending.erase(it);
-                  DEBUG<<"<ARQ TX>Acked base="<<base1<<std::endl;
+                  //DEBUG<<"<ARQ TX>Acked base="<<base1<<std::endl;
                   d_success_cnt++;
                   break;
                 }
                 it++;
               }
               if(d_success_cnt%d_avg_size == 0){
+                pmt::pmt_t dict = pmt::make_dict();
+                dict = pmt::dict_add(dict,pmt::intern("acc_size"),pmt::from_long(d_avg_size));
+                dict = pmt::dict_add(dict,pmt::intern("acc_delay"),pmt::from_long(d_avg_size));
+                dict = pmt::dict_add(dict,pmt::intern("acc_ch_use"),pmt::from_long(d_avg_size));
+                dict = pmt::dict_add(dict,pmt::intern("total_suc"),pmt::from_long(d_avg_size));
+                message_port_pub(d_data_port,pmt::cons(dict,pmt::PMT_NIL));
                 // accumulate a averaging length
                 VERBOSE << "<ARQ TX> ,acc_size="<<d_avg_size<<" ,acc_delay="<<d_acc_delay<<" ,acc_channel_use="<<d_channel_use<<" ,total_success="<<d_success_cnt<<std::endl;
                 // reset
@@ -119,7 +127,7 @@ namespace gr {
                 d_channel_use=0;
               }
               if(base1 == d_ack_no){
-                DEBUG<<"<ARQ TX>Acked base point, increment to next number, current:"<<d_ack_no<<std::endl;
+                //DEBUG<<"<ARQ TX>Acked base point, increment to next number, current:"<<d_ack_no<<std::endl;
                 if(d_pending.empty()){
                   d_ack_no = d_seq_no;
                 }else{
@@ -196,16 +204,16 @@ namespace gr {
               seq = std::get<0>(*it);
               d_pending.push_back(std::make_tuple(seq,boost::posix_time::microsec_clock::local_time(),std::get<2>(*it)+1));
               d_pending.pop_front();
-              DEBUG<<"<ARQ TX>Found timeout retry:"<<seq<<" ,current seqno="<<d_seq_no<<std::endl;
+              //DEBUG<<"<ARQ TX>Found timeout retry:"<<seq<<" ,current seqno="<<d_seq_no<<std::endl;
             }else{
               d_pending.push_back(std::make_tuple(seq,boost::posix_time::microsec_clock::local_time(),1));
               d_seq_no = (d_seq_no==0xffff)? 0 : d_seq_no+1;
-              DEBUG<<"<ARQ TX>Not timeout ,current seqno="<<d_seq_no<<std::endl;
+              //DEBUG<<"<ARQ TX>Not timeout ,current seqno="<<d_seq_no<<std::endl;
             }
           }else{
             d_pending.push_back(std::make_tuple(seq,boost::posix_time::microsec_clock::local_time(),1));
             d_seq_no = (d_seq_no==0xffff)? 0 : d_seq_no+1;
-            DEBUG<<"<ARQ TX>Empty pending queue, current seqno="<<d_seq_no<<std::endl;
+            //DEBUG<<"<ARQ TX>Empty pending queue, current seqno="<<d_seq_no<<std::endl;
           }
           const uint8_t* u8_seq = (const uint8_t*) &seq;
           d_buf[0] = u8_seq[1];
@@ -218,6 +226,7 @@ namespace gr {
 
         const pmt::pmt_t d_ack_port;
         const pmt::pmt_t d_pdu_port;
+        const pmt::pmt_t d_data_port;
         boost::shared_ptr<gr::thread::thread> d_thread;
         gr::thread::mutex d_mutex;
         gr::thread::condition_variable d_ack_received;
