@@ -4,7 +4,7 @@
   <key>lsa_simple_tx</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.simple_tx($filename,$timeout,$cnt,$slow,$verb)</make>
+  <make>lsa.simple_tx($filename,$timeout,$slow,$verb)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -21,12 +21,6 @@
     <key>timeout</key>
     <value>2000</value>
     <type>float</type>
-  </param>
-  <param>
-    <name>Count size</name>
-    <key>cnt</key>
-    <value>30</value>
-    <type>int</type>
   </param>
   <param>
     <name>Low Rate</name>

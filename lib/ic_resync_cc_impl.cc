@@ -908,7 +908,7 @@ namespace gr {
       float cross_val = std::abs(cross/std::sqrt(su_eng*ori_eng));
       // update according to cross correlation value
       d_su_cfo =(cross_val>0.9)? d_su_cfo+d_tracking_gain*fast_atan2f(diff.imag(),diff.real())/(float)d_chunk_size : d_su_cfo;
-      d_su_gain = (cross_val>0.9)? std::exp(std::log(d_su_gain)+d_gain_gain*(std::log(tmp_gain)-std::log(d_su_gain))) : d_su_gain;
+      //d_su_gain = (cross_val>0.9)? std::exp(std::log(d_su_gain)+d_gain_gain*(std::log(tmp_gain)-std::log(d_su_gain))) : d_su_gain;
       d_su_phase = (cross_val>0.9)? fast_atan2f(cross.imag(),cross.real()) : d_su_phase;
       d_last_su_sync_idx = su_begin;
     }
