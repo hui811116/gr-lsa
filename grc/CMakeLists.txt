@@ -50,5 +50,6 @@ install(FILES
     lsa_ic_resync_cc.xml
     lsa_su_block_receiver_c.xml
     lsa_ic_ncfo_cc.xml
-    lsa_arq_tx.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_arq_tx.xml
+    lsa_sns_tx.xml DESTINATION share/gnuradio/grc/blocks
 )

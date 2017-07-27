@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<block>
+  <name>SNS TX</name>
+  <key>lsa_sns_tx</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.sns_tx($filename,$send,$timeout,$verb)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>File</name>
+    <key>filename</key>
+    <value></value>
+    <type>file_open</type>
+  </param>
+  <param>
+    <name>Packet Send</name>
+    <key>send</key>
+    <value>10</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Timeout</name>
+    <key>timeout</key>
+    <value>5000</value>
+    <type>float</type>
+  </param>
+  <param>
+    <name>Verbose</name>
+    <key>verb</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>ack_in</name>
+    <type>message</type>
+  </sink>
+  <sink>
+    <name>strobe</name>
+    <type>message</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>pdu_out</name>
+    <type>message</type>
+  </source>
+</block>

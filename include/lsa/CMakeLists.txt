@@ -55,5 +55,6 @@ install(FILES
     ic_resync_cc.h
     su_block_receiver_c.h
     ic_ncfo_cc.h
-    arq_tx.h DESTINATION include/lsa
+    arq_tx.h
+    sns_tx.h DESTINATION include/lsa
 )

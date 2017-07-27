@@ -1438,7 +1438,7 @@
     </param>
     <param>
       <key>timeout</key>
-      <value>100</value>
+      <value>200</value>
     </param>
     <param>
       <key>verb</key>
