@@ -31,7 +31,7 @@ namespace gr {
     {
      private:
       // Nothing to declare in this block.
-      uint64_t d_count;
+      long int d_count;
       pmt::pmt_t d_tagname;
       pmt::pmt_t d_id;
       unsigned int d_mult;
