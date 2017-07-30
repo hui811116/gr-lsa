@@ -48,6 +48,7 @@ namespace gr {
       if(psize<=0){
         throw std::invalid_argument("Processing size should be positive");
       }
+      set_process_size(psize);
       if(samples.size()==0){
         throw std::invalid_argument("Sync words empty...");
       }
@@ -180,6 +181,7 @@ namespace gr {
               }
               d_process_cnt++;
               if(d_process_cnt==d_process_size){
+                DEBUG<<"<SNS RX CTRL>size reached, sending clear signal"<<std::endl;
                 d_process_cnt=0;
                 // collect enough samples for sensing, feedback to transmitter
                 d_pub_sensing.notify_one();
@@ -197,8 +199,10 @@ namespace gr {
               uint16_t max_idx;
               volk_32fc_index_max_16u(&max_idx,d_buf,512);
               if(std::abs(d_buf[max_idx])>0.9){
+                DEBUG<<"<SNS RX CTRL>found SFD in first 512 samples declare SNS signal"<<std::endl;
                 enter_ed_sns();
               }else{
+                DEBUG<<"<SNS RX CTRL>no sfd found in first 512, ProU signal detected"<<std::endl;
                 enter_ed_pu();
               }
               count+=512;

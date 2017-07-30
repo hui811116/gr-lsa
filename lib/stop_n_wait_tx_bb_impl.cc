@@ -71,6 +71,7 @@ namespace gr {
         }
       }
       d_pkt_success_cnt=0;
+      d_pkt_total=0;
       if(send<=0){
         throw std::invalid_argument("Invalid Send size...");
       }
@@ -126,11 +127,11 @@ namespace gr {
       size_t ctrl_type = pmt::to_long(pmt::dict_ref(msg,pmt::intern("SNS_ctrl"),pmt::from_long(-1)));
       int seqno = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));
       if(ctrl_type == SNS_COLLISION){
-        if(d_sns_stop = false){
+        if(!d_sns_stop){
           d_sns_stop = true;
         }
       }else if(ctrl_type == SNS_CLEAR){
-        if(d_sns_stop = true){
+        if(d_sns_stop){
           d_sns_stop = false;
           d_send_cnt=0;
         }
@@ -275,7 +276,7 @@ namespace gr {
         boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time()-d_start_time;
         if(d_verb){
           std::cout<<"<SNS TX>Execution time:"<<diff.total_seconds();
-          std::cout<<"total packets:<<"<<d_pkt_total<<" ,success packets:"<<d_pkt_success_cnt<<std::endl;
+          std::cout<<" total packets:<<"<<d_pkt_total<<" ,success packets:"<<d_pkt_success_cnt<<std::endl;
         }
       }
     }

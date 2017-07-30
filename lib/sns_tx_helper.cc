@@ -60,9 +60,13 @@ namespace gr {
           pmt::pmt_t msg_out = pmt::make_dict();
           if(io==SNS_COLLISION){
             // SNS sensing positive
+            if(!sns_crc(uvec,io,SNS_COLLISION))
+              return;
             msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_COLLISION));
             message_port_pub(d_out_port,msg_out);
           }else if(io==SNS_CLEAR){
+            if(!sns_crc(uvec,io,SNS_CLEAR))
+              return;
             msg_out = pmt::dict_add(msg_out,pmt::intern("SNS_ctrl"),pmt::from_long(SNS_CLEAR));
             message_port_pub(d_out_port,msg_out);
           }else if(io==SNS_ACK){
@@ -83,6 +87,17 @@ namespace gr {
           }
         }
       private:
+        bool sns_crc(const uint8_t* uvec, size_t io, int type){
+          if(type == SNS_CLEAR){
+            return uvec[0]==0x00 && uvec[1]==0xff && uvec[2]==0x0f;
+          }else if(type == SNS_COLLISION){
+            return uvec[0]==0xff && uvec[1]==0x00;
+          }else if(type == SNS_ACK){
+            return uvec[0]==uvec[2] && uvec[1]==uvec[3];
+          }else{
+            return false;
+          }
+        }
         const pmt::pmt_t d_in_port;
         const pmt::pmt_t d_out_port;
         gr::thread::mutex d_mutex;
