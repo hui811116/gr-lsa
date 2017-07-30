@@ -52,11 +52,15 @@ namespace gr {
       unsigned char d_symbol_cnt;
       // for recording snr of payload
       pmt::pmt_t d_current_pwr;
+      std::vector<tag_t> d_voe_tags;
+      bool d_voe_state;
+      bool d_voe_do_not_pub;
 
       unsigned char decode_chip(const unsigned int& reg);
       void enter_search();
       void enter_have_sync();
       void enter_load_payload();
+      void update_voe(int idx);
 
      public:
       su_packet_sink_c_impl(const gr::digital::constellation_sptr& hdr_const,int threshold);

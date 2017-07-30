@@ -55,6 +55,7 @@ namespace gr {
     static const int MAX_PLD = 127;
     static const int CODE_RATE_INV= 8;
     static const unsigned int d_mask = 0x7ffffffe;
+    static const uint8_t d_sensing[] = {0xff,0x00};
 
     su_block_receiver_c::sptr
     su_block_receiver_c::make(
@@ -163,8 +164,9 @@ namespace gr {
             d_voe_state = pmt::to_bool(voe_tags[0].value);
             if(!prev_state && d_voe_state){
               d_voe_do_not_pub=true;
+              message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sensing,2)));
             }else if(prev_state && !d_voe_state){
-              d_voe_do_not_pub=false;
+              //d_voe_do_not_pub=false;
             }
             voe_tags.erase(voe_tags.begin());
           }
@@ -277,6 +279,8 @@ namespace gr {
                         pmt::pmt_t blob = pmt::make_blob(d_out_buf,d_pkt_byte);
                         message_port_pub(d_out_port,pmt::cons(dict,blob));
                         DEBUG<<"<Block RX>\033[32;1mPublishing pkt, bid="<<d_latest_bid<<" ,offset="<<d_latest_offset<<"\033[0m"<<std::endl;
+                      }else{
+                        d_voe_do_not_pub = false;
                       }
                     // reason: header may be intact
                     enter_search();

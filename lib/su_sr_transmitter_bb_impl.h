@@ -51,20 +51,18 @@ namespace gr {
       bool d_verb;
       boost::shared_ptr<gr::thread::thread> d_thread;
       boost::posix_time::ptime d_start_time;
+      boost::posix_time::ptime d_system_time;
       bool d_finished;
 
       // thread functions for d_arq_queue;
       void clear_queue();
-      void enqueue(const srArq_t& arq);
-      bool dequeue(int seq);
       pmt::pmt_t check_timeout();
       bool peek_front(int& len);
       // thread functions for retransmission
       bool create_retx_queue();
       pmt::pmt_t get_retx(int idx);
       bool retx_peek_front(int& len);
-      bool check_retx_table(int idx);
-      bool update_retx_table(int idx);
+      bool update_retx_table(int idx,int size,int seqno);
       void reset_retx_retry();
 
       // file operation

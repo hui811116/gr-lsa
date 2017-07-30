@@ -146,12 +146,14 @@ namespace gr {
       const uint64_t nwrite= nitems_written(0);
       while(count<nin && nout<noutput_items){
         update_tag_state(count);
-        if(in_mag_norm[count]>d_threshold){
+        if(in_mag_norm[count]>d_threshold && in_mag_norm[count]<=1){
           d_auto_cnt++;
           if(d_auto_cnt>=d_valid_len){
             if(d_copy_cnt>=d_mingap){
               if(!d_voe_state && (d_voe_duration_cnt>=d_maxlen)){
-                d_coarse_cfo = d_coarse_cfo + (arg(in_corr[count])/(float)d_delay-d_coarse_cfo)*d_cfo_gain;
+                //d_coarse_cfo = d_coarse_cfo + (arg(in_corr[count])/(float)d_delay-d_coarse_cfo)*d_cfo_gain;
+                d_coarse_cfo = arg(in_corr[count])/(float)d_delay;
+                //std::cout<<"<DEBUG Auto corr> value = "<<in_mag_norm[count]<<" ,cfo="<<d_coarse_cfo<<std::endl;
                 d_auto_cnt =0;
                 d_copy_cnt =0;
                 add_item_tag(0,nwrite+nout,d_cfo_key,pmt::from_float(d_coarse_cfo));

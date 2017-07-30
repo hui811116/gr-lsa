@@ -121,15 +121,12 @@ namespace gr {
         return;
       }
       if(d_prou_present){
-        if( (qidx==0&& qsize==0) || qsize!=d_retx_size || qidx>=d_retx_size){
+        if( qsize!=d_retx_size || qidx>=d_retx_size){
           return;
         }else if(d_retx_size ==0){
           return;
         }
-        if(d_retx_table.empty()){
-          throw std::runtime_error("WTF retx");
-        }
-        if(update_retx_table(qidx)){
+        if(update_retx_table(qidx,qsize,seqno)){
           DEBUG<<"<SU SR TX>Received a retransmission, idx:"<<qidx<<" ,retx count:"<<d_retx_cnt<<"(expected:"<<d_retx_size<<")"<<std::endl;
           if(d_retx_cnt >= d_retx_size){
             d_prou_present = false;
@@ -142,9 +139,13 @@ namespace gr {
         if(qidx!=0 || qsize!=0){
           return;
         }
-        if(dequeue(seqno)){
-          // success
-          DEBUG<<"<SU SR TX> dequeue seqno:"<<seqno<<std::endl;
+        for(it = d_arq_queue.begin();it!=d_arq_queue.end();++it){
+          if(it->seq()==seqno){
+            d_pkt_success_cnt++;
+            it = d_arq_queue.erase(it);    
+            DEBUG<<"<SU SR TX> dequeue seqno:"<<seqno<<std::endl;
+            return;
+          }
         }
       }
     }
@@ -162,21 +163,21 @@ namespace gr {
     {
       std::list<srArq_t>::iterator it;
       if(d_arq_queue.empty()){
-            return false;
-          }else{
-            d_retx_cnt= 0;
-            d_retx_idx= 0;
-            d_retx_table.clear();
-            d_retx_queue.clear();
-            d_retx_size=d_arq_queue.size();
-            d_retx_table.resize(d_retx_size,false);
-            for(it=d_arq_queue.begin();it!=d_arq_queue.end();++it){
-              srArq_t tmp = *it;
-              tmp.set_retry(0);
-              d_retx_queue.push_back(tmp);
-            }
-          }
-          return true;
+        return false;
+      }else{
+        d_retx_cnt= 0;
+        d_retx_idx= 0;
+        d_retx_table.clear();
+        d_retx_queue.clear();
+        d_retx_size=d_arq_queue.size();
+        d_retx_table.resize(d_retx_size,false);
+        for(it=d_arq_queue.begin();it!=d_arq_queue.end();++it){
+          srArq_t tmp = *it;
+          tmp.set_retry(0);
+          d_retx_queue.push_back(tmp);
+        }
+      }
+      return true;
     }
 
     pmt::pmt_t
@@ -221,11 +222,6 @@ namespace gr {
       d_retx_cnt =0;
       d_retx_size =0;
     }
-    void
-    su_sr_transmitter_bb_impl::enqueue(const srArq_t& arq)
-    {
-      d_arq_queue.push_back(arq);
-    }
     pmt::pmt_t
     su_sr_transmitter_bb_impl::check_timeout()
     {
@@ -253,20 +249,6 @@ namespace gr {
           }
       }
       return nx_msg;
-    }
-
-    bool
-    su_sr_transmitter_bb_impl::dequeue(int seq)
-    {
-      std::list<srArq_t>::iterator it;
-      for(it = d_arq_queue.begin();it!=d_arq_queue.end();++it){
-        if(it->seq()==seq){
-          d_pkt_success_cnt++;
-          it = d_arq_queue.erase(it);    
-          return true;
-        }
-      }
-      return false;
     }
 
     bool
@@ -302,24 +284,28 @@ namespace gr {
       return !d_data_src.empty();
     }
 
+
     bool
-    su_sr_transmitter_bb_impl::check_retx_table(int idx)
-    {
-      if(idx>=d_retx_table.size()){
-        throw std::runtime_error("WTF...");
-      }
-      return d_retx_table[idx];
-    }
-    bool
-    su_sr_transmitter_bb_impl::update_retx_table(int idx){
-      if(idx>=d_retx_table.size()){
-        throw std::runtime_error("WTF......");
-      }
-      if(d_retx_table[idx]==false){
-        d_pkt_success_cnt++;
-        d_retx_cnt++;
-        d_retx_table[idx] = true;
-        return true;
+    su_sr_transmitter_bb_impl::update_retx_table(int idx,int size,int seqno){
+      assert(idx<d_retx_table.size());
+      if(idx==size && size==0){
+        for(int i=0;i<d_retx_queue.size();++i){
+          if(d_retx_queue[i].seq()==seqno){
+            if(d_retx_table[i]==false){
+              d_retx_table[i] = true;
+              d_retx_cnt++;
+              d_pkt_success_cnt++;
+            }
+            return true;
+          }
+        }
+      }else{
+        if(d_retx_table[idx]==false){
+          d_pkt_success_cnt++;
+          d_retx_cnt++;
+          d_retx_table[idx] = true;
+          return true;
+        }
       }
       return false;
     }
@@ -349,18 +335,16 @@ namespace gr {
         if(d_retx_cnt!=0){
           // already passed sensing delay
           d_retx_queue[d_retx_idx].inc_retry();
-          if(d_retx_queue[d_retx_idx].retry()>d_retx_retry_limit 
-             && (check_retx_table(d_retx_idx)==false) ){
-              if(update_retx_table(d_retx_idx)){
-                DEBUG<<"<SU SR TX>"<<"\033[32;1m"<<"Retransmission achieve retry limit, forced true..."<<"\033[0m"<<std::endl;
-              }
-              if(d_retx_cnt>=d_retx_size){
-                clear_queue();
-                d_prou_present = false;
-                DEBUG<<"<SU SR TX>"<<"\033[31;1m"<<"Failure: Retransmission exceed retry limit! resume to clear state"<<"\033[0m"<<std::endl;
-                nout =0;
-                return 0;
-              }
+          if(d_retx_queue[d_retx_idx].retry()>d_retx_retry_limit && (d_retx_table[d_retx_idx]==false) ){
+              d_retx_table[d_retx_idx] = true;
+              d_retx_cnt++;
+            if(d_retx_cnt>=d_retx_size){
+              clear_queue();
+              d_prou_present = false;
+              DEBUG<<"<SU SR TX>"<<"\033[31;1m"<<"Failure: Retransmission exceed retry limit! resume to clear state"<<"\033[0m"<<std::endl;
+              nout =0;
+              return 0;
+            }
           }
         }
         // consider a retry count to reduce retransmission time
@@ -394,7 +378,7 @@ namespace gr {
           nx_msg = pmt::make_blob(d_buf,nout);
           d_seq = (d_seq == 0xffff)? 0:d_seq; // wrap around
           srArq_t temp_arq(d_seq++,nx_msg);
-          enqueue(temp_arq);
+          d_arq_queue.push_back(temp_arq);
           memcpy(out,d_buf,sizeof(char)*(nout) );
         }else{
           // send existing message

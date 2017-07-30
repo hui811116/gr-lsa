@@ -49,6 +49,7 @@ static const int MAX_PLD = 127;
 static const int CODE_RATE_INV= 8;
 static const unsigned int d_mask = 0x7ffffffe;
 static const pmt::pmt_t d_pwr_tag = pmt::intern("pwr_tag");
+static const uint8_t d_sensing[] = {0xff,0x00};
 
 enum SYSTEMSTATE{
   SEARCH_ZERO,
@@ -89,6 +90,10 @@ enum SYSTEMSTATE{
       d_threshold = (threshold<0)? 0: threshold;
       d_const_buf = new unsigned char[d_cap];
       d_current_pwr = pmt::from_float(0);
+      d_voe_do_not_pub = false;
+      d_voe_state = false;
+      d_voe_tags.clear();
+
     }
 
     /*
@@ -153,6 +158,23 @@ enum SYSTEMSTATE{
       return 0xff;
     }
 
+    void 
+    su_packet_sink_c_impl::update_voe(int idx)
+    {
+      if(!d_voe_tags.empty()){
+        if(d_voe_tags[0].offset==idx){
+          bool result = pmt::to_bool(d_voe_tags[0].value);
+          if(d_voe_state && !result){
+            d_voe_state = result;
+          }else if(!d_voe_state && result){
+            d_voe_state = result;
+            d_voe_do_not_pub = true;
+            message_port_pub(d_msg_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sensing,2)));
+          }
+          d_voe_tags.erase(d_voe_tags.begin());
+        }
+      }
+    }
 
     int
     su_packet_sink_c_impl::general_work (int noutput_items,
@@ -163,8 +185,17 @@ enum SYSTEMSTATE{
       const gr_complex *in = (const gr_complex *) input_items[0];
       int nin = std::min(ninput_items[0],d_cap/d_hdr_bps);
       std::vector<tag_t> pwr_tags;
-      if(nin!=0)
-        get_tags_in_window(pwr_tags,0,0,nin,d_pwr_tag);
+      if(nin==0){
+        consume_each(0);
+        return 0;
+      }
+      d_voe_tags.clear();
+      get_tags_in_window(pwr_tags,0,0,nin,d_pwr_tag);
+      get_tags_in_window(d_voe_tags,0,0,nin,pmt::intern("voe_tag"));
+      for(int i=0;i<d_voe_tags.size();++i){
+        int offset = d_voe_tags[i].offset-nitems_read(0);
+        d_voe_tags[i].offset= offset;
+      }
       if(!pwr_tags.empty()){
         d_current_pwr = pwr_tags[0].value;
       }
@@ -183,6 +214,7 @@ enum SYSTEMSTATE{
           case SEARCH_ZERO:
             while(count < nbits)
             {
+              update_voe(count/d_hdr_bps);
               d_data_reg = (d_data_reg<<1) | (0x01 & d_const_buf[count++]);
               if(d_pre_cnt >0){
                 d_chip_cnt++;
@@ -232,11 +264,12 @@ enum SYSTEMSTATE{
           break;
           case HAVE_SYNC:
           while(count <nbits){
-              d_data_reg = (d_data_reg<<1) | (0x01&d_const_buf[count++]);
-              d_chip_cnt++;
-              if(d_chip_cnt==32){
-                d_chip_cnt=0;
-                unsigned char c = decode_chip(d_data_reg);
+            update_voe(count/d_hdr_bps);
+            d_data_reg = (d_data_reg<<1) | (0x01&d_const_buf[count++]);
+            d_chip_cnt++;
+            if(d_chip_cnt==32){
+              d_chip_cnt=0;
+              unsigned char c = decode_chip(d_data_reg);
               if(c==0xff){
                 enter_search();
                 break;
@@ -271,33 +304,37 @@ enum SYSTEMSTATE{
           break;
           case LOAD_PAYLOAD:
           while(count < nbits){
-              d_data_reg = (d_data_reg<<1) | (d_const_buf[count++]&0x01);
-              d_chip_cnt++;
-              if(d_chip_cnt==32){
-                d_chip_cnt=0;
-                unsigned char c = decode_chip(d_data_reg);
-                if(c==0xff){
+            update_voe(count/d_hdr_bps);
+            d_data_reg = (d_data_reg<<1) | (d_const_buf[count++]&0x01);
+            d_chip_cnt++;
+            if(d_chip_cnt==32){
+              d_chip_cnt=0;
+              unsigned char c = decode_chip(d_data_reg);
+              if(c==0xff){
+                enter_search();
+                break;
+              }else{
+                if(d_symbol_cnt%2==0){
+                  d_buf[d_symbol_cnt/2] = (c<<4);
+                }else{
+                  d_buf[d_symbol_cnt/2] |= c;
+                }
+                d_symbol_cnt++;
+                if(d_symbol_cnt/2 >= d_pkt_byte){
+                  // hide pwr tag in key field
+                  if(d_voe_do_not_pub){
+                    d_voe_do_not_pub = false;
+                  }else{
+                    pmt::pmt_t msg = pmt::cons(d_current_pwr,pmt::make_blob(d_buf,d_pkt_byte));
+                    message_port_pub(d_msg_port,msg);
+                  }
+                  // reason: header may be intact
                   enter_search();
                   break;
                 }
-                else{
-                  if(d_symbol_cnt%2==0){
-                    d_buf[d_symbol_cnt/2] = (c<<4);
-                  }else{
-                    d_buf[d_symbol_cnt/2] |= c;
-                  }
-                  d_symbol_cnt++;
-                  if(d_symbol_cnt/2 >= d_pkt_byte){
-                    // hide pwr tag in key field
-                    pmt::pmt_t msg = pmt::cons(d_current_pwr,pmt::make_blob(d_buf,d_pkt_byte));
-                    message_port_pub(d_msg_port,msg);
-                    // reason: header may be intact
-                    enter_search();
-                    break;
-                  }
-                }
               }
             }
+          }
           break;
           default:
             throw std::runtime_error("Entering undefined state");
@@ -305,8 +342,6 @@ enum SYSTEMSTATE{
         }
       }
       consume_each (nin);
-
-      // Tell runtime system how many output items we produced.
       return 0;
     }
 

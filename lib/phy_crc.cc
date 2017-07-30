@@ -87,43 +87,46 @@ namespace gr {
           assert(pmt::is_blob(v));
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(v,io);
-          if(io<=d_min_len || io>d_max_len){
-            return;
-          }
-          pmt::pmt_t pwr = pmt::from_float(0);
-          if(pmt::is_number(k)){
-            // have pwr tag
-            pwr = k;
-          }
-          // crc for different user type
-          if(!phy_crc(uvec,io)){
-            return;
-          }
-            // crc passed
-          pmt::pmt_t thr_msg;
-          pmt::pmt_t dict = pmt::make_dict();
-          dict = pmt::dict_add(dict, pmt::intern("seqno"),pmt::from_long(d_seq));
-          dict = pmt::dict_add(dict, pmt::intern("pwr"),pwr);
-          thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
-          if(d_user == LSA){
-            if(d_qsize!=d_lsa_queue_table.size()){
-              d_lsa_queue_table.clear();
-              d_lsa_queue_table.resize(d_qsize,false);
+          if(io<=d_min_len){
+            if(ctrl_crc(uvec,io)){
+              message_port_pub(d_out_port,msg);
             }
-            if(d_qsize!=0){
-              if(d_lsa_queue_table[d_qidx]==false){
-                // a new retransmission
-                d_lsa_queue_table[d_qidx] = true;
+          }else if(io<=d_max_len){
+            pmt::pmt_t pwr = pmt::from_float(0);
+            if(pmt::is_number(k)){
+              // have pwr tag
+              pwr = k;
+            }
+            // crc for different user type
+            if(!phy_crc(uvec,io)){
+              return;
+            }
+            // crc passed
+            pmt::pmt_t thr_msg;
+            pmt::pmt_t dict = pmt::make_dict();
+            dict = pmt::dict_add(dict, pmt::intern("seqno"),pmt::from_long(d_seq));
+            dict = pmt::dict_add(dict, pmt::intern("pwr"),pwr);
+            thr_msg = pmt::make_blob(uvec+d_min_len,io-d_min_len);
+            if(d_user == LSA){
+              if(d_qsize!=d_lsa_queue_table.size()){
+                d_lsa_queue_table.clear();
+                d_lsa_queue_table.resize(d_qsize,false);
+              }
+              if(d_qsize!=0){
+                if(d_lsa_queue_table[d_qidx]==false){
+                  // a new retransmission
+                  d_lsa_queue_table[d_qidx] = true;
+                  message_port_pub(d_thr_port,pmt::cons(dict,thr_msg));
+                }
+              }else if(d_qidx==0){
                 message_port_pub(d_thr_port,pmt::cons(dict,thr_msg));
               }
-            }else if(d_qidx==0){
+            }else{
+              // for throughput measurement and ber calculation
               message_port_pub(d_thr_port,pmt::cons(dict,thr_msg));
             }
-          }else{
-            // for throughput measurement and ber calculation
-            message_port_pub(d_thr_port,pmt::cons(dict,thr_msg));
+              message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,v));
           }
-          message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,v));
         }
 
       private:
@@ -170,6 +173,51 @@ namespace gr {
             break;
             default:
               throw std::runtime_error("Undefined user type");
+            break;
+          }
+          return true;
+        }
+        bool ctrl_crc(const uint8_t* uvec,size_t io)
+        {
+          switch(d_user){
+            case PROU:
+              return uvec[0]==uvec[2] && uvec[1]==uvec[3];
+            break;
+            case LSA:
+              if(io==2){
+                return uvec[0]==0xff && uvec[1]==0x00;
+              }else if(io==8){
+                uint16_t qidx,qsize,base1,base2;
+                qidx= uvec[0]<<8;
+                qidx|=uvec[1];
+                qsize = uvec[2]<<8;
+                qsize|= uvec[3];
+                base1 = uvec[4]<<8;
+                base1|= uvec[5];
+                base2 = uvec[6]<<8;
+                base2|= uvec[7];
+                if(qsize!=0){
+                  return qidx<qsize && base1==base2;
+                }else{
+                  return qidx==qsize &&base1==base2;
+                }
+              }else{
+                return false;
+              }
+            break;
+            case SNS:
+              if(io==2){
+                return uvec[0]==0xff && uvec[1]==0x00;
+              }else if(io==3){
+                return uvec[0]==0x00 && uvec[1]==0xff && uvec[2]==0x0f;
+              }else if(io==4){
+                return uvec[0]==uvec[2] && uvec[1]==uvec[3];
+              }else{
+                return false;
+              }
+            break;
+            default:
+              throw std::runtime_error("undefined state");
             break;
           }
           return true;

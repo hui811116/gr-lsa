@@ -36,7 +36,7 @@ namespace gr {
     #define MACLEN 4
     #define MAXLEN 127
     
-    static unsigned char d_sns_collision[] = {0x00,0xff};
+    static unsigned char d_sns_collision[] = {0xff,0x00};
     static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
 
     class stop_n_wait_ack_impl : public stop_n_wait_ack

@@ -38,7 +38,7 @@ namespace gr {
     static int d_min_gap = 8*8*8/2*4;
     static int d_burst_max_diff = 256;
     static int d_max_waiting = 20;
-    static unsigned char d_sns_collision[] = {0x00,0xff};
+    static unsigned char d_sns_collision[] = {0xff,0x00};
     static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
 
     enum SNSRXSTATE{
@@ -181,11 +181,11 @@ namespace gr {
               d_voe_cnt++;
               if(d_voe_cnt>=d_voe_valid){
                 // consecutive higher than threshold
-                pmt::pmt_t msg_out = pmt::cons(
-                  pmt::intern("SNS_hdr"),
-                  pmt::make_blob(d_sns_collision,SNS_COLLISION)
-                );
-                message_port_pub(d_out_port,msg_out);
+                //pmt::pmt_t msg_out = pmt::cons(
+                  //pmt::intern("SNS_hdr"),
+                  //pmt::make_blob(d_sns_collision,SNS_COLLISION)
+                //);
+                //message_port_pub(d_out_port,msg_out);
                 enter_search_stop();
                 break;
               }

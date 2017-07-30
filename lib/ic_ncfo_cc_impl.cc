@@ -32,7 +32,7 @@ namespace gr {
   namespace lsa {
     #define d_debug false
     #define DEBUG d_debug && std::cout
-    #define CAPACITY 1000*128*64
+    #define CAPACITY 1000*128*128
     #define LSAPHYLEN 6
     #define MODBPS 2
     #define CHIPRATEINV 8
@@ -62,8 +62,8 @@ namespace gr {
       message_port_register_in(d_in_port);
       set_msg_handler(d_in_port,boost::bind(&ic_ncfo_cc_impl::msg_in,this,_1));
       d_in_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
-      d_out_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_buff_lim,volk_get_alignment());
-      d_demo_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_buff_lim,volk_get_alignment());
+      d_out_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
+      d_demo_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_cap,volk_get_alignment());
       d_intf_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_buff_lim,volk_get_alignment());
       d_fir_buffer = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_buff_lim,volk_get_alignment());
       d_ic_mem = (gr_complex*) volk_malloc(sizeof(gr_complex)*d_buff_lim,volk_get_alignment());

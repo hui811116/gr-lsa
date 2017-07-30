@@ -35,7 +35,6 @@ namespace gr {
     #define LSASENLEN 2
     static const unsigned char LSA_SEN = 0x02;
     static const unsigned char LSA_CTRL= 0x08;
-    static const unsigned int BASEMAX = 16777216;
 
     class su_ctrl_impl: public su_ctrl{
       public:
@@ -57,43 +56,34 @@ namespace gr {
         gr::thread::scoped_lock guard(d_mutex);
         pmt::pmt_t key = pmt::car(msg);
         pmt::pmt_t value = pmt::cdr(msg);
-        pmt::pmt_t blob;
+        assert(pmt::is_blob(value));
+        pmt::pmt_t blob=pmt::PMT_NIL;
         uint16_t qsize,qidx;
         uint16_t base1, base2;
-        if(pmt::is_blob(value)){
-          size_t io(0);
-          const uint8_t* uvec = pmt::u8vector_elements(value,io);
-          if(io==LSASENLEN){
-            DEBUG<<"<SU CTRL DEBUG>recieved a sensing positive tag"<<std::endl;
-            blob = generate_header(qidx,qsize,base1,LSA_SEN);
-          }else if(io==LSAMACLEN){
-            parse_pdu(qidx,qsize,base1,base2,uvec);
-            if(base1==base2){
-              DEBUG<<"<SU CTRL DEBUG>received a LSA Control frame:"
-              <<"block_idx="<<qidx<<" ,block_size="<<qsize<<" ,base="<<base1<<std::endl;
-            }
-            return;
-          }else if(io>LSAMACLEN){
-            parse_pdu(qidx,qsize,base1,base2,uvec);
-            DEBUG<<"<SU CTRL DEBUG>received PHY packet--block_idx="
-            <<qidx<<" ,block_size="<<qsize<<" ,base="<<base1<<std::endl;
-            blob = generate_header(qidx,qsize,base1,LSA_CTRL);  
-          }else{
-            return;
-          }
-        }
-        else if(pmt::dict_has_key(msg,pmt::intern("LSA_sensing"))){
+        size_t io(0);
+        const uint8_t* uvec = pmt::u8vector_elements(value,io);
+        if(io==LSASENLEN){
+          DEBUG<<"<SU CTRL DEBUG>recieved a sensing positive tag"<<std::endl;
+          //std::cout<<"<SU CTRL DEBUG>recieved a sensing positive tag"<<boost::posix_time::second_clock::local_time()<<std::endl;
           blob = generate_header(qidx,qsize,base1,LSA_SEN);
-          if(!d_prou_present){
-            DEBUG<<"<SU CTRL>Receive interference signal! send information back to TX!"<<std::endl;
-            d_prou_present = true;
+        }else if(io==LSAMACLEN){
+          parse_pdu(qidx,qsize,base1,base2,uvec);
+          if(base1==base2){
+            DEBUG<<"<SU CTRL DEBUG>received a LSA Control frame:"
+            <<"block_idx="<<qidx<<" ,block_size="<<qsize<<" ,base="<<base1<<std::endl;
           }
-        }
-        else{
+          return;
+        }else if(io>LSAMACLEN){
+          parse_pdu(qidx,qsize,base1,base2,uvec);
+          DEBUG<<"<SU CTRL DEBUG>received PHY packet--block_idx="
+          <<qidx<<" ,block_size="<<qsize<<" ,base="<<base1<<std::endl;
+          blob = generate_header(qidx,qsize,base1,LSA_CTRL);  
+        }else{
+          // undefined
           return;
         }
         // can support more feedback types
-        if(!pmt::is_blob(blob)){
+        if(pmt::is_null(blob)){
           return;
         }
         message_port_pub(d_msg_out,pmt::cons(pmt::PMT_NIL,blob));
