@@ -24,52 +24,39 @@
 
 #include <gnuradio/io_signature.h>
 #include "stop_n_wait_rx_ctrl_cc_impl.h"
+#include <volk/volk.h>
 
 namespace gr {
   namespace lsa {
 
-    #define d_debug false
-    #define DEBUG d_debug && std::cout
-    #define SNS_COLLISION 2
-    #define SNS_CLEAR 3
-    #define MAXLEN 125*8*8/2*4
-    
-    static int d_voe_valid = 128;
-    static int d_min_gap = 8*8*8/2*4;
-    static int d_burst_max_diff = 256;
-    static int d_max_waiting = 20;
-    static unsigned char d_sns_collision[] = {0xff,0x00};
-    static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
-
-    enum SNSRXSTATE{
-      SEARCH_COLLISION,
-      SEARCH_STOP,
-      WAIT_BURST,
-      WAIT_RESUME
-    };
-
     stop_n_wait_rx_ctrl_cc::sptr
-    stop_n_wait_rx_ctrl_cc::make(float high_thres, float low_thres, float ed_thres)
+    stop_n_wait_rx_ctrl_cc::make(int psize,float ed_thres,const std::vector<gr_complex>& samples)
     {
       return gnuradio::get_initial_sptr
-        (new stop_n_wait_rx_ctrl_cc_impl(high_thres,low_thres,ed_thres));
+        (new stop_n_wait_rx_ctrl_cc_impl(psize,ed_thres,samples));
     }
 
     /*
      * The private constructor
      */
-    stop_n_wait_rx_ctrl_cc_impl::stop_n_wait_rx_ctrl_cc_impl(float high_thres, float low_thres, float ed_thres)
+    stop_n_wait_rx_ctrl_cc_impl::stop_n_wait_rx_ctrl_cc_impl(int psize,float ed_thres,const std::vector<gr_complex>& samples)
       : gr::block("stop_n_wait_rx_ctrl_cc",
-              gr::io_signature::make3(3, 3, sizeof(gr_complex),sizeof(float),sizeof(float)),
+              gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(float)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
               d_out_port(pmt::mp("ctrl_out"))
     {
-      d_state = SEARCH_COLLISION;
-      set_high_threshold(high_thres);
-      set_low_threshold(low_thres);
+      if(psize<=0){
+        throw std::invalid_argument("Processing size should be positive");
+      }
+      if(samples.size()==0){
+        throw std::invalid_argument("Sync words empty...");
+      }
+      d_samples = samples;
+      volk_32fc_x2_conjugate_dot_prod_32fc(&d_sample_eng,samples.data(),samples.data(),samples.size());
       set_ed_threshold(ed_thres);
-      enter_search_collision();
+      enter_listen();
       message_port_register_out(d_out_port);
+      d_buf = (gr_complex*) volk_malloc(sizeof(gr_complex)*(512),volk_get_alignment());
     }
 
     /*
@@ -77,86 +64,91 @@ namespace gr {
      */
     stop_n_wait_rx_ctrl_cc_impl::~stop_n_wait_rx_ctrl_cc_impl()
     {
+      volk_free(d_buf);
     }
-
-    void
-    stop_n_wait_rx_ctrl_cc_impl::enter_search_collision()
+    bool
+    stop_n_wait_rx_ctrl_cc_impl::start()
     {
-      d_state = SEARCH_COLLISION;
-      d_voe_cnt = 0;
-      d_voe_duration =0;
+      d_finished = false;
+      d_thread = boost::shared_ptr<gr::thread::thread>
+        (new gr::thread::thread(boost::bind(&stop_n_wait_rx_ctrl_cc_impl::run,this)));
+      return block::start();
     }
-    void
-    stop_n_wait_rx_ctrl_cc_impl::enter_search_stop()
+    bool
+    stop_n_wait_rx_ctrl_cc_impl::stop()
     {
-      d_state = SEARCH_STOP;
-      d_voe_duration =0;
-      d_voe_cnt = 0;
-      d_burst_lock = false;
-      d_burst_voe_cnt =0;
-      d_target_burst_cnt = 0;
-      d_intf_cnt =0;
+      d_finished = true;
+      d_thread->interrupt();
+      d_thread->join();
+      return block::stop();
     }
     void
-    stop_n_wait_rx_ctrl_cc_impl::enter_wait_burst()
+    stop_n_wait_rx_ctrl_cc_impl::run()
     {
-      d_state = WAIT_BURST;
-      d_voe_cnt =0;
-      d_burst_voe_cnt=0;
-      d_burst_lock = false;
-      d_voe_duration =0;
-      std::time(&d_time_duration);
+      while(!d_finished){
+        gr::thread::scoped_lock lock(d_mutex);
+        d_pub_sensing.wait(lock);
+        lock.unlock();
+        if(d_finished){
+          return;
+        }
+        message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sns_clear,3))); // size of sns clear = 3
+      }
     }
     void
-    stop_n_wait_rx_ctrl_cc_impl::enter_wait_resume()
+    stop_n_wait_rx_ctrl_cc_impl::enter_listen()
     {
-      d_voe_duration =0;
-      d_state = WAIT_RESUME;
-      d_voe_cnt=0;
-      std::time(&d_time_duration);
+      d_state = ED_LISTEN;
+      d_ed_cnt=0;
+      d_process_cnt=0;
     }
-
     void
-    stop_n_wait_rx_ctrl_cc_impl::set_high_threshold(float thres)
+    stop_n_wait_rx_ctrl_cc_impl::enter_sfd()
     {
-      d_high_thres = thres;
+      d_state = ED_SFD;
+      d_ed_cnt=0;
     }
-
-    float
-    stop_n_wait_rx_ctrl_cc_impl::high_threshold() const
-    {
-      return d_high_thres;
-    }
-
     void
-    stop_n_wait_rx_ctrl_cc_impl::set_low_threshold(float thres)
+    stop_n_wait_rx_ctrl_cc_impl::enter_ed_pu()
     {
-      d_low_thres = thres;
+      d_state = ED_DETECT_PU;
+      d_ed_cnt=0;
     }
-
-    float
-    stop_n_wait_rx_ctrl_cc_impl::low_threshold() const
+    void
+    stop_n_wait_rx_ctrl_cc_impl::enter_ed_sns()
     {
-      return d_low_thres;
+      d_state = ED_DETECT_SNS;
+      d_ed_cnt=0;
     }
-
     void
     stop_n_wait_rx_ctrl_cc_impl::set_ed_threshold(float thres)
     {
       d_ed_thres = thres;
     }
-    
     float
-    stop_n_wait_rx_ctrl_cc_impl::ed_threshold()const
+    stop_n_wait_rx_ctrl_cc_impl::ed_threshold()const 
     {
       return d_ed_thres;
     }
-
+    void
+    stop_n_wait_rx_ctrl_cc_impl::set_process_size(int size)
+    {
+      assert(size>0);
+      d_process_size=size;
+    }
+    int
+    stop_n_wait_rx_ctrl_cc_impl::process_size()const
+    {
+      return d_process_size;
+    }
     void
     stop_n_wait_rx_ctrl_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
-      for(int i=0;i<ninput_items_required.size();++i){
-        ninput_items_required[i] = noutput_items;
+      if(d_state == ED_SFD){
+        int sample_size = d_samples.size();
+        ninput_items_required[0] = std::max(noutput_items,512+sample_size);
+      }else{
+        ninput_items_required[0] = noutput_items;
       }
     }
 
@@ -167,164 +159,89 @@ namespace gr {
                        gr_vector_void_star &output_items)
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
-      const float *voe = (const float*) input_items[1];
-      const float *ed = (const float*) input_items[2];
+      const float *ed = (const float*) input_items[1];
       gr_complex *out = (gr_complex *) output_items[0];
-      int nin = std::min(std::min(ninput_items[0],ninput_items[1]),ninput_items[2]);
-      int nout =0;
+      int nin = std::min(std::min(ninput_items[0],ninput_items[1]),noutput_items);
       int count =0;
-      
-      switch(d_state){
-        case SEARCH_COLLISION:
-          while(nout<noutput_items && count<nin){
-            if(voe[count]>d_high_thres){
-              d_voe_cnt++;
-              if(d_voe_cnt>=d_voe_valid){
-                // consecutive higher than threshold
-                //pmt::pmt_t msg_out = pmt::cons(
-                  //pmt::intern("SNS_hdr"),
-                  //pmt::make_blob(d_sns_collision,SNS_COLLISION)
-                //);
-                //message_port_pub(d_out_port,msg_out);
-                enter_search_stop();
-                break;
-              }
-            }else{
-              d_voe_cnt=0;
-            }
-            out[nout++] = in[count++];
-          }
-        break;
-        case SEARCH_STOP:
-          while(nout<noutput_items && count<nin){
-            if(!d_burst_lock){
-              if(voe[count]>d_high_thres){
-                d_voe_duration++;
-              }
-              if(voe[count]<d_high_thres && voe[count]>d_low_thres){
-                d_burst_voe_cnt++;
-                if(d_burst_voe_cnt>=d_voe_valid){
-                  d_burst_lock = true;
-                  d_target_burst_cnt = (d_voe_duration>=d_min_gap)? d_voe_duration:d_min_gap;
-                  DEBUG<<"\033[33;1m"<<"<SNS RX CTRL>VoE dropping down of high threshold..."<<"\033[0m"
-                  <<"burst size:"<<d_target_burst_cnt<<" ,acc intf:"<<d_intf_cnt<<std::endl;
-                  d_intf_cnt++;
+      gr_complex corr_val, eng, corr_norm;
+      while(count<nin){
+        switch(d_state){
+          case ED_LISTEN:
+            while(count<nin){
+              if(ed[count++]>d_ed_thres){
+                d_ed_cnt++;
+                if(d_ed_cnt==d_valid){
+                  // triggered
+                  enter_sfd();
+                  break;
                 }
               }else{
-                d_burst_voe_cnt=0;
+                d_ed_cnt=0;
               }
+              d_process_cnt++;
+              if(d_process_cnt==d_process_size){
+                d_process_cnt=0;
+                // collect enough samples for sensing, feedback to transmitter
+                d_pub_sensing.notify_one();
+              }
+            }
+          break;
+          case ED_SFD:
+            if( (noutput_items-count)>=512 && (nin-count)>=(512+d_samples.size()) ){
+              // enough samples for searching preamble
+              for(int i=0;i<512;++i){
+                volk_32fc_x2_conjugate_dot_prod_32fc(&corr_val,in+count+i,d_samples.data(),d_samples.size());
+                volk_32fc_x2_conjugate_dot_prod_32fc(&eng, in+count+i,in+count+i,d_samples.size());
+                d_buf[i] = corr_val/(std::sqrt(eng*d_sample_eng)+gr_complex(1e-8,0));
+              }
+              uint16_t max_idx;
+              volk_32fc_index_max_16u(&max_idx,d_buf,512);
+              if(std::abs(d_buf[max_idx])>0.9){
+                enter_ed_sns();
+              }else{
+                enter_ed_pu();
+              }
+              count+=512;
             }else{
-              if(voe[count]>d_high_thres){
-                d_burst_voe_cnt++;
-                if(d_burst_voe_cnt>=d_voe_valid){
-                  d_burst_lock = false;
-                  d_voe_duration=0;
-                  DEBUG<<"\033[34;1m"<<"<SNS RX CTRL>Detecting collision during waiting time..."<<"\033[0m"<<std::endl;
+              memcpy(out,in,sizeof(gr_complex)*count);
+              consume_each(count);
+              return count;
+            }
+          break;
+          case ED_DETECT_PU:
+            while(count<nin){
+              if(ed[count++]<d_ed_thres){
+                d_ed_cnt++;
+                if(d_ed_cnt>=d_valid){
+                  enter_listen();
+                  break;
                 }
               }else{
-                d_burst_voe_cnt=0;
+                d_ed_cnt=0;
               }
             }
-            if(voe[count]<d_low_thres){
-              d_voe_cnt++;
-              if(d_voe_cnt>=d_voe_valid){
-                DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>VoE level drop out of low threshold, TX stop event detected"
-                <<"\033[0m"<<std::endl;
-                enter_wait_burst();
-                break;
-              }
-            }else{
-              d_voe_cnt=0;
-            }
-            out[nout++] = in[count++];
-          }
-        break;
-        case WAIT_BURST:
-          while(nout<noutput_items && count<nin){
-            if(!d_burst_lock){
-              if(ed[count]>d_ed_thres){
-                d_voe_cnt++;
-                if(d_voe_cnt>=d_voe_valid){
-                  d_burst_lock = true;
-                  d_burst_voe_cnt =0;
-                  d_voe_cnt=0;
-                  d_voe_duration =0; //
-                  //DEBUG<<"\033[36;1m"<<"<SNS RX CTRL>detect a trigger signal, start track length"<<"\033[0m"<<std::endl;
+          break;
+          case ED_DETECT_SNS:
+            while(count<nin){
+              if(ed[count++]<d_ed_thres){
+                d_ed_cnt++;
+                if(d_ed_cnt>=d_valid){
+                  enter_listen();
+                  break;
                 }
               }else{
-                d_voe_cnt=0;
-              }
-            }else{
-              d_burst_voe_cnt++;
-              if(ed[count]<d_ed_thres){
-                d_voe_cnt++;
-                if(d_voe_cnt>=d_voe_valid){
-                  if(abs(d_burst_voe_cnt-d_target_burst_cnt)<= d_burst_max_diff){
-                    DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Detect a burst with matched length:"<<"\033[0m"
-                    <<" ,target:"<<d_target_burst_cnt<<" ,matched:"<<d_burst_voe_cnt<<" ,pending:"<<d_intf_cnt<<std::endl;
-                    d_intf_cnt--;
-                    if(d_intf_cnt<=0){
-                      pmt::pmt_t msg_out = pmt::cons(
-                      pmt::intern("SNS_hdr"),
-                      pmt::make_blob(d_sns_clear,SNS_CLEAR));
-                      message_port_pub(d_out_port,msg_out);
-                      enter_wait_resume();
-                      d_intf_cnt=0;
-                      break;
-                    }
-                  }
-                  DEBUG<<"\033[36;1m"<<"<SNS RX CTRL>length not matched, reset tracking registers"<<"\033[0m"
-                  <<" ,expected:"<<d_target_burst_cnt<<" ,current:"<<d_burst_voe_cnt<<std::endl;
-                  d_burst_voe_cnt = 0;
-                  d_burst_lock = false;
-                  d_voe_cnt=0;
-                }
-              }else{
-                d_voe_cnt=0;
+                d_ed_cnt=0;
               }
             }
-            out[nout++] = in[count++];
-            if(std::difftime(std::time(NULL),d_time_duration) >= d_max_waiting){
-              // waiting too long, maybe ProU is truned off...
-              pmt::pmt_t msg_out = pmt::cons(
-                pmt::intern("SNS_hdr"),
-                pmt::make_blob(d_sns_clear,SNS_CLEAR)
-              );
-              message_port_pub(d_out_port,msg_out);
-              enter_wait_resume();
-              DEBUG<<"\033[33;1m"<<"<SNS RX CTRL>Waiting time exceed limit, notify tx to resume..."
-              <<"\033[0m"<<" ,sec:"<<std::difftime(std::time(NULL),d_time_duration)<<std::endl;
-              break;
-            }
-          }
-        break;
-        case WAIT_RESUME:
-          while(nout<noutput_items && count<nin){
-            if(voe[count]>d_low_thres){
-              d_voe_cnt++;
-              if(d_voe_cnt>=d_min_gap){
-                //DEBUG<<"\033[31;1m"<<"<SNS RX CTRL>Signal level exceed low threshold...tx resume"<<"\033[0m"<<std::endl;
-                enter_search_collision();
-                break;
-              }
-            }else{
-              d_voe_cnt=0;
-            }
-            out[nout++] = in[count++];
-            // can add warning if not resume for a long time
-          }
-        break;
-        default:
-          throw std::runtime_error("Undefined state");
-        break;
+          break;
+          default:
+            throw std::runtime_error("undefined state");
+          break;
+        }
       }
-
-      // Tell runtime system how many input items we consumed on
-      // each input stream.
+      memcpy(out,in,sizeof(gr_complex)*count);
       consume_each (count);
-
-      // Tell runtime system how many output items we produced.
-      return nout;
+      return count;
     }
 
   } /* namespace lsa */

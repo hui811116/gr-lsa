@@ -46,14 +46,12 @@ namespace gr {
        * class. lsa::stop_n_wait_rx_ctrl_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(float high_thres,float low_thres,float ed_thres);
-
-      virtual void set_high_threshold(float thres)=0;
-      virtual float high_threshold()const =0;
-      virtual void set_low_threshold(float thres)=0;
-      virtual float low_threshold()const=0;
+      static sptr make(int size,float ed_thres, const std::vector<gr_complex>& samples);
       virtual void set_ed_threshold(float thres)=0;
       virtual float ed_threshold()const=0;
+      virtual void set_process_size(int size)=0;
+      virtual int process_size()const=0;
+      
     };
 
   } // namespace lsa

@@ -44,7 +44,9 @@ namespace gr {
       bool d_usef;
       bool d_verb;
       long int d_pkt_success_cnt;
-      long int d_pkt_failed_cnt;
+      long int d_pkt_total;
+      int d_send_cnt;
+      int d_send_size;
 
       boost::shared_ptr<gr::thread::thread> d_thread;
       boost::posix_time::ptime d_start_time;
@@ -58,7 +60,7 @@ namespace gr {
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
-      stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef, bool verb);
+      stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef, bool verb, int send);
       ~stop_n_wait_tx_bb_impl();
 
       // Where all the action really happens
@@ -69,6 +71,8 @@ namespace gr {
 
       bool start();
       bool stop();
+
+      void set_send(int send);
     };
 
   } // namespace lsa

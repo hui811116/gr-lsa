@@ -4,9 +4,7 @@
   <key>lsa_stop_n_wait_rx_ctrl_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.stop_n_wait_rx_ctrl_cc($high_thres,$low_thres,$ed_thres)</make>
-  <callback>set_high_threshold($high_thres)</callback>
-  <callback>set_low_threshold($low_thres)</callback>
+  <make>lsa.stop_n_wait_rx_ctrl_cc($psize,$ed_thres,$samples)</make>
   <callback>set_ed_threshold($ed_thres)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
@@ -14,19 +12,21 @@
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <param>
-    <name>High Threshold</name>
-    <key>high_thres</key>
-    <type>float</type>
-  </param>
-  <param>
-    <name>Low Threshold</name>
-    <key>low_thres</key>
-    <type>float</type>
+    <name>Process size</name>
+    <key>psize</key>
+    <value>int(samp_rate)</value>
+    <type>int</type>
   </param>
   <param>
     <name>ED Threshold</name>
     <key>ed_thres</key>
     <type>float</type>
+  </param>
+  <param>
+    <name>Sync word</name>
+    <key>samples</key>
+    <value></value>
+    <type>complex_vector</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
@@ -37,10 +37,6 @@
   <sink>
     <name>in</name>
     <type>complex</type>
-  </sink>
-  <sink>
-    <name>voe</name>
-    <type>float</type>
   </sink>
   <sink>
     <name>ed</name>

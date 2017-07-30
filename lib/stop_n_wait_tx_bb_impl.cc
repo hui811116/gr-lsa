@@ -41,24 +41,24 @@ namespace gr {
     static unsigned char d_mac_field[] = {0x00,0x00,0x00,0x00};
    
     stop_n_wait_tx_bb::sptr
-    stop_n_wait_tx_bb::make(const std::string& tagname, const std::string& filename, bool usef,bool verb)
+    stop_n_wait_tx_bb::make(const std::string& tagname, const std::string& filename, bool usef,bool verb,int send)
     {
       return gnuradio::get_initial_sptr
-        (new stop_n_wait_tx_bb_impl(tagname,filename,usef,verb));
+        (new stop_n_wait_tx_bb_impl(tagname,filename,usef,verb,send));
     }
 
     /*
      * The private constructor
      */
-    stop_n_wait_tx_bb_impl::stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef,bool verb)
+    stop_n_wait_tx_bb_impl::stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef,bool verb, int send)
       : gr::tagged_stream_block("stop_n_wait_tx_bb",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(1, 1, sizeof(char)), tagname),
               d_in_port(pmt::mp("msg_in")),
               d_tagname(pmt::intern(tagname))
     {
-      d_sns_stop = false;
-      d_state_change = true;
+      d_sns_stop = true; // waiting for receiver approve transmission
+      d_state_change = false;
       message_port_register_in(d_in_port);
       set_msg_handler(d_in_port, boost::bind(&stop_n_wait_tx_bb_impl::msg_handler,this, _1));
       memcpy(d_buf,d_phy_field,sizeof(char)*PHYLEN);
@@ -71,7 +71,11 @@ namespace gr {
         }
       }
       d_pkt_success_cnt=0;
-      d_pkt_failed_cnt=0;
+      if(send<=0){
+        throw std::invalid_argument("Invalid Send size...");
+      }
+      set_send(send);
+      d_send_cnt=0;
     }
 
     /*
@@ -120,34 +124,27 @@ namespace gr {
         return;
       }
       size_t ctrl_type = pmt::to_long(pmt::dict_ref(msg,pmt::intern("SNS_ctrl"),pmt::from_long(-1)));
-      if(ctrl_type == SNS_COLLISION || ctrl_type == SNS_CLEAR){
-        // update stop and wait state
-        bool result = (ctrl_type == SNS_COLLISION)? true : false;
-        if(d_sns_stop && !result){
-          DEBUG<<"\033[31;1m"<<"<SNS TX> ProU detected from feedback... resume to transmission mode"<<"\033[0m"<<std::endl;
-          d_sns_stop = false;
-          d_state_change = true;
-          return;
-        }else if(!d_sns_stop && result){
-          DEBUG<<"\033[31;1m"<<"<SNS TX> Causing interference to ProU, Stop transmission"<<"\033[0m"<<std::endl;
-          d_sns_stop = true;
-          d_state_change = true;
-          return;
-        }
-      }
-      // arq queue update
-      // find matched seqno
       int seqno = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));
-      if(seqno<0){
-        return;
-      }
-      std::list<srArq_t>::iterator it;
-      for(it = d_arq_list.begin();it!=d_arq_list.end();++it){
-        if(seqno == it->seq()){
-          it = d_arq_list.erase(it);
-          d_pkt_success_cnt++;
-          break;
+      if(ctrl_type == SNS_COLLISION){
+        if(d_sns_stop = false){
+          d_sns_stop = true;
         }
+      }else if(ctrl_type == SNS_CLEAR){
+        if(d_sns_stop = true){
+          d_sns_stop = false;
+          d_send_cnt=0;
+        }
+      }else if(seqno>=0){
+        std::list<srArq_t>::iterator it;
+        for(it = d_arq_list.begin();it!=d_arq_list.end();++it){
+          if(seqno == it->seq()){
+            it = d_arq_list.erase(it);
+            d_pkt_success_cnt++;
+            break;
+          }
+        }
+      }else{
+        return;
       }
     }
     void
@@ -165,7 +162,13 @@ namespace gr {
       d_arq_list.push_back(srArq_t(d_seq,blob));
       d_seq = (d_seq==0xffff)? 0 : d_seq+1;
     }
-
+    void
+    stop_n_wait_tx_bb_impl::set_send(int send)
+    {
+      if(send>0){
+        d_send_size = send;
+      }
+    }
     int
     stop_n_wait_tx_bb_impl::calculate_output_stream_length(const gr_vector_int &ninput_items)
     {
@@ -178,14 +181,7 @@ namespace gr {
             noutput_items = d_data_src[d_seq%d_data_src.size()].size() + PHYLEN+MACLEN;
           }
         }else{
-          if(it->timeout() && it->retry()>= LSARETRYLIM){
-            noutput_items = it->blob_length();
-          }else{
-            noutput_items = ninput_items[0] + PHYLEN + MACLEN;
-            if(d_usef){
-              noutput_items = d_data_src[d_seq%d_data_src.size()].size() + PHYLEN+MACLEN;
-            }
-          }
+          noutput_items = it->blob_length();
         }
       }
       return noutput_items;
@@ -208,35 +204,16 @@ namespace gr {
       pmt::pmt_t blob;
       int nout =0;
       if(d_sns_stop){
-        if(d_state_change){
-          d_state_change = false;
-          add_item_tag(0,nitems_written(0),pmt::intern("tx_eob"),pmt::PMT_T);
-          // dummy byte
-          out[0] = 0xff;
-          nout =1;
-          DEBUG<<"\033[31;1m"<<"<SNS TX> first call after positive state change, add tag to stop usrp"<<"\033[0m"<<std::endl;
-        }
-        return nout;
+        return 0;
       }else{
-        if(d_state_change){
-          d_state_change = false;
-          add_item_tag(0,nitems_written(0),pmt::intern("tx_sob"),pmt::PMT_T);
-          DEBUG<<"\033[31;1m"<<"<SNS TX> first call after negative state change, add tag to start usrp"<<"\033[0m"<<std::endl;
-        }
         // check arq 
         while(it!=d_arq_list.end()){
           if(it->timeout()){
-            if(it->inc_retry()){
-              d_arq_list.pop_front();
-              it = d_arq_list.begin();
-              d_pkt_failed_cnt++;
-            }else{
-              blob = it->msg();
-              it->update_time();
-              d_arq_list.push_back(*it);
-              d_arq_list.pop_front();
-              break;
-            }
+            it->inc_retry();
+            blob = it->msg();
+            d_arq_list.push_back(*it);
+            d_arq_list.pop_front();
+            break;
           }else{
             // found a pkt that is not timeout...
             it = d_arq_list.end();
@@ -251,14 +228,24 @@ namespace gr {
           generate_new_pkt(in,nin);
           nout = pkt_len+PHYLEN;
           memcpy(out,d_buf,sizeof(char)*nout);
+          d_pkt_total++;
         }else{
           size_t io(0);
           const uint8_t* uvec = pmt::u8vector_elements(blob,io);
           memcpy(out,uvec,sizeof(char)*io);
           nout = io;
         }
+        d_send_cnt++;
+        if(d_send_cnt==d_send_size){
+          d_send_cnt=0;
+          d_sns_stop = true;
+          add_item_tag(0,nitems_written(0)+nout,pmt::intern("tx_eob"),pmt::PMT_T);
+          out[nout++]=0x00;
+        }else if(d_send_cnt==1){
+          add_item_tag(0,nitems_written(0),pmt::intern("tx_sob"),pmt::PMT_T);
+        }
+        return nout;
       }
-      return nout;
     }
     bool 
     stop_n_wait_tx_bb_impl::start()
@@ -288,7 +275,7 @@ namespace gr {
         boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time()-d_start_time;
         if(d_verb){
           std::cout<<"<SNS TX>Execution time:"<<diff.total_seconds();
-          std::cout<<" ,success packets:"<<d_pkt_success_cnt<<" ,failed packets:"<<d_pkt_failed_cnt<<std::endl;
+          std::cout<<"total packets:<<"<<d_pkt_total<<" ,success packets:"<<d_pkt_success_cnt<<std::endl;
         }
       }
     }

@@ -88,8 +88,8 @@ namespace gr {
           uint16_t base1, base2;
           if(io==2){
             // positive sensing
-            VERBOSE<<"<SNS TX>receive sensing positive"<<std::endl;
-            d_wait = true;
+            //VERBOSE<<"<SNS TX>receive sensing positive"<<std::endl;
+            //d_wait = true;
           }else if(io==3){
             // clear
             VERBOSE<<"<SNSTX>receive sensing clear"<<std::endl;

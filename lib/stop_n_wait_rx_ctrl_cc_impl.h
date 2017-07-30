@@ -27,39 +27,52 @@
 namespace gr {
   namespace lsa {
 
+    #define d_debug false
+    #define DEBUG d_debug && std::cout
+    
+    static int d_valid = 64;
+    static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
+
+    enum SNSRXSTATE{
+      ED_LISTEN,
+      ED_SFD,
+      ED_DETECT_PU,
+      ED_DETECT_SNS
+    };
+
     class stop_n_wait_rx_ctrl_cc_impl : public stop_n_wait_rx_ctrl_cc
     {
      private:
       const pmt::pmt_t d_out_port;
-
+      gr_complex* d_buf;
+      gr::thread::mutex d_mutex;
+      gr::thread::condition_variable d_pub_sensing;
+      boost::shared_ptr<gr::thread::thread> d_thread;
       int d_state;
-      float d_high_thres;
-      float d_low_thres;
       float d_ed_thres;
-      int d_voe_cnt;
-      int d_voe_duration;
-      bool d_burst_lock;
-      int d_burst_voe_cnt;
-      int d_target_burst_cnt;
-      time_t d_time_duration;
-      int d_intf_cnt;
+      bool d_finished;
+      int d_ed_cnt;
+      int d_process_cnt;
+      int d_process_size;
+      std::vector<gr_complex> d_samples;
+      gr_complex d_sample_eng;
 
-      void enter_search_collision();
-      void enter_search_stop();
-      void enter_wait_burst();
-      void enter_wait_resume();
+      void enter_listen();
+      void enter_sfd();
+      void enter_ed_pu();
+      void enter_ed_sns();
+      void run();
 
      public:
-      stop_n_wait_rx_ctrl_cc_impl(float high_thres, float low_thres, float ed_thres);
+      stop_n_wait_rx_ctrl_cc_impl(int psize,float ed_thres,const std::vector<gr_complex>& samples);
       ~stop_n_wait_rx_ctrl_cc_impl();
 
-      void set_high_threshold(float thres);
-      float high_threshold()const;
-      void set_low_threshold(float thres);
-      float low_threshold()const;
+      bool start();
+      bool stop();
       void set_ed_threshold(float thres);
-      float ed_threshold()const;
-
+      float ed_threshold() const;
+      void set_process_size(int size);
+      int process_size()const;
       // Where all the action really happens
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 

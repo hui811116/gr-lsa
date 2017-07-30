@@ -4,7 +4,8 @@
   <key>lsa_stop_n_wait_tx_bb</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.stop_n_wait_tx_bb($tagname,$filename,$usef,$verb)</make>
+  <make>lsa.stop_n_wait_tx_bb($tagname,$filename,$usef,$verb,$send)</make>
+  <callback>set_send($send)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -50,7 +51,12 @@
       <key>False</key>
     </option>
   </param>
-
+  <param>
+    <name>Send size</name>
+    <key>send</key>
+    <value>10</value>
+    <type>int</type>
+  </param>
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type

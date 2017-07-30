@@ -439,6 +439,45 @@
     </param>
   </block>
   <block>
+    <key>variable_qtgui_entry</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>20</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(8, 284)</value>
+    </param>
+    <param>
+      <key>gui_hint</key>
+      <value>tab0@0:1,0,1,2</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>sns_send</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>Send Size</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>int</value>
+    </param>
+  </block>
+  <block>
     <key>variable</key>
     <param>
       <key>comment</key>
@@ -970,7 +1009,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(736, 348)</value>
+      <value>(544, 372)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1003,6 +1042,45 @@
     <param>
       <key>type</key>
       <value>ccf</value>
+    </param>
+  </block>
+  <block>
+    <key>lsa_burst_gate_cc</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(832, 352)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_burst_gate_cc_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
     </param>
   </block>
   <block>
@@ -1150,7 +1228,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(192, 244)</value>
+      <value>(192, 224)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1167,6 +1245,10 @@
     <param>
       <key>minoutbuf</key>
       <value>0</value>
+    </param>
+    <param>
+      <key>send</key>
+      <value>sns_send</value>
     </param>
     <param>
       <key>tagname</key>
@@ -3547,6 +3629,12 @@
   </connection>
   <connection>
     <source_block_id>interp_fir_filter_xxx_0</source_block_id>
+    <sink_block_id>lsa_burst_gate_cc_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_burst_gate_cc_0</source_block_id>
     <sink_block_id>uhd_usrp_sink_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
