@@ -39,7 +39,6 @@ install(FILES
     lsa_stop_n_wait_rx_ctrl_cc.xml
     lsa_stop_n_wait_ack.xml
     lsa_sns_tx_helper.xml
-    lsa_burst_gate_cc.xml
     lsa_message_file_sink.xml
     lsa_sfd_tagger_cc.xml
     lsa_simple_tx.xml

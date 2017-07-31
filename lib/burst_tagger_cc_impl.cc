@@ -97,6 +97,10 @@ namespace gr {
             DEBUG<<"found a consecutive tag, do not add eob, count="<<d_count<<" ,offset="<<offset<<std::endl;
             d_count+= (pmt::to_long(tags[0].value)*d_mult);
             memcpy(out,in,sizeof(gr_complex)*(offset+1));
+            if(d_count==offset+1){
+              add_eob(nitems_written(0)+offset);
+              DEBUG<<"consecutive tag ends, add eob"<<std::endl;
+            }
             d_count-=(offset+1);
             return offset+1;
           }else if(d_count<offset){
@@ -119,11 +123,11 @@ namespace gr {
         }
       }
       int nout = std::min((long int)noutput_items,d_count);
-      d_count-=nout;
-      if(d_count==0 && nout!=0){
+      if(nout!=0 && nout==d_count){
         add_eob(nitems_written(0)+nout-1);
         DEBUG<<"add eob abs:"<<nitems_written(0)+nout-1<<std::endl;
       }
+      d_count-=nout;
       memcpy(out,in,sizeof(gr_complex)*nout);
       return nout;
     }

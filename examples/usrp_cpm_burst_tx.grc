@@ -93,7 +93,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(352, 708)</value>
+      <value>(0, 932)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -120,7 +120,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(336, 652)</value>
+      <value>(0, 876)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -264,7 +264,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(0, 452)</value>
+      <value>(80, 932)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -291,7 +291,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(0, 396)</value>
+      <value>(80, 876)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -318,7 +318,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 160)</value>
+      <value>(8, 108)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -345,7 +345,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(208, 708)</value>
+      <value>(8, 436)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -372,7 +372,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(208, 652)</value>
+      <value>(8, 380)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -462,7 +462,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(128, 652)</value>
+      <value>(0, 764)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -489,7 +489,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(128, 708)</value>
+      <value>(0, 820)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -567,7 +567,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(656, 408)</value>
+      <value>(352, 704)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -614,7 +614,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(824, 436)</value>
+      <value>(520, 732)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -665,7 +665,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(936, 408)</value>
+      <value>(632, 704)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -689,6 +689,61 @@
     </param>
   </block>
   <block>
+    <key>blocks_message_strobe_random</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>dist</key>
+      <value>blocks.STROBE_POISSON</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(176, 344)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_message_strobe_random_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>mean</key>
+      <value>1000</value>
+    </param>
+    <param>
+      <key>msg</key>
+      <value>pmt.intern("TEST")</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>std</key>
+      <value>100</value>
+    </param>
+  </block>
+  <block>
     <key>blocks_multiply_xx</key>
     <param>
       <key>alias</key>
@@ -708,7 +763,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(536, 408)</value>
+      <value>(240, 704)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -759,11 +814,11 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(208, 324)</value>
+      <value>(736, 452)</value>
     </param>
     <param>
       <key>_rotation</key>
-      <value>0</value>
+      <value>180</value>
     </param>
     <param>
       <key>id</key>
@@ -818,11 +873,11 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(424, 316)</value>
+      <value>(536, 444)</value>
     </param>
     <param>
       <key>_rotation</key>
-      <value>0</value>
+      <value>180</value>
     </param>
     <param>
       <key>id</key>
@@ -865,11 +920,11 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(360, 436)</value>
+      <value>(148, 528)</value>
     </param>
     <param>
       <key>_rotation</key>
-      <value>0</value>
+      <value>270</value>
     </param>
     <param>
       <key>id</key>
@@ -967,11 +1022,11 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(120, 388)</value>
+      <value>(196, 504)</value>
     </param>
     <param>
       <key>_rotation</key>
-      <value>0</value>
+      <value>270</value>
     </param>
     <param>
       <key>id</key>
@@ -1030,11 +1085,11 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(624, 316)</value>
+      <value>(320, 444)</value>
     </param>
     <param>
       <key>_rotation</key>
-      <value>0</value>
+      <value>180</value>
     </param>
     <param>
       <key>id</key>
@@ -1144,7 +1199,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 124)</value>
+      <value>(8, 68)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1242,7 +1297,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(424, 516)</value>
+      <value>(800, 708)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1285,7 +1340,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(928, 200)</value>
+      <value>(1040, 200)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1324,7 +1379,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(696, 196)</value>
+      <value>(848, 196)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1406,7 +1461,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>filename</key>
@@ -1414,7 +1469,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(408, 192)</value>
+      <value>(440, 192)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1446,7 +1501,7 @@
     </param>
   </block>
   <block>
-    <key>lsa_throughput_file_sink</key>
+    <key>lsa_sns_tx</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1461,15 +1516,15 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>True</value>
     </param>
     <param>
       <key>filename</key>
-      <value>/home/hui/project/data/prou/throughput/prou_slow/prou_sns_2000.txt</value>
+      <value>/home/nic-hui/project/data/data_100.csv</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1008, 292)</value>
+      <value>(472, 280)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1477,14 +1532,26 @@
     </param>
     <param>
       <key>id</key>
-      <value>lsa_throughput_file_sink_0</value>
+      <value>lsa_sns_tx_0</value>
     </param>
     <param>
-      <key>sys</key>
+      <key>maxoutbuf</key>
       <value>0</value>
     </param>
     <param>
-      <key>verbose</key>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>send</key>
+      <value>10</value>
+    </param>
+    <param>
+      <key>timeout</key>
+      <value>5000</value>
+    </param>
+    <param>
+      <key>verb</key>
       <value>True</value>
     </param>
   </block>
@@ -2211,7 +2278,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(672, 500)</value>
+      <value>(1008, 652)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -3738,6 +3805,12 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
+    <source_block_id>blocks_message_strobe_random_0</source_block_id>
+    <sink_block_id>lsa_sns_tx_0</sink_block_id>
+    <source_key>strobe</source_key>
+    <sink_key>strobe</sink_key>
+  </connection>
+  <connection>
     <source_block_id>blocks_multiply_xx_0</source_block_id>
     <sink_block_id>blocks_complex_to_float_0</sink_block_id>
     <source_key>0</source_key>
@@ -3822,7 +3895,19 @@
     <sink_key>ack_in</sink_key>
   </connection>
   <connection>
+    <source_block_id>lsa_prou_packet_sink_f_0</source_block_id>
+    <sink_block_id>lsa_sns_tx_0</sink_block_id>
+    <source_key>pkt_out</source_key>
+    <sink_key>ack_in</sink_key>
+  </connection>
+  <connection>
     <source_block_id>lsa_simple_tx_0</source_block_id>
+    <sink_block_id>lsa_preamble_prefixer_0</sink_block_id>
+    <source_key>pdu_out</source_key>
+    <sink_key>in</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_sns_tx_0</source_block_id>
     <sink_block_id>lsa_preamble_prefixer_0</sink_block_id>
     <source_key>pdu_out</source_key>
     <sink_key>in</sink_key>

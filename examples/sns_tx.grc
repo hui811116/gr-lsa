@@ -1045,10 +1045,14 @@
     </param>
   </block>
   <block>
-    <key>lsa_burst_gate_cc</key>
+    <key>lsa_burst_tagger_cc</key>
     <param>
       <key>alias</key>
       <value></value>
+    </param>
+    <param>
+      <key>tagname</key>
+      <value>"packet_len"</value>
     </param>
     <param>
       <key>comment</key>
@@ -1064,7 +1068,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(832, 352)</value>
+      <value>(768, 372)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1072,7 +1076,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>lsa_burst_gate_cc_0</value>
+      <value>lsa_burst_tagger_cc_0</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -1081,6 +1085,10 @@
     <param>
       <key>minoutbuf</key>
       <value>0</value>
+    </param>
+    <param>
+      <key>mult</key>
+      <value>8*8/2*sps</value>
     </param>
   </block>
   <block>
@@ -3629,12 +3637,12 @@
   </connection>
   <connection>
     <source_block_id>interp_fir_filter_xxx_0</source_block_id>
-    <sink_block_id>lsa_burst_gate_cc_0</sink_block_id>
+    <sink_block_id>lsa_burst_tagger_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_burst_gate_cc_0</source_block_id>
+    <source_block_id>lsa_burst_tagger_cc_0</source_block_id>
     <sink_block_id>uhd_usrp_sink_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
