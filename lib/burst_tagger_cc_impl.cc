@@ -64,7 +64,7 @@ namespace gr {
     void
     burst_tagger_cc_impl::add_eob(const uint64_t& offset)
     {
-      add_item_tag(0,offset-1, pmt::intern("tx_eob"),pmt::PMT_T,d_id);
+      add_item_tag(0,offset, pmt::intern("tx_eob"),pmt::PMT_T,d_id);
     }
     /*
      * Our virtual destructor.
@@ -86,33 +86,33 @@ namespace gr {
       if(!tags.empty()){
         int offset = tags[0].offset-nitems_read(0);
         next_tag_idx = offset;
-        //DEBUG<<"Found a tag at idx="<<next_tag_idx<<std::endl;
+        DEBUG<<"Found a tag at idx="<<next_tag_idx<<std::endl;
         if(d_count==0 && offset ==0){
           add_sob(nitems_written(0));
-          //DEBUG<<"add sob abs:"<<nitems_written(0)<<std::endl;
+          DEBUG<<"add sob abs:"<<nitems_written(0)<<std::endl;
           d_count+= (pmt::to_long(tags[0].value)*d_mult);
-          //DEBUG<<"update count size="<<d_count<<std::endl;
+          DEBUG<<"update count size="<<d_count<<std::endl;
         }else{
           if(d_count == offset){
-            //DEBUG<<"found a consecutive tag, do not add eob, count="<<d_count<<" ,offset="<<offset<<std::endl;
+            DEBUG<<"found a consecutive tag, do not add eob, count="<<d_count<<" ,offset="<<offset<<std::endl;
             d_count+= (pmt::to_long(tags[0].value)*d_mult);
             memcpy(out,in,sizeof(gr_complex)*(offset+1));
             d_count-=(offset+1);
             return offset+1;
           }else if(d_count<offset){
-            //DEBUG<<"There are some samples lies between bursts! count="<<d_count<<" ,offset="<<offset<<std::endl;
+            DEBUG<<"There are some samples lies between bursts! count="<<d_count<<" ,offset="<<offset<<std::endl;
             if(d_count!=0){
               // shift the begin of tag
               memcpy(out,in,sizeof(gr_complex)*d_count);
-              add_eob(nitems_written(0)+d_count);
+              add_eob(nitems_written(0)+d_count-1);
               d_count=0;
             }  
             return offset;
           }else{
             // this case for (d_count>offset)
-            //DEBUG<<"count not end but detect a new burst,...may due to wrong scalar..."<<std::endl;
+            DEBUG<<"count not end but detect a new burst,...may due to wrong scalar..."<<std::endl;
             memcpy(out,in,sizeof(gr_complex)*offset);
-            add_eob(nitems_written(0)+offset);
+            add_eob(nitems_written(0)+offset-1);
             d_count=0;
             return offset;
           }
@@ -121,8 +121,8 @@ namespace gr {
       int nout = std::min((long int)noutput_items,d_count);
       d_count-=nout;
       if(d_count==0 && nout!=0){
-        add_eob(nitems_written(0)+nout);
-        //DEBUG<<"add eob abs:"<<nitems_written(0)+nout-1<<std::endl;
+        add_eob(nitems_written(0)+nout-1);
+        DEBUG<<"add eob abs:"<<nitems_written(0)+nout-1<<std::endl;
       }
       memcpy(out,in,sizeof(gr_complex)*nout);
       return nout;

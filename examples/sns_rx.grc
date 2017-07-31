@@ -1562,37 +1562,6 @@
     </param>
   </block>
   <block>
-    <key>blocks_message_debug</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(960, 600)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>blocks_message_debug_0</value>
-    </param>
-  </block>
-  <block>
     <key>blocks_multiply_const_vxx</key>
     <param>
       <key>alias</key>
@@ -2768,7 +2737,7 @@
     </param>
     <param>
       <key>psize</key>
-      <value>int(samp_rate)*2</value>
+      <value>int(samp_rate*0.1)</value>
     </param>
     <param>
       <key>samples</key>
@@ -6919,12 +6888,6 @@
     <sink_block_id>lsa_preamble_prefixer_0</sink_block_id>
     <source_key>msg_out</source_key>
     <sink_key>in</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_stop_n_wait_rx_ctrl_cc_0</source_block_id>
-    <sink_block_id>blocks_message_debug_0</sink_block_id>
-    <source_key>ctrl_out</source_key>
-    <sink_key>print_pdu</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_stop_n_wait_rx_ctrl_cc_0</source_block_id>
