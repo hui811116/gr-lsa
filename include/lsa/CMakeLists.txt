@@ -55,5 +55,5 @@ install(FILES
     su_block_receiver_c.h
     ic_ncfo_cc.h
     arq_tx.h
-    sns_tx.h DESTINATION include/lsa
+    dump_tx.h DESTINATION include/lsa
 )

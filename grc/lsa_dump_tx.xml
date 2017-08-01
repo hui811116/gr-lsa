@@ -1,10 +1,12 @@
 <?xml version="1.0"?>
 <block>
-  <name>SNS TX</name>
-  <key>lsa_sns_tx</key>
+  <name>Dump TX</name>
+  <key>lsa_dump_tx</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.sns_tx($filename,$send,$timeout,$verb)</make>
+  <make>lsa.dump_tx($filename,$avg_size,$timeout,$verb)</make>
+  <callback>set_avg_size($avg_size)</callback>
+  <callback>set_timeout($timeout)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -17,9 +19,9 @@
     <type>file_open</type>
   </param>
   <param>
-    <name>Packet Send</name>
-    <key>send</key>
-    <value>10</value>
+    <name>Average Size</name>
+    <key>avg_size</key>
+    <value>30</value>
     <type>int</type>
   </param>
   <param>
@@ -42,6 +44,7 @@
       <key>False</key>
     </option>
   </param>
+
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type

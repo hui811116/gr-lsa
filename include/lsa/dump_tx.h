@@ -19,8 +19,8 @@
  */
 
 
-#ifndef INCLUDED_LSA_SNS_TX_H
-#define INCLUDED_LSA_SNS_TX_H
+#ifndef INCLUDED_LSA_DUMP_TX_H
+#define INCLUDED_LSA_DUMP_TX_H
 
 #include <lsa/api.h>
 #include <gnuradio/block.h>
@@ -32,15 +32,20 @@ namespace gr {
      * \brief <+description+>
      *
      */
-    class LSA_API sns_tx : virtual public block
+    class LSA_API dump_tx : virtual public block
     {
-    public:
-      typedef boost::shared_ptr<sns_tx> sptr;
-      static sptr make(const std::string& filename,int send, float timeout, bool verb);
+      public:
+        typedef boost::shared_ptr<dump_tx> sptr;
+        static sptr make(const std::string& filename,int avg_size, float timeout, bool verb);
+
+        virtual void set_avg_size(int avg_size)=0;
+        virtual int avg_size()const=0;
+        virtual void set_timeout(float timeout)=0;
+        virtual float timeout()const=0;
     };
 
   } // namespace lsa
 } // namespace gr
 
-#endif /* INCLUDED_LSA_SNS_TX_H */
+#endif /* INCLUDED_LSA_DUMP_TX_H */
 

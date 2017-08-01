@@ -53,7 +53,7 @@
 %include "gnuradio/filter/fir_filter.h"
 %{
 #include "gnuradio/blocks/count_bits.h"
-#include "lsa/sns_tx.h"
+#include "lsa/dump_tx.h"
 %}
 %include "gnuradio/blocks/count_bits.h"
 
@@ -123,5 +123,6 @@ GR_SWIG_BLOCK_MAGIC2(lsa, su_block_receiver_c);
 GR_SWIG_BLOCK_MAGIC2(lsa, ic_ncfo_cc);
 %include "lsa/arq_tx.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, arq_tx);
-%include "lsa/sns_tx.h"
-GR_SWIG_BLOCK_MAGIC2(lsa, sns_tx);
+
+%include "lsa/dump_tx.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, dump_tx);

@@ -59,7 +59,7 @@ list(APPEND lsa_sources
     su_block_receiver_c_impl.cc
     ic_ncfo_cc_impl.cc
     arq_tx.cc
-    sns_tx.cc )
+    dump_tx.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
