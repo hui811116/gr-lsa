@@ -28,7 +28,7 @@
 namespace gr {
   namespace lsa {
 
-    #define d_debug false
+    #define d_debug true
     #define DEBUG d_debug && std::cout
 
     burst_tagger_cc::sptr
@@ -82,54 +82,53 @@ namespace gr {
       gr_complex *out = (gr_complex *) output_items[0];
       std::vector<tag_t> tags;
       get_tags_in_range(tags,0,nitems_read(0),nitems_read(0)+noutput_items,d_tagname);
-      int next_tag_idx=0;
+      std::sort(tags.begin(),tags.end(),tag_t::offset_compare);
+      
       if(!tags.empty()){
         int offset = tags[0].offset-nitems_read(0);
-        next_tag_idx = offset;
-        DEBUG<<"Found a tag at idx="<<next_tag_idx<<std::endl;
-        if(d_count==0 && offset ==0){
-          add_sob(nitems_written(0));
-          DEBUG<<"add sob abs:"<<nitems_written(0)<<std::endl;
-          d_count+= (pmt::to_long(tags[0].value)*d_mult);
-          DEBUG<<"update count size="<<d_count<<std::endl;
-        }else{
-          if(d_count == offset){
-            DEBUG<<"found a consecutive tag, do not add eob, count="<<d_count<<" ,offset="<<offset<<std::endl;
-            d_count+= (pmt::to_long(tags[0].value)*d_mult);
-            memcpy(out,in,sizeof(gr_complex)*(offset+1));
-            if(d_count==offset+1){
-              add_eob(nitems_written(0)+offset);
-              DEBUG<<"consecutive tag ends, add eob"<<std::endl;
-            }
-            d_count-=(offset+1);
-            return offset+1;
-          }else if(d_count<offset){
-            DEBUG<<"There are some samples lies between bursts! count="<<d_count<<" ,offset="<<offset<<std::endl;
-            if(d_count!=0){
-              // shift the begin of tag
-              memcpy(out,in,sizeof(gr_complex)*d_count);
-              add_eob(nitems_written(0)+d_count-1);
-              d_count=0;
-            }  
-            return offset;
+        //DEBUG<<"Found a tag at idx="<<next_tag_idx<<" ,d_count="<<d_count<<std::endl;
+        if(d_count==offset){
+          if(offset==0){
+            add_sob(nitems_written(0));  
+            d_count = pmt::to_long(tags[0].value)*d_mult;
           }else{
-            // this case for (d_count>offset)
-            DEBUG<<"count not end but detect a new burst,...may due to wrong scalar..."<<std::endl;
-            memcpy(out,in,sizeof(gr_complex)*offset);
-            add_eob(nitems_written(0)+offset-1);
-            d_count=0;
-            return offset;
+            memcpy(out,in,sizeof(gr_complex)*(offset+1));
+            d_count+=(pmt::to_long(tags[0].value)*d_mult);
+            d_count-=(offset+1);
+            if(d_count<=0){
+              add_eob(nitems_written(0)+offset);
+              d_count=0;
+            }
+            return offset+1;
+          }
+        }else{
+          if(offset>0){
+            add_eob(offset-1);
+          }
+          d_count=0;
+          memcpy(out,in,sizeof(gr_complex)*offset);
+          return offset;
+        }
+        int nout = std::min((long int)noutput_items,d_count);
+        if(nout!=0 && nout==d_count){
+          add_eob(nitems_written(0)+nout-1);
+          //DEBUG<<"add eob abs:"<<nitems_written(0)+nout-1<<std::endl;
+        }
+        d_count-=nout;
+        memcpy(out,in,sizeof(gr_complex)*nout);
+        return nout;
+      }else{
+        // empty tags
+        if(d_count){
+          noutput_items = std::min(d_count,(long int)noutput_items);
+          d_count-=noutput_items;
+          if(d_count==0){
+            add_eob(nitems_written(0)+noutput_items-1);
           }
         }
+        memcpy(out,in,sizeof(gr_complex)*noutput_items);
+        return noutput_items;
       }
-      int nout = std::min((long int)noutput_items,d_count);
-      if(nout!=0 && nout==d_count){
-        add_eob(nitems_written(0)+nout-1);
-        DEBUG<<"add eob abs:"<<nitems_written(0)+nout-1<<std::endl;
-      }
-      d_count-=nout;
-      memcpy(out,in,sizeof(gr_complex)*nout);
-      return nout;
     }
 
   } /* namespace lsa */

@@ -121,17 +121,15 @@ namespace gr {
         return;
       }
       if(d_prou_present){
-        if( qsize!=d_retx_size || qidx>=d_retx_size){
-          return;
-        }else if(d_retx_size ==0){
-          return;
-        }
+        assert(d_retx_size!=0);
         if(update_retx_table(qidx,qsize,seqno)){
-          DEBUG<<"<SU SR TX>Received a retransmission, idx:"<<qidx<<" ,retx count:"<<d_retx_cnt<<"(expected:"<<d_retx_size<<")"<<std::endl;
+          DEBUG<<"<SU SR TX>Received a retransmission ,retx count:"<<d_retx_cnt<<"(expected:"<<d_retx_size<<")"<<std::endl;
           if(d_retx_cnt >= d_retx_size){
             d_prou_present = false;
             clear_queue();
+            boost::posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time()-d_retx_time;
             DEBUG<<"<SU SR TX>"<<"\033[31;1m"<<"Retransmission complete! resume to clear state"<<"\033[0m"<<std::endl;
+            DEBUG<<"Time spend on retransmission:"<<diff.total_milliseconds()<<std::endl;
           }
         }
       }else{
@@ -143,7 +141,7 @@ namespace gr {
           if(it->seq()==seqno){
             d_pkt_success_cnt++;
             it = d_arq_queue.erase(it);    
-            DEBUG<<"<SU SR TX> dequeue seqno:"<<seqno<<std::endl;
+            //DEBUG<<"<SU SR TX> dequeue seqno:"<<seqno<<std::endl;
             return;
           }
         }
@@ -165,17 +163,22 @@ namespace gr {
       if(d_arq_queue.empty()){
         return false;
       }else{
+        DEBUG<<"Create retransmission of size:"<<d_arq_queue.size()<<std::endl;
         d_retx_cnt= 0;
         d_retx_idx= 0;
         d_retx_table.clear();
         d_retx_queue.clear();
         d_retx_size=d_arq_queue.size();
-        d_retx_table.resize(d_retx_size,false);
+        d_retx_table.resize(d_retx_size);
+        for(int i=0;i<d_retx_size;++i){
+          d_retx_table[i] = false;
+        }
         for(it=d_arq_queue.begin();it!=d_arq_queue.end();++it){
           srArq_t tmp = *it;
           tmp.set_retry(0);
           d_retx_queue.push_back(tmp);
         }
+        d_retx_time = boost::posix_time::microsec_clock::local_time();
       }
       return true;
     }
@@ -227,7 +230,21 @@ namespace gr {
     {
       pmt::pmt_t nx_msg = pmt::PMT_NIL;
       std::list<srArq_t>::iterator it = d_arq_queue.begin();
-      while(it!=d_arq_queue.end()){
+      if(it!=d_arq_queue.end()){
+        if(it->timeout()){
+          it->inc_retry();
+          nx_msg = it->msg();
+          it->update_time();
+          d_arq_queue.push_back(*it);
+          d_arq_queue.pop_front();
+          return nx_msg;
+        }else{
+          return nx_msg;
+        }
+      }else{
+        return nx_msg;
+      }
+      /*while(it!=d_arq_queue.end()){
         if(it->timeout()) {
             //check retry count
             if(it->inc_retry()){
@@ -247,8 +264,8 @@ namespace gr {
           }else{
             break;
           }
-      }
-      return nx_msg;
+      }*/
+      //return nx_msg;
     }
 
     bool
@@ -263,7 +280,6 @@ namespace gr {
       }
       if(d_file.is_open())
         d_file.close();
-      DEBUG<<"reading dataset:"<<filename;
       d_file.open(filename.c_str(),std::fstream::in);
       if(d_file.is_open()){
         while(getline(d_file,line,'\n')){
@@ -275,9 +291,7 @@ namespace gr {
           }
           d_data_src.push_back(u8);
         }
-        DEBUG<<"...done"<<std::endl;
       }else{
-        DEBUG<<"...fail"<<std::endl;
         d_data_src.clear();
       }
       d_file.close();
@@ -291,19 +305,21 @@ namespace gr {
       if(idx==size && size==0){
         for(int i=0;i<d_retx_queue.size();++i){
           if(d_retx_queue[i].seq()==seqno){
-            if(d_retx_table[i]==false){
+            if(!d_retx_table[i]){
               d_retx_table[i] = true;
               d_retx_cnt++;
               d_pkt_success_cnt++;
+              DEBUG<<"update retx from a clean tag"<<std::endl;
             }
             return true;
           }
         }
       }else{
-        if(d_retx_table[idx]==false){
+        if(!d_retx_table[idx]){
           d_pkt_success_cnt++;
           d_retx_cnt++;
           d_retx_table[idx] = true;
+          DEBUG<<"update retx from a retransmitted tag"<<std::endl;
           return true;
         }
       }
@@ -322,7 +338,7 @@ namespace gr {
       int nout;
       pmt::pmt_t nx_msg =pmt::PMT_NIL;
       if(d_usef){
-        DEBUG<<"<SR SU TX>Use file data: index="<<d_seq%d_data_src.size()<<std::endl;
+        //DEBUG<<"<SR SU TX>Use file data: index="<<d_seq%d_data_src.size()<<std::endl;
         in = d_data_src[d_seq%d_data_src.size()].data();
         nin = d_data_src[d_seq%d_data_src.size()].size();
       }

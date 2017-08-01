@@ -52,6 +52,7 @@ namespace gr {
       boost::shared_ptr<gr::thread::thread> d_thread;
       boost::posix_time::ptime d_start_time;
       boost::posix_time::ptime d_system_time;
+      boost::posix_time::ptime d_retx_time;
       bool d_finished;
 
       // thread functions for d_arq_queue;

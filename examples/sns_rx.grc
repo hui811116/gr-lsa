@@ -473,7 +473,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>0.2</value>
+      <value>0.5</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1559,6 +1559,37 @@
     <param>
       <key>vlen</key>
       <value>1</value>
+    </param>
+  </block>
+  <block>
+    <key>blocks_message_debug</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1304, 584)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_message_debug_0</value>
     </param>
   </block>
   <block>
@@ -2737,7 +2768,7 @@
     </param>
     <param>
       <key>psize</key>
-      <value>int(samp_rate*0.1)</value>
+      <value>int(samp_rate)</value>
     </param>
     <param>
       <key>samples</key>
@@ -6882,6 +6913,12 @@
     <sink_block_id>blocks_pdu_to_tagged_stream_0_0</sink_block_id>
     <source_key>out</source_key>
     <sink_key>pdus</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>lsa_stop_n_wait_ack_0</source_block_id>
+    <sink_block_id>blocks_message_debug_0</sink_block_id>
+    <source_key>msg_out</source_key>
+    <sink_key>print_pdu</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_stop_n_wait_ack_0</source_block_id>
