@@ -30,25 +30,22 @@ namespace gr {
   namespace lsa {
 
     stop_n_wait_rx_ctrl_cc::sptr
-    stop_n_wait_rx_ctrl_cc::make(int psize,float ed_thres,const std::vector<gr_complex>& samples)
+    stop_n_wait_rx_ctrl_cc::make(float ed_thres,float period,const std::vector<gr_complex>& samples)
     {
       return gnuradio::get_initial_sptr
-        (new stop_n_wait_rx_ctrl_cc_impl(psize,ed_thres,samples));
+        (new stop_n_wait_rx_ctrl_cc_impl(ed_thres,period,samples));
     }
 
     /*
      * The private constructor
      */
-    stop_n_wait_rx_ctrl_cc_impl::stop_n_wait_rx_ctrl_cc_impl(int psize,float ed_thres,const std::vector<gr_complex>& samples)
+    stop_n_wait_rx_ctrl_cc_impl::stop_n_wait_rx_ctrl_cc_impl(float ed_thres,float period,const std::vector<gr_complex>& samples)
       : gr::block("stop_n_wait_rx_ctrl_cc",
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(float)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
               d_out_port(pmt::mp("ctrl_out"))
     {
-      if(psize<=0){
-        throw std::invalid_argument("Processing size should be positive");
-      }
-      set_process_size(psize);
+      
       if(samples.size()==0){
         throw std::invalid_argument("Sync words empty...");
       }
@@ -57,7 +54,11 @@ namespace gr {
       set_ed_threshold(ed_thres);
       enter_listen();
       message_port_register_out(d_out_port);
-      d_buf = (gr_complex*) volk_malloc(sizeof(gr_complex)*(512),volk_get_alignment());
+      d_buf = (gr_complex*) volk_malloc(sizeof(gr_complex)*(1024),volk_get_alignment());
+      if(period<=0){
+        throw std::invalid_argument("Period shoud be positive");
+      }
+      d_period = period;
     }
 
     /*
@@ -87,21 +88,23 @@ namespace gr {
     stop_n_wait_rx_ctrl_cc_impl::run()
     {
       while(!d_finished){
-        gr::thread::scoped_lock lock(d_mutex);
-        d_pub_sensing.wait(lock);
-        lock.unlock();
+        boost::this_thread::sleep(boost::posix_time::milliseconds(d_period));
         if(d_finished){
           return;
         }
-        message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sns_clear,3))); // size of sns clear = 3
+        if(d_state==ED_LISTEN){
+          //DEBUG<<"<Rx CTRL debug>state at ED listen, pub tag"<<std::endl;
+          message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sns_clear,3)));
+        }
       }
     }
+
+
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_listen()
     {
       d_state = ED_LISTEN;
       d_ed_cnt=0;
-      d_process_cnt=0;
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_sfd()
@@ -131,17 +134,7 @@ namespace gr {
     {
       return d_ed_thres;
     }
-    void
-    stop_n_wait_rx_ctrl_cc_impl::set_process_size(int size)
-    {
-      assert(size>0);
-      d_process_size=size;
-    }
-    int
-    stop_n_wait_rx_ctrl_cc_impl::process_size()const
-    {
-      return d_process_size;
-    }
+    
     void
     stop_n_wait_rx_ctrl_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
@@ -178,14 +171,7 @@ namespace gr {
                 }
               }else{
                 d_ed_cnt=0;
-              }
-              d_process_cnt++;
-              if(d_process_cnt==d_process_size){
-                DEBUG<<"<SNS RX CTRL>size reached, sending clear signal"<<std::endl;
-                d_process_cnt=0;
-                // collect enough samples for sensing, feedback to transmitter
-                d_pub_sensing.notify_one();
-              }
+              } 
             }
           break;
           case ED_SFD:

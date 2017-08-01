@@ -105,7 +105,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>2.48e9</value>
+      <value>2.55e9</value>
     </param>
   </block>
   <block>
@@ -708,7 +708,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1261,7 +1261,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>filename</key>
@@ -1398,7 +1398,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>filename</key>
@@ -1430,7 +1430,7 @@
     </param>
     <param>
       <key>timeout</key>
-      <value>200</value>
+      <value>1000</value>
     </param>
     <param>
       <key>verb</key>

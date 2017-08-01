@@ -45,34 +45,28 @@ namespace gr {
      private:
       const pmt::pmt_t d_out_port;
       gr_complex* d_buf;
-      gr::thread::mutex d_mutex;
-      gr::thread::condition_variable d_pub_sensing;
-      boost::shared_ptr<gr::thread::thread> d_thread;
       int d_state;
       float d_ed_thres;
-      bool d_finished;
+      float d_period;
       int d_ed_cnt;
-      int d_process_cnt;
-      int d_process_size;
       std::vector<gr_complex> d_samples;
       gr_complex d_sample_eng;
+      boost::shared_ptr<gr::thread::thread> d_thread;
+      gr::thread::mutex d_mutex;
+      bool d_finished;
 
       void enter_listen();
       void enter_sfd();
       void enter_ed_pu();
       void enter_ed_sns();
       void run();
-
      public:
-      stop_n_wait_rx_ctrl_cc_impl(int psize,float ed_thres,const std::vector<gr_complex>& samples);
+      stop_n_wait_rx_ctrl_cc_impl(float ed_thres,float period,const std::vector<gr_complex>& samples);
       ~stop_n_wait_rx_ctrl_cc_impl();
-
       bool start();
       bool stop();
       void set_ed_threshold(float thres);
       float ed_threshold() const;
-      void set_process_size(int size);
-      int process_size()const;
       // Where all the action really happens
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 

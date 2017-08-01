@@ -28,7 +28,7 @@
 namespace gr {
   namespace lsa {
 
-    #define d_debug true
+    #define d_debug false
     #define DEBUG d_debug && std::cout
 
     burst_tagger_cc::sptr
@@ -91,6 +91,13 @@ namespace gr {
           if(offset==0){
             add_sob(nitems_written(0));  
             d_count = pmt::to_long(tags[0].value)*d_mult;
+            noutput_items = std::min((long int)noutput_items,d_count);
+            d_count-=noutput_items;
+            if(d_count==0){
+              add_eob(nitems_written(0)+noutput_items-1);
+            }
+            memcpy(out,in,sizeof(gr_complex)*noutput_items);
+            return noutput_items;
           }else{
             memcpy(out,in,sizeof(gr_complex)*(offset+1));
             d_count+=(pmt::to_long(tags[0].value)*d_mult);
@@ -109,14 +116,6 @@ namespace gr {
           memcpy(out,in,sizeof(gr_complex)*offset);
           return offset;
         }
-        int nout = std::min((long int)noutput_items,d_count);
-        if(nout!=0 && nout==d_count){
-          add_eob(nitems_written(0)+nout-1);
-          //DEBUG<<"add eob abs:"<<nitems_written(0)+nout-1<<std::endl;
-        }
-        d_count-=nout;
-        memcpy(out,in,sizeof(gr_complex)*nout);
-        return nout;
       }else{
         // empty tags
         if(d_count){
