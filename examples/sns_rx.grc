@@ -1852,7 +1852,7 @@
     </param>
     <param>
       <key>tag</key>
-      <value>packet_len</value>
+      <value>"burst_tag"</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -2184,10 +2184,6 @@
       <value></value>
     </param>
     <param>
-      <key>tagname</key>
-      <value>"packet_len"</value>
-    </param>
-    <param>
       <key>comment</key>
       <value></value>
     </param>
@@ -2197,11 +2193,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>True</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1016, 940)</value>
+      <value>(1040, 940)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2221,7 +2217,11 @@
     </param>
     <param>
       <key>mult</key>
-      <value>8*8/2*4</value>
+      <value>8*8/2*sps</value>
+    </param>
+    <param>
+      <key>tagname</key>
+      <value>"burst_tag"</value>
     </param>
   </block>
   <block>

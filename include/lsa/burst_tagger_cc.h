@@ -23,7 +23,7 @@
 #define INCLUDED_LSA_BURST_TAGGER_CC_H
 
 #include <lsa/api.h>
-#include <gnuradio/sync_block.h>
+#include <gnuradio/block.h>
 
 namespace gr {
   namespace lsa {
@@ -33,7 +33,7 @@ namespace gr {
      * \ingroup lsa
      *
      */
-    class LSA_API burst_tagger_cc : virtual public gr::sync_block
+    class LSA_API burst_tagger_cc : virtual public gr::block
     {
      public:
       typedef boost::shared_ptr<burst_tagger_cc> sptr;
@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::burst_tagger_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(const std::string& d_tagname, int mult);
+      static sptr make(const std::string& tagname,int mult);
     };
 
   } // namespace lsa

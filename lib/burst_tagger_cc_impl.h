@@ -22,7 +22,6 @@
 #define INCLUDED_LSA_BURST_TAGGER_CC_IMPL_H
 
 #include <lsa/burst_tagger_cc.h>
-#include <pmt/pmt.h>
 
 namespace gr {
   namespace lsa {
@@ -30,23 +29,26 @@ namespace gr {
     class burst_tagger_cc_impl : public burst_tagger_cc
     {
      private:
-      // Nothing to declare in this block.
-      long int d_count;
+      int d_mult;
+      const pmt::pmt_t d_sob_tag;
+      const pmt::pmt_t d_eob_tag;
+      const pmt::pmt_t d_src_id;
+      void add_sob(int offset);
+      void add_eob(int offset);
+      int d_count;
       pmt::pmt_t d_tagname;
-      pmt::pmt_t d_id;
-      unsigned int d_mult;
-
-      void add_sob(const uint64_t& offset);
-      void add_eob(const uint64_t& offset);
 
      public:
-      burst_tagger_cc_impl(const std::string& tagname, int mult);
+      burst_tagger_cc_impl(const std::string& tagname,int mult);
       ~burst_tagger_cc_impl();
 
       // Where all the action really happens
-      int work(int noutput_items,
-         gr_vector_const_void_star &input_items,
-         gr_vector_void_star &output_items);
+      void forecast (int noutput_items, gr_vector_int &ninput_items_required);
+
+      int general_work(int noutput_items,
+           gr_vector_int &ninput_items,
+           gr_vector_const_void_star &input_items,
+           gr_vector_void_star &output_items);
     };
 
   } // namespace lsa

@@ -240,10 +240,8 @@ namespace gr {
         if(d_send_cnt==d_send_size){
           d_send_cnt=0;
           d_sns_stop = true;
-          add_item_tag(0,nitems_written(0)+nout,pmt::intern("tx_eob"),pmt::PMT_T);
-          out[nout++]=0x00;
         }else if(d_send_cnt==1){
-          add_item_tag(0,nitems_written(0),pmt::intern("tx_sob"),pmt::PMT_T);
+          add_item_tag(0,nitems_written(0),pmt::intern("burst_tag"),pmt::from_long(d_send_size*nout));
         }
         return nout;
       }

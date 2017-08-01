@@ -20,7 +20,6 @@ install(FILES
     lsa_eng_det_cc.xml
     lsa_interference_energy_detector_cc.xml
     lsa_modified_costas_loop_cc.xml
-    lsa_burst_tagger_cc.xml
     lsa_correlate_sync_cc.xml
     lsa_preamble_prefixer.xml
     lsa_su_ctrl.xml
@@ -50,5 +49,6 @@ install(FILES
     lsa_su_block_receiver_c.xml
     lsa_ic_ncfo_cc.xml
     lsa_arq_tx.xml
-    lsa_dump_tx.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_dump_tx.xml
+    lsa_burst_tagger_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

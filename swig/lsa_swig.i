@@ -14,7 +14,6 @@
 #include "lsa/eng_det_cc.h"
 #include "lsa/interference_energy_detector_cc.h"
 #include "lsa/modified_costas_loop_cc.h"
-#include "lsa/burst_tagger_cc.h"
 #include "lsa/correlate_sync_cc.h"
 #include "lsa/preamble_prefixer.h"
 #include "lsa/su_ctrl.h"
@@ -44,6 +43,8 @@
 #include "lsa/su_block_receiver_c.h"
 #include "lsa/ic_ncfo_cc.h"
 #include "lsa/arq_tx.h"
+#include "lsa/dump_tx.h"
+#include "lsa/burst_tagger_cc.h"
 %}
 
 %include "gnuradio/digital/constellation.h"
@@ -53,7 +54,6 @@
 %include "gnuradio/filter/fir_filter.h"
 %{
 #include "gnuradio/blocks/count_bits.h"
-#include "lsa/dump_tx.h"
 %}
 %include "gnuradio/blocks/count_bits.h"
 
@@ -63,8 +63,7 @@ GR_SWIG_BLOCK_MAGIC2(lsa, eng_det_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_energy_detector_cc);
 %include "lsa/modified_costas_loop_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, modified_costas_loop_cc);
-%include "lsa/burst_tagger_cc.h"
-GR_SWIG_BLOCK_MAGIC2(lsa, burst_tagger_cc);
+
 %include "lsa/correlate_sync_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, correlate_sync_cc);
 %include "lsa/preamble_prefixer.h"
@@ -126,3 +125,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, arq_tx);
 
 %include "lsa/dump_tx.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, dump_tx);
+%include "lsa/burst_tagger_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, burst_tagger_cc);

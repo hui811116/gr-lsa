@@ -25,7 +25,6 @@ install(FILES
     eng_det_cc.h
     interference_energy_detector_cc.h
     modified_costas_loop_cc.h
-    burst_tagger_cc.h
     correlate_sync_cc.h
     preamble_prefixer.h
     su_ctrl.h
@@ -55,5 +54,6 @@ install(FILES
     su_block_receiver_c.h
     ic_ncfo_cc.h
     arq_tx.h
-    dump_tx.h DESTINATION include/lsa
+    dump_tx.h
+    burst_tagger_cc.h DESTINATION include/lsa
 )

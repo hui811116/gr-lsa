@@ -28,7 +28,6 @@ list(APPEND lsa_sources
     eng_det_cc_impl.cc
     interference_energy_detector_cc_impl.cc
     modified_costas_loop_cc_impl.cc
-    burst_tagger_cc_impl.cc
     correlate_sync_cc_impl.cc
     preamble_prefixer.cc
     su_ctrl.cc
@@ -59,7 +58,8 @@ list(APPEND lsa_sources
     su_block_receiver_c_impl.cc
     ic_ncfo_cc_impl.cc
     arq_tx.cc
-    dump_tx.cc )
+    dump_tx.cc
+    burst_tagger_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)
