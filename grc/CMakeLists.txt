@@ -50,5 +50,6 @@ install(FILES
     lsa_ic_ncfo_cc.xml
     lsa_arq_tx.xml
     lsa_dump_tx.xml
-    lsa_burst_tagger_cc.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_burst_tagger_cc.xml
+    lsa_stop_n_wait_tag_gate_cc.xml DESTINATION share/gnuradio/grc/blocks
 )

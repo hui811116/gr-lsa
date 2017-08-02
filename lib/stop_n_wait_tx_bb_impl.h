@@ -36,6 +36,7 @@ namespace gr {
       std::list<srArq_t> d_arq_list;
       gr::thread::mutex d_mutex;
       bool d_sns_stop;
+      bool d_gate_tag;
       bool d_state_change;
       unsigned char d_buf[256];
       uint16_t d_seq;

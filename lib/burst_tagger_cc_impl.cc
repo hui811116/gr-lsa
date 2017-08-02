@@ -102,6 +102,7 @@ namespace gr {
           if(offset==0){
             add_sob(0);
             d_count = pmt::to_long(tags[0].value)*d_mult;
+            //DEBUG<<"update count to:"<<d_count<<" found tag at "<<nitems_read(0)<<std::endl;
           }else{
             consume_each(offset);
             return 0;
@@ -113,6 +114,7 @@ namespace gr {
         memcpy(out,in,sizeof(gr_complex)*nout);
         d_count-=nout;
         if(d_count==0){
+          //DEBUG<<"output complete, add end tag at:"<<nitems_written(0)+nout-1<<std::endl;
           add_eob(nout-1);
         }
         consume_each (nout);

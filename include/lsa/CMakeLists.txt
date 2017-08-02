@@ -55,5 +55,6 @@ install(FILES
     ic_ncfo_cc.h
     arq_tx.h
     dump_tx.h
-    burst_tagger_cc.h DESTINATION include/lsa
+    burst_tagger_cc.h
+    stop_n_wait_tag_gate_cc.h DESTINATION include/lsa
 )

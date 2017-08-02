@@ -59,7 +59,8 @@ list(APPEND lsa_sources
     ic_ncfo_cc_impl.cc
     arq_tx.cc
     dump_tx.cc
-    burst_tagger_cc_impl.cc )
+    burst_tagger_cc_impl.cc
+    stop_n_wait_tag_gate_cc_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

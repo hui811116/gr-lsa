@@ -45,6 +45,7 @@
 #include "lsa/arq_tx.h"
 #include "lsa/dump_tx.h"
 #include "lsa/burst_tagger_cc.h"
+#include "lsa/stop_n_wait_tag_gate_cc.h"
 %}
 
 %include "gnuradio/digital/constellation.h"
@@ -127,3 +128,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, arq_tx);
 GR_SWIG_BLOCK_MAGIC2(lsa, dump_tx);
 %include "lsa/burst_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, burst_tagger_cc);
+%include "lsa/stop_n_wait_tag_gate_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_tag_gate_cc);

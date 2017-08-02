@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<block>
+  <name>SNS Tag Gate</name>
+  <key>lsa_stop_n_wait_tag_gate_cc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.stop_n_wait_tag_gate_cc()</make>
+  
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+</block>

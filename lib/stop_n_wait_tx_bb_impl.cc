@@ -129,6 +129,7 @@ namespace gr {
       if(ctrl_type == SNS_COLLISION){
         if(!d_sns_stop){
           d_sns_stop = true;
+          d_gate_tag = false;
         }
       }else if(ctrl_type == SNS_CLEAR){
         if(d_sns_stop){
@@ -184,6 +185,10 @@ namespace gr {
         }else{
           noutput_items = it->blob_length();
         }
+      }else{
+        if(!d_gate_tag){
+          noutput_items =1;
+        }
       }
       return noutput_items;
     }
@@ -205,7 +210,15 @@ namespace gr {
       pmt::pmt_t blob;
       int nout =0;
       if(d_sns_stop){
-        return 0;
+        if(!d_gate_tag){
+          d_gate_tag = true;
+          //std::cout<<"<SNS TX DEBUG> adding tag to index:"<<nitems_written(0)<<std::endl;
+          add_item_tag(0,nitems_written(0),pmt::intern("sns_stop"),pmt::PMT_T);
+          out[0] = 0;
+          return 1;
+        }else{
+          return 0;
+        }
       }else{
         // check arq 
         while(it!=d_arq_list.end()){
@@ -240,8 +253,9 @@ namespace gr {
         if(d_send_cnt==d_send_size){
           d_send_cnt=0;
           d_sns_stop = true;
+          d_gate_tag = false;
         }else if(d_send_cnt==1){
-          add_item_tag(0,nitems_written(0),pmt::intern("burst_tag"),pmt::from_long(d_send_size*nout));
+          add_item_tag(0,nitems_written(0),pmt::intern("sns_start"),pmt::PMT_T);
         }
         return nout;
       }
