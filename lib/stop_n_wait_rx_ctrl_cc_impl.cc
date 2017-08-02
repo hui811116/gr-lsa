@@ -43,7 +43,8 @@ namespace gr {
       : gr::block("stop_n_wait_rx_ctrl_cc",
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(float)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
-              d_out_port(pmt::mp("ctrl_out"))
+              d_out_port(pmt::mp("ctrl_out")),
+              d_src_id(pmt::intern(alias()))
     {
       
       if(samples.size()==0){
@@ -54,6 +55,7 @@ namespace gr {
       set_ed_threshold(ed_thres);
       enter_listen();
       message_port_register_out(d_out_port);
+      set_tag_propagation_policy(TPP_DONT);
       d_buf = (gr_complex*) volk_malloc(sizeof(gr_complex)*(1024),volk_get_alignment());
       if(period<=0){
         throw std::invalid_argument("Period shoud be positive");
@@ -136,6 +138,19 @@ namespace gr {
     }
     
     void
+    stop_n_wait_rx_ctrl_cc_impl::tags_handler(int count)
+    {
+      if(count==0){
+        return;
+      }
+      d_tags.clear();
+      get_tags_in_window(d_tags,0,0,count,d_voe_tag);
+      for(int i=0;i<d_tags.size();++i){
+        int offset = d_tags[i].offset-nitems_read(0);
+        add_item_tag(0,nitems_written(0)+offset,d_tags[i].key,d_tags[i].value,d_src_id);
+      }
+    }
+    void
     stop_n_wait_rx_ctrl_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       if(d_state == ED_SFD){
@@ -193,6 +208,7 @@ namespace gr {
               }
               count+=512;
             }else{
+              tags_handler(count);
               memcpy(out,in,sizeof(gr_complex)*count);
               consume_each(count);
               return count;
@@ -229,6 +245,7 @@ namespace gr {
           break;
         }
       }
+      tags_handler(count);
       memcpy(out,in,sizeof(gr_complex)*count);
       consume_each (count);
       return count;

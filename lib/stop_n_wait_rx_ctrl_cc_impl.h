@@ -32,6 +32,7 @@ namespace gr {
     
     static int d_valid = 64;
     static unsigned char d_sns_clear[] = {0x00,0xff,0x0f};
+    static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
 
     enum SNSRXSTATE{
       ED_LISTEN,
@@ -44,6 +45,7 @@ namespace gr {
     {
      private:
       const pmt::pmt_t d_out_port;
+      const pmt::pmt_t d_src_id;
       gr_complex* d_buf;
       int d_state;
       float d_ed_thres;
@@ -54,7 +56,9 @@ namespace gr {
       boost::shared_ptr<gr::thread::thread> d_thread;
       gr::thread::mutex d_mutex;
       bool d_finished;
+      std::vector<tag_t> d_tags;
 
+      void tags_handler(int count);
       void enter_listen();
       void enter_sfd();
       void enter_ed_pu();
