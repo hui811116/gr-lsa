@@ -24,20 +24,41 @@
 #include <lsa/stop_n_wait_tx_bb.h>
 #include "utils.h"
 #include <fstream>
+#include <boost/random/variate_generator.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/poisson_distribution.hpp>
 
 namespace gr {
   namespace lsa {
+    #define d_debug false 
+    #define DEBUG d_debug && std::cout
+    #define MAX_PAYLOAD 123
+    #define SNS_COLLISION 2
+    #define SNS_CLEAR 3
+    #define SNS_ACK 4
+   
+    static int PHYLEN = 6;
+    static int MACLEN = 4;
+    static unsigned char d_phy_field[] = {0x00,0x00,0x00,0x00,0xE6,0x00};
+    static unsigned char d_mac_field[] = {0x00,0x00,0x00,0x00};
 
     class stop_n_wait_tx_bb_impl : public stop_n_wait_tx_bb
     {
      private:
+      boost::mt19937 d_rng;
+      boost::shared_ptr< boost::variate_generator <boost::mt19937, boost::poisson_distribution<> > > d_variate_poisson;
+      float d_mean;
+      float d_std;
+      boost::shared_ptr<gr::thread::thread> d_stop_thread;
+      gr::thread::condition_variable d_wait_delay;
+
       const pmt::pmt_t d_in_port;
       const pmt::pmt_t d_tagname;
       std::list<srArq_t> d_arq_list;
       gr::thread::mutex d_mutex;
+      bool d_collision;
       bool d_sns_stop;
       bool d_gate_tag;
-      bool d_state_change;
       unsigned char d_buf[256];
       uint16_t d_seq;
       std::fstream d_file;
@@ -53,15 +74,17 @@ namespace gr {
       boost::posix_time::ptime d_start_time;
       bool d_finished;
 
+      float next_delay();
       bool read_data(const std::string& filename);
       void msg_handler(pmt::pmt_t msg);
       void generate_new_pkt(const unsigned char* in, int nin);
       void run();
+      void wait();
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
-      stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef, bool verb, int send);
+      stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef, bool verb, int send, float mean, float std);
       ~stop_n_wait_tx_bb_impl();
 
       // Where all the action really happens

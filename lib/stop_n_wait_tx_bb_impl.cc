@@ -28,37 +28,36 @@
 namespace gr {
   namespace lsa {
 
-   #define d_debug false 
-   #define DEBUG d_debug && std::cout
-   #define MAX_PAYLOAD 123
-   #define SNS_COLLISION 2
-   #define SNS_CLEAR 3
-   #define SNS_ACK 4
-   
-    static int PHYLEN = 6;
-    static int MACLEN = 4;
-    static unsigned char d_phy_field[] = {0x00,0x00,0x00,0x00,0xE6,0x00};
-    static unsigned char d_mac_field[] = {0x00,0x00,0x00,0x00};
-   
     stop_n_wait_tx_bb::sptr
-    stop_n_wait_tx_bb::make(const std::string& tagname, const std::string& filename, bool usef,bool verb,int send)
+    stop_n_wait_tx_bb::make(const std::string& tagname, 
+                            const std::string& filename, 
+                            bool usef,bool verb,int send,
+                            float mean, float std)
     {
       return gnuradio::get_initial_sptr
-        (new stop_n_wait_tx_bb_impl(tagname,filename,usef,verb,send));
+        (new stop_n_wait_tx_bb_impl(tagname,filename,usef,verb,send, mean, std));
     }
 
     /*
      * The private constructor
      */
-    stop_n_wait_tx_bb_impl::stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef,bool verb, int send)
+    stop_n_wait_tx_bb_impl::stop_n_wait_tx_bb_impl(const std::string& tagname,
+                                                   const std::string& filename, 
+                                                   bool usef,bool verb, int send,
+                                                   float mean, float std)
       : gr::tagged_stream_block("stop_n_wait_tx_bb",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(1, 1, sizeof(char)), tagname),
               d_in_port(pmt::mp("msg_in")),
-              d_tagname(pmt::intern(tagname))
+              d_tagname(pmt::intern(tagname)),
+              d_rng(),
+              d_mean(mean),
+              d_std(std)
     {
-      d_sns_stop = true; // waiting for receiver approve transmission
-      d_state_change = false;
+      boost::poisson_distribution<> pd(d_mean);
+      d_variate_poisson = boost::shared_ptr< boost::variate_generator<boost::mt19937, boost::poisson_distribution<> > >(
+        new boost::variate_generator <boost::mt19937, boost::poisson_distribution<> >(d_rng,pd) );
+      d_sns_stop = false; // waiting for receiver approve transmission
       message_port_register_in(d_in_port);
       set_msg_handler(d_in_port, boost::bind(&stop_n_wait_tx_bb_impl::msg_handler,this, _1));
       memcpy(d_buf,d_phy_field,sizeof(char)*PHYLEN);
@@ -77,6 +76,7 @@ namespace gr {
       }
       set_send(send);
       d_send_cnt=0;
+      d_collision = false;
     }
 
     /*
@@ -127,15 +127,9 @@ namespace gr {
       size_t ctrl_type = pmt::to_long(pmt::dict_ref(msg,pmt::intern("SNS_ctrl"),pmt::from_long(-1)));
       int seqno = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));
       if(ctrl_type == SNS_COLLISION){
-        if(!d_sns_stop){
-          d_sns_stop = true;
-          d_gate_tag = false;
-        }
+        d_collision = true;
       }else if(ctrl_type == SNS_CLEAR){
-        if(d_sns_stop){
-          d_sns_stop = false;
-          d_send_cnt=0;
-        }
+        d_collision = false;
       }else if(seqno>=0){
         std::list<srArq_t>::iterator it;
         for(it = d_arq_list.begin();it!=d_arq_list.end();++it){
@@ -169,6 +163,34 @@ namespace gr {
     {
       if(send>0){
         d_send_size = send;
+      }
+    }
+    float
+    stop_n_wait_tx_bb_impl::next_delay()
+    {
+      return d_variate_poisson->operator()();
+    }
+    void
+    stop_n_wait_tx_bb_impl::wait()
+    {
+      int wait_cnt=0;
+      int wait_lim = 10000/d_mean;
+      while(!d_finished){
+        gr::thread::scoped_lock lock(d_mutex);
+        d_wait_delay.wait(lock);
+        lock.unlock();
+        if(d_finished){
+          return;
+        }
+        boost::this_thread::sleep(boost::posix_time::milliseconds(next_delay()));
+        if(d_finished){
+          return;
+        }
+        wait_cnt = (d_collision)? wait_cnt+1 : wait_cnt;
+        if(!d_collision || wait_cnt>=wait_lim){
+          wait_cnt=0;
+          d_sns_stop=false;
+        }
       }
     }
     int
@@ -212,7 +234,6 @@ namespace gr {
       if(d_sns_stop){
         if(!d_gate_tag){
           d_gate_tag = true;
-          //std::cout<<"<SNS TX DEBUG> adding tag to index:"<<nitems_written(0)<<std::endl;
           add_item_tag(0,nitems_written(0),pmt::intern("sns_stop"),pmt::PMT_T);
           out[0] = 0;
           return 1;
@@ -249,13 +270,15 @@ namespace gr {
           memcpy(out,uvec,sizeof(char)*io);
           nout = io;
         }
+        if(d_send_cnt==0){
+          add_item_tag(0,nitems_written(0),pmt::intern("sns_start"),pmt::PMT_T);
+        }
         d_send_cnt++;
         if(d_send_cnt==d_send_size){
           d_send_cnt=0;
           d_sns_stop = true;
           d_gate_tag = false;
-        }else if(d_send_cnt==1){
-          add_item_tag(0,nitems_written(0),pmt::intern("sns_start"),pmt::PMT_T);
+          d_wait_delay.notify_one();
         }
         return nout;
       }
@@ -267,6 +290,8 @@ namespace gr {
       d_start_time = boost::posix_time::second_clock::local_time();
       d_thread = boost::shared_ptr<gr::thread::thread>
         (new gr::thread::thread(boost::bind(&stop_n_wait_tx_bb_impl::run,this)));
+      d_stop_thread = boost::shared_ptr<gr::thread::thread>
+        (new gr::thread::thread(boost::bind(&stop_n_wait_tx_bb_impl::wait,this)));
       return block::start();
     }
     bool
@@ -274,6 +299,8 @@ namespace gr {
     {
       d_finished = true;
       d_thread->interrupt();
+      d_stop_thread->interrupt();
+      d_stop_thread->join();
       d_thread->join();
       return block::stop();
     }
@@ -288,7 +315,7 @@ namespace gr {
         boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time()-d_start_time;
         if(d_verb){
           std::cout<<"<SNS TX>Execution time:"<<diff.total_seconds();
-          std::cout<<" total packets:<<"<<d_pkt_total<<" ,success packets:"<<d_pkt_success_cnt<<std::endl;
+          std::cout<<" total packets:"<<d_pkt_total<<" ,success packets:"<<d_pkt_success_cnt<<std::endl;
         }
       }
     }

@@ -64,6 +64,8 @@ namespace gr {
           d_seqno =0;
           d_verb = verb;
           d_pkt_cnt=0;
+          d_pkt_success=0;
+          d_pkt_fail =0;
         }
         ~dump_tx_impl(){}
         bool start()
@@ -73,6 +75,8 @@ namespace gr {
             (new gr::thread::thread(boost::bind(&dump_tx_impl::run,this)));
           d_timeout_thread = boost::shared_ptr<gr::thread::thread>
             (new gr::thread::thread(boost::bind(&dump_tx_impl::check_timeout,this)));
+          d_thread = boost::shared_ptr<gr::thread::thread>
+            (new gr::thread::thread(boost::bind(&dump_tx_impl::report,this)));
           return block::start();
         }
 
@@ -81,8 +85,10 @@ namespace gr {
           d_finished = true;
           d_thread->interrupt();
           d_timeout_thread->interrupt();
+          d_report_thread->interrupt();
           d_thread->join();
           d_timeout_thread->join();
+          d_report_thread->join();
           return block::stop();
         }
         void ack_in(pmt::pmt_t msg)
@@ -112,7 +118,9 @@ namespace gr {
                   diff =boost::posix_time::microsec_clock::local_time()-std::get<2>(*it);
                   channel_use = std::get<3>(*it);
                   // milliseconds
-                  VERBOSE<<"result:"<<d_pkt_cnt<<"channel use:"<<channel_use+1<<" ,RTT(msg):"<<diff.total_milliseconds()+d_timeout*channel_use<<std::endl;
+                  DEBUG<<"result:"<<d_pkt_cnt<<"channel use:"<<channel_use+1<<" ,RTT(msg):"<<diff.total_milliseconds()+d_timeout*channel_use<<std::endl;
+                  d_pkt_success++;
+                  d_pkt_fail+=channel_use;
                   d_pkt_cnt++;
                 }
               }
@@ -211,6 +219,19 @@ namespace gr {
             }
           }
         }
+        void report()
+        {
+          boost::posix_time::ptime start = boost::posix_time::microsec_clock::local_time();
+          boost::posix_time::time_duration diff;
+          while(!d_finished){
+            boost::this_thread::sleep(boost::posix_time::seconds(10.0));
+            if(d_finished){
+              return;
+            }
+            diff = boost::posix_time::microsec_clock::local_time()-start;
+            VERBOSE<<"<Dump TX>Time(sec)"<<diff.total_seconds()<<" ,success:"<<d_pkt_success<<" ,failed:"<<d_pkt_fail<<std::endl;
+          }
+        }
         bool read_data(const std::string& filename)
         {
           gr::thread::scoped_lock guard(d_mutex);
@@ -240,12 +261,15 @@ namespace gr {
         gr::thread::mutex d_mutex;
         boost::shared_ptr<gr::thread::thread> d_thread;
         boost::shared_ptr<gr::thread::thread> d_timeout_thread;
+        boost::shared_ptr<gr::thread::thread> d_report_thread;
         bool d_verb;
         bool d_finished;
         gr::thread::condition_variable d_queue_filled;
         float d_timeout;
         int d_avg_size;
         int d_pkt_cnt;
+        int d_pkt_success;
+        int d_pkt_fail;
         unsigned char d_buf[256];
         std::vector< std::vector<unsigned char> > d_data_src;
         std::fstream d_file;
