@@ -107,6 +107,7 @@ namespace gr {
     {
       d_state = ED_LISTEN;
       d_ed_cnt=0;
+      d_voe_cnt=0;
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_sfd()
@@ -124,6 +125,13 @@ namespace gr {
     stop_n_wait_rx_ctrl_cc_impl::enter_ed_sns()
     {
       d_state = ED_DETECT_SNS;
+      d_ed_cnt=0;
+    }
+    void
+    stop_n_wait_rx_ctrl_cc_impl::enter_silent()
+    {
+      d_state = ED_SILENT;
+      d_silent_trig = false;
       d_ed_cnt=0;
     }
     void
@@ -147,6 +155,8 @@ namespace gr {
       get_tags_in_window(d_tags,0,0,count,d_voe_tag);
       for(int i=0;i<d_tags.size();++i){
         int offset = d_tags[i].offset-nitems_read(0);
+        bool test_voe = pmt::to_bool(d_tags[i].value);
+        d_voe_cnt = (test_voe) ? d_voe_cnt+1 : d_voe_cnt;
         add_item_tag(0,nitems_written(0)+offset,d_tags[i].key,d_tags[i].value,d_src_id);
       }
     }
@@ -155,9 +165,11 @@ namespace gr {
     {
       if(d_state == ED_SFD){
         int sample_size = d_samples.size();
-        ninput_items_required[0] = std::max(noutput_items,512+sample_size);
+        for(int i=0;i<ninput_items_required.size();++i)
+          ninput_items_required[i] = std::max(noutput_items,512+sample_size);
       }else{
-        ninput_items_required[0] = noutput_items;
+        for(int i=0;i<ninput_items_required.size();++i)
+          ninput_items_required[i] = noutput_items;
       }
     }
 
@@ -219,7 +231,7 @@ namespace gr {
               if(ed[count++]<d_ed_thres){
                 d_ed_cnt++;
                 if(d_ed_cnt>=d_valid){
-                  enter_listen();
+                  enter_silent();
                   break;
                 }
               }else{
@@ -237,6 +249,39 @@ namespace gr {
                 }
               }else{
                 d_ed_cnt=0;
+              }
+            }
+          break;
+          case ED_SILENT:
+            while(count<nin){
+              if(d_silent_trig){
+                if(ed[count++]<d_ed_thres){
+                  d_ed_cnt++;
+                  if(d_ed_cnt>=d_valid){
+                    //DEBUG<<"SNS RX CTRL debug: found end of burst, change to listen state"<<std::endl;
+                    d_voe_cnt = (d_voe_cnt==0)? 0 : d_voe_cnt-1;
+                    if(d_voe_cnt==0){
+                      enter_listen();
+                      break;
+                    }else{
+                      d_ed_cnt=0;
+                      d_silent_trig = false;
+                    }
+                  }
+                }else{
+                  d_ed_cnt=0;
+                }
+              }else{
+                if(ed[count++]>d_ed_thres){
+                  d_ed_cnt++;
+                  if(d_ed_cnt>=d_valid){
+                    //DEBUG<<"SNS RX CTRL debug: triggered, waiting for the end of burst"<<std::endl;
+                    d_silent_trig = true;
+                    d_ed_cnt=0;
+                  }
+                }else{
+                  d_ed_cnt=0;
+                }
               }
             }
           break;

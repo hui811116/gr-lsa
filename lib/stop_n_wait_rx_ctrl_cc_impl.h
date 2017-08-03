@@ -38,7 +38,8 @@ namespace gr {
       ED_LISTEN,
       ED_SFD,
       ED_DETECT_PU,
-      ED_DETECT_SNS
+      ED_DETECT_SNS,
+      ED_SILENT
     };
 
     class stop_n_wait_rx_ctrl_cc_impl : public stop_n_wait_rx_ctrl_cc
@@ -56,10 +57,13 @@ namespace gr {
       boost::shared_ptr<gr::thread::thread> d_thread;
       gr::thread::mutex d_mutex;
       bool d_finished;
+      bool d_silent_trig;
       std::vector<tag_t> d_tags;
+      int d_voe_cnt;
 
       void tags_handler(int count);
       void enter_listen();
+      void enter_silent();
       void enter_sfd();
       void enter_ed_pu();
       void enter_ed_sns();
