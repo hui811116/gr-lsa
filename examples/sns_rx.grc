@@ -419,7 +419,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -446,7 +446,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -473,7 +473,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>0.5</value>
+      <value>0.1</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -579,7 +579,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -606,7 +606,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -687,7 +687,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -714,7 +714,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -741,7 +741,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>0.6</value>
+      <value>0.2</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -804,7 +804,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -831,7 +831,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -858,7 +858,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>-40</value>
+      <value>-60</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -961,33 +961,6 @@
     <param>
       <key>id</key>
       <value>zero_samples</value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>[ (0.43095961-0.11563824j),(0.47927102+0.15876304j),(0.42777519+0.38207836j),(0.22815121+0.51324301j),(-0.08058941+0.54975203j),(-0.36553886+0.49707116j),(-0.47057650+0.36263433j),(-0.32040480+0.15557772j),(0.01811341-0.08735843j),(0.35616438-0.29563213j),(0.49296856-0.38888100j),(0.34317785-0.32049402j),(-0.00822166-0.11057076j),(-0.35212207+0.15988440j),(-0.48621845+0.39268921j),(-0.34024672+0.52175552j),(-0.01134439+0.53407547j),(0.30715390+0.45951832j),(0.44727174+0.33043774j),(0.35677215+0.17166127j),(0.10692448-0.00339739j),(-0.17468070-0.18443709j),(-0.38882848-0.34554769j),(-0.50429878-0.45963016j),(-0.53330871-0.50724829j),(-0.48812694-0.47671898j),(-0.36938445-0.36643642j),(-0.17149539-0.18886194j),(0.07864466+0.02633507j),(0.30238468+0.23356573j),(0.40688034+0.38207836j),(0.33094214+0.43844031j),(0.09440210+0.40972346j),(-0.19959374+0.34241184j),(-0.42777519+0.30510376j),(-0.50782848+0.33390951j),(-0.44477230+0.40684394j),(-0.32689260+0.45727260j),(-0.26379967+0.40924385j),(-0.31021049+0.23941149j),(-0.42783687-0.00676902j),(-0.50640125-0.24207825j),(-0.44577452-0.39268921j),(-0.21822164-0.43956168j),(0.10234910-0.41479095j),(0.36988703-0.37193744j),(0.44871644-0.34549516j),(0.29619552-0.33498316j),(-0.01016641-0.32430978j),(-0.31163810-0.31231295j),(-0.44727174-0.32074571j),(-0.35228795-0.37043354j),(-0.08541368-0.44934767j),(0.21873190-0.49471360j),(0.42633049-0.42633049j),(0.48653382-0.21055213j),(0.43918127+0.09752483j),(0.36317073+0.36604912j),(0.32219041+0.45113247j),(0.32173225+0.30053738j),(0.33107880-0.00482427j),(0.32823061-0.29670578j),(0.32749583-0.42927241j),(0.36148931-0.35001961j),(0.43095961-0.11563824j),(0.47927102+0.15876304j),(0.42777519+0.38207836j),(0.22815121+0.51324301j),(-0.08058941+0.54975203j),(-0.36553886+0.49707116j),(-0.47057650+0.36263433j),(-0.32040480+0.15557772j),(0.01811341-0.08735843j),(0.35616438-0.29563213j),(0.49296856-0.38888100j),(0.34317785-0.32049402j),(-0.00822166-0.11057076j),(-0.35212207+0.15988440j),(-0.48621845+0.39268921j),(-0.34024672+0.52175552j),(-0.01134439+0.53407547j),(0.30715390+0.45951832j),(0.44727174+0.33043774j),(0.35677215+0.17166127j),(0.10692448-0.00339739j),(-0.17468070-0.18443709j),(-0.38882848-0.34554769j),(-0.50429878-0.45963016j),(-0.53330871-0.50724829j),(-0.48812694-0.47671898j),(-0.36938445-0.36643642j),(-0.17149539-0.18886194j),(0.07864466+0.02633507j),(0.30238468+0.23356573j),(0.40688034+0.38207836j),(0.33094214+0.43844031j),(0.09440210+0.40972346j),(-0.19959374+0.34241184j),(-0.42777519+0.30510376j),(-0.50782848+0.33390951j),(-0.44477230+0.40684394j),(-0.32689260+0.45727260j),(-0.26379967+0.40924385j),(-0.31021049+0.23941149j),(-0.42783687-0.00676902j),(-0.50640125-0.24207825j),(-0.44577452-0.39268921j),(-0.21822164-0.43956168j),(0.10137673-0.41576332j),(0.36663785-0.37518662j),(0.44606373-0.34814788j),(0.29703623-0.33414245j),(-0.00508320-0.32117133j),(-0.30475752-0.31193073j),(-0.44534138-0.32412077j),(-0.35783831-0.37430248j),(-0.09388139-0.44764898j),(0.21522759-0.48445674j),(0.43339980-0.41540046j),(0.49730824-0.21087843j),(0.43859227+0.08000041j),(0.34357119+0.33944096j),(0.29492540+0.43800607j),(0.31876207+0.31911603j),(0.37945784+0.04043203j),(0.41452524-0.25610859j),(0.38470481-0.43189885j),(0.29131595-0.42445193j)]</value>
-    </param>
-  </block>
-  <block>
-    <key>variable</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(176, 788)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>zero_samples_0</value>
     </param>
     <param>
       <key>value</key>
@@ -1385,7 +1358,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(648, 964)</value>
+      <value>(568, 964)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1581,7 +1554,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -1915,6 +1888,57 @@
     </param>
   </block>
   <block>
+    <key>blocks_tag_gate</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(672, 964)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_tag_gate_0</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>propagate_tags</key>
+      <value>False</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
     <key>blocks_vector_source_x</key>
     <param>
       <key>alias</key>
@@ -2142,7 +2166,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -2713,7 +2737,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>True</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -2734,10 +2758,6 @@
     <param>
       <key>minoutbuf</key>
       <value>0</value>
-    </param>
-    <param>
-      <key>period</key>
-      <value>1000</value>
     </param>
     <param>
       <key>samples</key>
@@ -6675,9 +6695,9 @@
   </connection>
   <connection>
     <source_block_id>blocks_delay_0_0</source_block_id>
-    <sink_block_id>blocks_float_to_complex_0</sink_block_id>
+    <sink_block_id>blocks_tag_gate_0</sink_block_id>
     <source_key>0</source_key>
-    <sink_key>1</sink_key>
+    <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>blocks_divide_xx_0</source_block_id>
@@ -6754,6 +6774,12 @@
   <connection>
     <source_block_id>blocks_repeat_0</source_block_id>
     <sink_block_id>blocks_multiply_xx_0_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>1</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>blocks_tag_gate_0</source_block_id>
+    <sink_block_id>blocks_float_to_complex_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>1</sink_key>
   </connection>

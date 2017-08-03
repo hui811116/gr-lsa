@@ -4,7 +4,7 @@
   <key>lsa_stop_n_wait_rx_ctrl_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.stop_n_wait_rx_ctrl_cc($ed_thres,$period,$samples)</make>
+  <make>lsa.stop_n_wait_rx_ctrl_cc($ed_thres,$samples)</make>
   <callback>set_ed_threshold($ed_thres)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
@@ -14,12 +14,6 @@
   <param>
     <name>ED Threshold</name>
     <key>ed_thres</key>
-    <type>float</type>
-  </param>
-  <param>
-    <name>Period(ms)</name>
-    <key>period</key>
-    <value>100</value>
     <type>float</type>
   </param>
   <param>

@@ -46,7 +46,7 @@ namespace gr {
        * class. lsa::stop_n_wait_rx_ctrl_cc::make is the public interface for
        * creating new instances.
        */
-      static sptr make(float ed_thres,float period,const std::vector<gr_complex>& samples);
+      static sptr make(float ed_thres,const std::vector<gr_complex>& samples);
       virtual void set_ed_threshold(float thres)=0;
       virtual float ed_threshold()const=0;
       

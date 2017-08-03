@@ -30,16 +30,16 @@ namespace gr {
   namespace lsa {
 
     stop_n_wait_rx_ctrl_cc::sptr
-    stop_n_wait_rx_ctrl_cc::make(float ed_thres,float period,const std::vector<gr_complex>& samples)
+    stop_n_wait_rx_ctrl_cc::make(float ed_thres,const std::vector<gr_complex>& samples)
     {
       return gnuradio::get_initial_sptr
-        (new stop_n_wait_rx_ctrl_cc_impl(ed_thres,period,samples));
+        (new stop_n_wait_rx_ctrl_cc_impl(ed_thres,samples));
     }
 
     /*
      * The private constructor
      */
-    stop_n_wait_rx_ctrl_cc_impl::stop_n_wait_rx_ctrl_cc_impl(float ed_thres,float period,const std::vector<gr_complex>& samples)
+    stop_n_wait_rx_ctrl_cc_impl::stop_n_wait_rx_ctrl_cc_impl(float ed_thres,const std::vector<gr_complex>& samples)
       : gr::block("stop_n_wait_rx_ctrl_cc",
               gr::io_signature::make2(2, 2, sizeof(gr_complex),sizeof(float)),
               gr::io_signature::make(1, 1, sizeof(gr_complex))),
@@ -56,11 +56,7 @@ namespace gr {
       enter_listen();
       message_port_register_out(d_out_port);
       set_tag_propagation_policy(TPP_DONT);
-      d_buf = (gr_complex*) volk_malloc(sizeof(gr_complex)*(1024),volk_get_alignment());
-      if(period<=0){
-        throw std::invalid_argument("Period shoud be positive");
-      }
-      d_period = period;
+      d_buf = (gr_complex*) volk_malloc(sizeof(gr_complex)*(1024+samples.size()),volk_get_alignment());
     }
 
     /*
@@ -70,38 +66,7 @@ namespace gr {
     {
       volk_free(d_buf);
     }
-    bool
-    stop_n_wait_rx_ctrl_cc_impl::start()
-    {
-      d_finished = false;
-      d_thread = boost::shared_ptr<gr::thread::thread>
-        (new gr::thread::thread(boost::bind(&stop_n_wait_rx_ctrl_cc_impl::run,this)));
-      return block::start();
-    }
-    bool
-    stop_n_wait_rx_ctrl_cc_impl::stop()
-    {
-      d_finished = true;
-      d_thread->interrupt();
-      d_thread->join();
-      return block::stop();
-    }
-    void
-    stop_n_wait_rx_ctrl_cc_impl::run()
-    {
-      while(!d_finished){
-        boost::this_thread::sleep(boost::posix_time::milliseconds(d_period));
-        if(d_finished){
-          return;
-        }
-        if(d_state==ED_LISTEN){
-          //DEBUG<<"<Rx CTRL debug>state at ED listen, pub tag"<<std::endl;
-          message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sns_clear,3)));
-        }
-      }
-    }
-
-
+    
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_listen()
     {
@@ -135,6 +100,11 @@ namespace gr {
       d_ed_cnt=0;
     }
     void
+    stop_n_wait_rx_ctrl_cc_impl::notify_clear()
+    {
+      message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sns_clear,3)));
+    }
+    void
     stop_n_wait_rx_ctrl_cc_impl::set_ed_threshold(float thres)
     {
       d_ed_thres = thres;
@@ -148,16 +118,16 @@ namespace gr {
     void
     stop_n_wait_rx_ctrl_cc_impl::tags_handler(int count)
     {
-      if(count==0){
+      if(d_tags.empty()){
         return;
-      }
-      d_tags.clear();
-      get_tags_in_window(d_tags,0,0,count,d_voe_tag);
-      for(int i=0;i<d_tags.size();++i){
-        int offset = d_tags[i].offset-nitems_read(0);
-        bool test_voe = pmt::to_bool(d_tags[i].value);
-        d_voe_cnt = (test_voe) ? d_voe_cnt+1 : d_voe_cnt;
-        add_item_tag(0,nitems_written(0)+offset,d_tags[i].key,d_tags[i].value,d_src_id);
+      }else{
+        int offset = d_tags[0].offset-nitems_read(0);
+        if(offset==count){
+          bool test_voe = pmt::to_bool(d_tags[0].value);
+          d_voe_cnt = (test_voe) ? d_voe_cnt+1 : d_voe_cnt;
+          add_item_tag(0,nitems_written(0)+offset,d_tags[0].key,d_tags[0].value,d_src_id);
+          d_tags.erase(d_tags.begin());
+        }
       }
     }
     void
@@ -184,11 +154,14 @@ namespace gr {
       gr_complex *out = (gr_complex *) output_items[0];
       int nin = std::min(std::min(ninput_items[0],ninput_items[1]),noutput_items);
       int count =0;
+      d_tags.clear();
+      get_tags_in_window(d_tags,0,0,nin,d_voe_tag);
       gr_complex corr_val, eng, corr_norm;
       while(count<nin){
         switch(d_state){
           case ED_LISTEN:
             while(count<nin){
+              tags_handler(count);
               if(ed[count++]>d_ed_thres){
                 d_ed_cnt++;
                 if(d_ed_cnt==d_valid){
@@ -205,6 +178,9 @@ namespace gr {
             if( (noutput_items-count)>=512 && (nin-count)>=(512+d_samples.size()) ){
               // enough samples for searching preamble
               for(int i=0;i<512;++i){
+                tags_handler(count+i);
+              }
+              for(int i=0;i<512;++i){
                 volk_32fc_x2_conjugate_dot_prod_32fc(&corr_val,in+count+i,d_samples.data(),d_samples.size());
                 volk_32fc_x2_conjugate_dot_prod_32fc(&eng, in+count+i,in+count+i,d_samples.size());
                 d_buf[i] = corr_val/(std::sqrt(eng*d_sample_eng)+gr_complex(1e-8,0));
@@ -220,7 +196,6 @@ namespace gr {
               }
               count+=512;
             }else{
-              tags_handler(count);
               memcpy(out,in,sizeof(gr_complex)*count);
               consume_each(count);
               return count;
@@ -228,10 +203,15 @@ namespace gr {
           break;
           case ED_DETECT_PU:
             while(count<nin){
+              tags_handler(count);
               if(ed[count++]<d_ed_thres){
                 d_ed_cnt++;
                 if(d_ed_cnt>=d_valid){
-                  enter_silent();
+                  if(d_voe_cnt){
+                    enter_silent();
+                  }else{
+                    enter_listen();
+                  }
                   break;
                 }
               }else{
@@ -241,10 +221,15 @@ namespace gr {
           break;
           case ED_DETECT_SNS:
             while(count<nin){
+              tags_handler(count);
               if(ed[count++]<d_ed_thres){
                 d_ed_cnt++;
                 if(d_ed_cnt>=d_valid){
-                  enter_listen();
+                  if(d_voe_cnt){
+                    enter_silent();
+                  }else{
+                    enter_listen();
+                  }
                   break;
                 }
               }else{
@@ -254,18 +239,19 @@ namespace gr {
           break;
           case ED_SILENT:
             while(count<nin){
+              tags_handler(count);
               if(d_silent_trig){
                 if(ed[count++]<d_ed_thres){
                   d_ed_cnt++;
                   if(d_ed_cnt>=d_valid){
-                    //DEBUG<<"SNS RX CTRL debug: found end of burst, change to listen state"<<std::endl;
                     d_voe_cnt = (d_voe_cnt==0)? 0 : d_voe_cnt-1;
                     if(d_voe_cnt==0){
+                      notify_clear();
                       enter_listen();
                       break;
                     }else{
-                      d_ed_cnt=0;
                       d_silent_trig = false;
+                      d_ed_cnt=0;
                     }
                   }
                 }else{
@@ -275,7 +261,6 @@ namespace gr {
                 if(ed[count++]>d_ed_thres){
                   d_ed_cnt++;
                   if(d_ed_cnt>=d_valid){
-                    //DEBUG<<"SNS RX CTRL debug: triggered, waiting for the end of burst"<<std::endl;
                     d_silent_trig = true;
                     d_ed_cnt=0;
                   }
