@@ -45,7 +45,7 @@ namespace gr {
       int d_protect_cnt;
       gr_complex* d_in_mem;
       gr_complex* d_out_mem;
-      gr_complex* d_demo_mem;
+      //gr_complex* d_demo_mem;
       gr_complex* d_intf_mem;
       gr_complex* d_fir_buffer;
       gr_complex* d_ic_mem;

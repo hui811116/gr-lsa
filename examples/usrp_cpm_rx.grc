@@ -105,7 +105,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>2.48e9</value>
+      <value>2.55e9</value>
     </param>
   </block>
   <block>
@@ -186,7 +186,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"addr=192.168.10.3"</value>
+      <value>"addr=192.168.10.2"</value>
     </param>
   </block>
   <block>
@@ -384,7 +384,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>"addr=192.168.10.3"</value>
+      <value>"addr=192.168.10.2"</value>
     </param>
   </block>
   <block>
@@ -395,7 +395,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>0.7</value>
+      <value>0.2</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1147,11 +1147,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>filename</key>
-      <value>/home/nic-hui/project/data/goodput/proup2p/p2p_gp059gs051_p100.txt</value>
+      <value>/home/nic-hui/project/data/goodput/lsa-b20/inr30/gp074gs081p200_dc.txt</value>
     </param>
     <param>
       <key>_coordinate</key>
