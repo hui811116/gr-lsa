@@ -56,5 +56,6 @@ install(FILES
     arq_tx.h
     dump_tx.h
     burst_tagger_cc.h
-    stop_n_wait_tag_gate_cc.h DESTINATION include/lsa
+    stop_n_wait_tag_gate_cc.h
+    file_downloader_tx.h DESTINATION include/lsa
 )

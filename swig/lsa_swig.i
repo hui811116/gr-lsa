@@ -46,6 +46,7 @@
 #include "lsa/dump_tx.h"
 #include "lsa/burst_tagger_cc.h"
 #include "lsa/stop_n_wait_tag_gate_cc.h"
+#include "lsa/file_downloader_tx.h"
 %}
 
 %include "gnuradio/digital/constellation.h"
@@ -64,7 +65,6 @@ GR_SWIG_BLOCK_MAGIC2(lsa, eng_det_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, interference_energy_detector_cc);
 %include "lsa/modified_costas_loop_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, modified_costas_loop_cc);
-
 %include "lsa/correlate_sync_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, correlate_sync_cc);
 %include "lsa/preamble_prefixer.h"
@@ -123,10 +123,11 @@ GR_SWIG_BLOCK_MAGIC2(lsa, su_block_receiver_c);
 GR_SWIG_BLOCK_MAGIC2(lsa, ic_ncfo_cc);
 %include "lsa/arq_tx.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, arq_tx);
-
 %include "lsa/dump_tx.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, dump_tx);
 %include "lsa/burst_tagger_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, burst_tagger_cc);
 %include "lsa/stop_n_wait_tag_gate_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_tag_gate_cc);
+%include "lsa/file_downloader_tx.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, file_downloader_tx);
