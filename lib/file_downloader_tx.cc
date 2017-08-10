@@ -168,8 +168,8 @@ namespace gr {
               if(d_seq==d_data_src.size()){
                 // download complete....
                 record_result();
-                reset_downloader();
                 boost::this_thread::sleep(boost::posix_time::milliseconds(10000));
+                reset_downloader();
               }else{
                 retry=0;
                 // if verbose, report download progress?

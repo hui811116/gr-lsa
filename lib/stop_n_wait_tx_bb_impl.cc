@@ -32,10 +32,10 @@ namespace gr {
     stop_n_wait_tx_bb::make(const std::string& tagname, 
                             const std::string& filename, 
                             bool usef,bool verb,int send,
-                            float mean, float std)
+                            float mean)
     {
       return gnuradio::get_initial_sptr
-        (new stop_n_wait_tx_bb_impl(tagname,filename,usef,verb,send, mean, std));
+        (new stop_n_wait_tx_bb_impl(tagname,filename,usef,verb,send, mean));
     }
 
     /*
@@ -44,15 +44,14 @@ namespace gr {
     stop_n_wait_tx_bb_impl::stop_n_wait_tx_bb_impl(const std::string& tagname,
                                                    const std::string& filename, 
                                                    bool usef,bool verb, int send,
-                                                   float mean, float std)
+                                                   float mean)
       : gr::tagged_stream_block("stop_n_wait_tx_bb",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(1, 1, sizeof(char)), tagname),
               d_in_port(pmt::mp("msg_in")),
               d_tagname(pmt::intern(tagname)),
               d_rng(),
-              d_mean(mean),
-              d_std(std)
+              d_mean(mean)
     {
       boost::poisson_distribution<> pd(d_mean);
       d_variate_poisson = boost::shared_ptr< boost::variate_generator<boost::mt19937, boost::poisson_distribution<> > >(
@@ -76,7 +75,6 @@ namespace gr {
       }
       set_send(send);
       d_send_cnt=0;
-      d_collision = false;
     }
 
     /*
@@ -127,9 +125,17 @@ namespace gr {
       size_t ctrl_type = pmt::to_long(pmt::dict_ref(msg,pmt::intern("SNS_ctrl"),pmt::from_long(-1)));
       int seqno = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));
       if(ctrl_type == SNS_COLLISION){
-        d_collision = true;
+        d_collision=true;
+        if(!d_sns_stop){
+          d_sns_stop = true;
+          d_gate_tag = true;
+        }
+        d_collision_rx.notify_one();
       }else if(ctrl_type == SNS_CLEAR){
-        d_collision = false;
+        if(d_sns_stop){
+          d_sns_stop = false;
+          d_send_cnt=0;
+        }
       }else if(seqno>=0){
         std::list<srArq_t>::iterator it;
         for(it = d_arq_list.begin();it!=d_arq_list.end();++it){
@@ -171,10 +177,31 @@ namespace gr {
       return d_variate_poisson->operator()();
     }
     void
+    stop_n_wait_tx_bb_impl::collision_timer()
+    {
+      while(!d_finished){
+        if(d_collision){
+          d_collision = false;
+          gr::thread::scoped_lock lock(d_mutex);
+          d_collision_rx.timed_wait(lock,boost::posix_time::milliseconds(5000));
+          lock.unlock();
+          if(!d_collision && d_sns_stop){
+            d_sns_stop = false;
+            d_send_cnt=0;
+          }
+        }else{
+          gr::thread::scoped_lock lock(d_mutex);
+          d_collision_rx.wait(lock);
+          lock.unlock();
+        }
+        if(d_finished){
+          return;
+        }
+      }
+    }
+    void
     stop_n_wait_tx_bb_impl::wait()
     {
-      int wait_cnt=0;
-      int wait_lim = 10000/d_mean;
       while(!d_finished){
         gr::thread::scoped_lock lock(d_mutex);
         d_wait_delay.wait(lock);
@@ -186,11 +213,7 @@ namespace gr {
         if(d_finished){
           return;
         }
-        wait_cnt = (d_collision)? wait_cnt+1 : wait_cnt;
-        if(!d_collision || wait_cnt>=wait_lim){
-          wait_cnt=0;
-          d_sns_stop=false;
-        }
+        d_sns_stop = false;
       }
     }
     int
@@ -292,16 +315,21 @@ namespace gr {
         (new gr::thread::thread(boost::bind(&stop_n_wait_tx_bb_impl::run,this)));
       d_stop_thread = boost::shared_ptr<gr::thread::thread>
         (new gr::thread::thread(boost::bind(&stop_n_wait_tx_bb_impl::wait,this)));
+      d_collision_thread = boost::shared_ptr<gr::thread::thread>
+        (new gr::thread::thread(boost::bind(&stop_n_wait_tx_bb_impl::collision_timer,this)));
       return block::start();
     }
     bool
     stop_n_wait_tx_bb_impl::stop()
     {
       d_finished = true;
+      d_wait_delay.notify_one();
       d_thread->interrupt();
       d_stop_thread->interrupt();
+      d_collision_thread->interrupt();
       d_stop_thread->join();
       d_thread->join();
+      d_collision_thread->join();
       return block::stop();
     }
     void

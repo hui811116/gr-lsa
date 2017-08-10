@@ -4,7 +4,7 @@
   <key>lsa_stop_n_wait_tx_bb</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.stop_n_wait_tx_bb($tagname,$filename,$usef,$verb,$send,$mean,$std)</make>
+  <make>lsa.stop_n_wait_tx_bb($tagname,$filename,$usef,$verb,$send,$mean)</make>
   <callback>set_send($send)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
@@ -61,12 +61,6 @@
     <name>Mean</name>
     <key>mean</key>
     <value>1000</value>
-    <type>float</type>
-  </param>
-  <param>
-    <name>Std</name>
-    <key>std</key>
-    <value>100</value>
     <type>float</type>
   </param>
   <!-- Make one 'sink' node per input. Sub-nodes:

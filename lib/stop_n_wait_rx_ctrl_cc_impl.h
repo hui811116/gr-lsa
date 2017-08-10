@@ -64,7 +64,7 @@ namespace gr {
       void enter_ed_pu();
       void enter_ed_sns();
       void notify_clear();
-      
+      void pub_clear();
      public:
       stop_n_wait_rx_ctrl_cc_impl(float ed_thres,const std::vector<gr_complex>& samples);
       ~stop_n_wait_rx_ctrl_cc_impl();

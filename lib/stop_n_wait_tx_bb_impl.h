@@ -50,7 +50,9 @@ namespace gr {
       float d_mean;
       float d_std;
       boost::shared_ptr<gr::thread::thread> d_stop_thread;
+      boost::shared_ptr<gr::thread::thread> d_collision_thread;
       gr::thread::condition_variable d_wait_delay;
+      gr::thread::condition_variable d_collision_rx;
 
       const pmt::pmt_t d_in_port;
       const pmt::pmt_t d_tagname;
@@ -80,11 +82,12 @@ namespace gr {
       void generate_new_pkt(const unsigned char* in, int nin);
       void run();
       void wait();
+      void collision_timer();
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
 
      public:
-      stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef, bool verb, int send, float mean, float std);
+      stop_n_wait_tx_bb_impl(const std::string& tagname,const std::string& filename, bool usef, bool verb, int send, float mean);
       ~stop_n_wait_tx_bb_impl();
 
       // Where all the action really happens

@@ -73,24 +73,28 @@ namespace gr {
       d_state = ED_LISTEN;
       d_ed_cnt=0;
       d_voe_cnt=0;
+      DEBUG<<"<SNS CTRL DEBUG>enter listen"<<std::endl;
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_sfd()
     {
       d_state = ED_SFD;
       d_ed_cnt=0;
+      DEBUG<<"<SNS CTRL DEBUG>enter sfd"<<std::endl;
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_ed_pu()
     {
       d_state = ED_DETECT_PU;
       d_ed_cnt=0;
+      DEBUG<<"<SNS CTRL DEBUG>enter ed pu"<<std::endl;
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_ed_sns()
     {
       d_state = ED_DETECT_SNS;
       d_ed_cnt=0;
+      DEBUG<<"<SNS CTRL DEBUG>enter ed sns"<<std::endl;
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::enter_silent()
@@ -98,11 +102,24 @@ namespace gr {
       d_state = ED_SILENT;
       d_silent_trig = false;
       d_ed_cnt=0;
+      DEBUG<<"<SNS CTRL DEBUG>enter silent"<<std::endl;
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::notify_clear()
     {
-      message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sns_clear,3)));
+      //message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sns_clear,3)));
+      gr::thread::thread(&stop_n_wait_rx_ctrl_cc_impl::pub_clear,this).detach();
+    }
+    void
+    stop_n_wait_rx_ctrl_cc_impl::pub_clear()
+    {
+      int count =0;
+      while(count<2){
+        message_port_pub(d_out_port,pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_sns_clear,3)));
+        boost::this_thread::sleep(boost::posix_time::milliseconds(25));
+        count++;
+      }
+      DEBUG<<"<SNS CTRL DEBUG>pub message complete"<<std::endl;
     }
     void
     stop_n_wait_rx_ctrl_cc_impl::set_ed_threshold(float thres)
@@ -250,6 +267,7 @@ namespace gr {
                       enter_listen();
                       break;
                     }else{
+                      DEBUG<<"<SNS RX CTRL DEBUG>Triggered set to false"<<std::endl;
                       d_silent_trig = false;
                       d_ed_cnt=0;
                     }
@@ -261,6 +279,7 @@ namespace gr {
                 if(ed[count++]>d_ed_thres){
                   d_ed_cnt++;
                   if(d_ed_cnt>=d_valid){
+                    DEBUG<<"<SNS RX CTRL DEBUG>Triggered set to true"<<std::endl;
                     d_silent_trig = true;
                     d_ed_cnt=0;
                   }
