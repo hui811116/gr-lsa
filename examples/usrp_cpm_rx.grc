@@ -1147,11 +1147,11 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>filename</key>
-      <value>/home/nic-hui/project/data/goodput/lsa-b20/inr30/gp074gs081p200_dc.txt</value>
+      <value>/home/nic-hui/project/data/goodput/sns-update/gp044gs050p100_dc.txt</value>
     </param>
     <param>
       <key>_coordinate</key>

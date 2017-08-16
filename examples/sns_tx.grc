@@ -566,7 +566,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>0.6</value>
+      <value>0.48</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -1308,10 +1308,6 @@
     <param>
       <key>send</key>
       <value>sns_send</value>
-    </param>
-    <param>
-      <key>std</key>
-      <value>100</value>
     </param>
     <param>
       <key>tagname</key>
