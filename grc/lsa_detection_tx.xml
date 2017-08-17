@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<block>
+  <name>Detector TX</name>
+  <key>lsa_detection_tx</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.detection_tx($filename,$slot)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>File</name>
+    <key>filename</key>
+    <value></value>
+    <type>file_open</type>
+  </param>
+  <param>
+    <name>Time slot(ms)</name>
+    <key>slot</key>
+    <value>1000</value>
+    <type>float</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>fb_in</name>
+    <type>message</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>pdu_out</name>
+    <type>message</type>
+  </source>
+</block>

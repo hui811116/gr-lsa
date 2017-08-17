@@ -52,5 +52,6 @@ install(FILES
     lsa_dump_tx.xml
     lsa_burst_tagger_cc.xml
     lsa_stop_n_wait_tag_gate_cc.xml
-    lsa_file_downloader_tx.xml DESTINATION share/gnuradio/grc/blocks
+    lsa_file_downloader_tx.xml
+    lsa_detection_tx.xml DESTINATION share/gnuradio/grc/blocks
 )

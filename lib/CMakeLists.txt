@@ -61,7 +61,8 @@ list(APPEND lsa_sources
     dump_tx.cc
     burst_tagger_cc_impl.cc
     stop_n_wait_tag_gate_cc_impl.cc
-    file_downloader_tx.cc )
+    file_downloader_tx.cc
+    detection_tx.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

@@ -57,5 +57,6 @@ install(FILES
     dump_tx.h
     burst_tagger_cc.h
     stop_n_wait_tag_gate_cc.h
-    file_downloader_tx.h DESTINATION include/lsa
+    file_downloader_tx.h
+    detection_tx.h DESTINATION include/lsa
 )
