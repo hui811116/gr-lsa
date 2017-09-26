@@ -101,8 +101,10 @@ namespace gr {
             return;
           }
           boost::posix_time::time_duration diff = boost::posix_time::second_clock::local_time() -d_start_time;
-          std::cout<<"<DETECTOR Report> Time spent:"<<diff.total_seconds()
-          <<" Total event:"<<d_h0_cnt+d_h1_cnt<<" ,md_cnt="<<d_md_cnt<<" ,fa_cnt="<<d_fa_cnt<<std::endl;
+          //std::cout<<"<DETECTOR Report> Time spent:"<<diff.total_seconds()
+          //<<" ,H1 event:"<<d_h0_cnt<<",H0 event:"<<d_h1_cnt<<" ,md_cnt="<<d_md_cnt<<" ,fa_cnt="<<d_fa_cnt<<std::endl;
+          std::cout<<"<Detector report>(Time, H1, H0, MD, FA)=("<<diff.total_seconds()<<","<<d_h1_cnt<<","
+          <<d_h0_cnt<<","<<d_md_cnt<<","<<d_fa_cnt<<")"<<std::endl;
         }
       }
       void run()

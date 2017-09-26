@@ -395,7 +395,7 @@
     </param>
     <param>
       <key>value</key>
-      <value>0.66</value>
+      <value>0.52</value>
     </param>
     <param>
       <key>_enabled</key>
@@ -403,7 +403,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(0, 648)</value>
+      <value>(840, 288)</value>
     </param>
     <param>
       <key>gui_hint</key>
@@ -1242,11 +1242,7 @@
     </param>
   </block>
   <block>
-    <key>lsa_dump_tx</key>
-    <param>
-      <key>avg_size</key>
-      <value>30</value>
-    </param>
+    <key>lsa_detection_tx</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1261,66 +1257,15 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>filename</key>
-      <value>/home/nic-hui/project/data/data_100.csv</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(536, 288)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>lsa_dump_tx_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>timeout</key>
-      <value>5000</value>
-    </param>
-    <param>
-      <key>verb</key>
       <value>True</value>
     </param>
-  </block>
-  <block>
-    <key>lsa_file_downloader_tx</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>0</value>
-    </param>
     <param>
       <key>filename</key>
-      <value></value>
+      <value>/home/nic-hui/project/data/data_b20.csv</value>
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(544, 380)</value>
+      <value>(576, 292)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1328,19 +1273,19 @@
     </param>
     <param>
       <key>id</key>
-      <value>lsa_file_downloader_tx_0</value>
+      <value>lsa_detection_tx_0</value>
     </param>
     <param>
       <key>maxoutbuf</key>
       <value>0</value>
     </param>
     <param>
-      <key>mean</key>
-      <value>1000</value>
-    </param>
-    <param>
       <key>minoutbuf</key>
       <value>0</value>
+    </param>
+    <param>
+      <key>slot</key>
+      <value>50</value>
     </param>
   </block>
   <block>
@@ -3734,12 +3679,6 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>blocks_message_strobe_random_0</source_block_id>
-    <sink_block_id>lsa_dump_tx_0</sink_block_id>
-    <source_key>strobe</source_key>
-    <sink_key>strobe</sink_key>
-  </connection>
-  <connection>
     <source_block_id>blocks_multiply_xx_0</source_block_id>
     <sink_block_id>blocks_complex_to_float_0</sink_block_id>
     <source_key>0</source_key>
@@ -3794,13 +3733,7 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_dump_tx_0</source_block_id>
-    <sink_block_id>lsa_preamble_prefixer_0</sink_block_id>
-    <source_key>pdu_out</source_key>
-    <sink_key>in</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_file_downloader_tx_0</source_block_id>
+    <source_block_id>lsa_detection_tx_0</source_block_id>
     <sink_block_id>lsa_preamble_prefixer_0</sink_block_id>
     <source_key>pdu_out</source_key>
     <sink_key>in</sink_key>
@@ -3819,15 +3752,9 @@
   </connection>
   <connection>
     <source_block_id>lsa_prou_packet_sink_f_0</source_block_id>
-    <sink_block_id>lsa_dump_tx_0</sink_block_id>
+    <sink_block_id>lsa_detection_tx_0</sink_block_id>
     <source_key>pkt_out</source_key>
-    <sink_key>ack_in</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>lsa_prou_packet_sink_f_0</source_block_id>
-    <sink_block_id>lsa_file_downloader_tx_0</sink_block_id>
-    <source_key>pkt_out</source_key>
-    <sink_key>ack_in</sink_key>
+    <sink_key>fb_in</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_prou_packet_sink_f_0</source_block_id>

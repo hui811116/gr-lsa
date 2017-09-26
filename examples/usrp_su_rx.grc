@@ -1286,7 +1286,7 @@
     </param>
     <param>
       <key>const</key>
-      <value>100</value>
+      <value>500</value>
     </param>
     <param>
       <key>affinity</key>
