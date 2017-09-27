@@ -6,7 +6,7 @@ A prototype for the implementation of a sensing delay resilient spectrum sharing
 
 The work is published in Sep. 2017. NTU, Taiwan.
 
-This prototype can operated in both simulation and USRP real-time transmission
+This prototype can operate in both simulation and USRP real-time transmission
 
 Current version only support LINUX environment.
 
