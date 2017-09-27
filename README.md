@@ -2,14 +2,14 @@
 
 Overview
 
-This is a developing module based on the open source software Gnuradio
+A prototype for the implementation of a sensing delay resilient spectrum sharing system
 
-this is a prototype for interference cancellation. 
+The work is published in Sep. 2017. NTU, Taiwan.
 
-It is aided by the retransmission commonly used in standard communication technologies.
+This prototype can operated in both simulation and USRP real-time transmission
 
-With retransmission, the interfered signal can be subtracted with proper channel impairment compensation.
+Current version only support LINUX environment.
 
+For reference, we develop the prototype in ubunut 16.04 operating system.
 
-
-
+If you are interested in this work. Welcome to contact us.
