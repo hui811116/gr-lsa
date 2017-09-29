@@ -392,8 +392,8 @@ namespace gr {
       std::list< std::pair<int,hdr_t> >::reverse_iterator rit;
       int idx = hdr.index();
       for(rit=d_sfd_list.rbegin();rit!=d_sfd_list.rend();rit++){
-        int distance1 = std::abs(std::get<0>(*rit)-idx);
-        int distance2 = std::abs(std::get<0>(*rit)+d_cap-idx);
+        int distance1 = std::abs((double)std::get<0>(*rit)-idx);
+        int distance2 = std::abs((double)std::get<0>(*rit)+d_cap-idx);
         if(std::min(distance1,distance2)<=min_dis){
           //DEBUG<<"<Resync>\033[34;1mMatching packets: dist1="<<distance1<<" ,dist2="<<distance2<<"\033[0m"<<std::endl;
           // possible matched case

@@ -22,8 +22,8 @@
 ########################################################################
 include(GrPlatform) #define LIB_SUFFIX
 
-include_directories(${Boost_INCLUDE_DIR})
-link_directories(${Boost_LIBRARY_DIRS})
+include_directories(${Boost_INCLUDE_DIR} ${VOLK_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARY_DIRS} ${VOLK_LIBRARY_DIRS})
 list(APPEND lsa_sources
     eng_det_cc_impl.cc
     interference_energy_detector_cc_impl.cc
@@ -70,7 +70,7 @@ if(NOT lsa_sources)
 endif(NOT lsa_sources)
 
 add_library(gnuradio-lsa SHARED ${lsa_sources})
-target_link_libraries(gnuradio-lsa ${Boost_LIBRARIES} ${GNURADIO_ALL_LIBRARIES})
+target_link_libraries(gnuradio-lsa ${Boost_LIBRARIES} ${GNURADIO_ALL_LIBRARIES} ${VOLK_LIBRARIES})
 set_target_properties(gnuradio-lsa PROPERTIES DEFINE_SYMBOL "gnuradio_lsa_EXPORTS")
 
 if(APPLE)
