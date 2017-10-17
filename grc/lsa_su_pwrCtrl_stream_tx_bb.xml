@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<block>
+  <name>SU Power Ctrl TX</name>
+  <key>lsa_su_pwrCtrl_stream_tx_bb</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.su_pwrCtrl_stream_tx_bb($tagname,$filename,$useFile,$pwr_low,$pwr_high)</make>
+  <callback>set_power($pwr_low,$pwr_high)</callback>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Tagname</name>
+    <key>tagname</key>
+    <value>"pkt_len"</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Filename</name>
+    <key>filename</key>
+    <value></value>
+    <type>file_open</type>
+  </param>
+  <param>
+    <name>Use File</name>
+    <key>useFile</key>
+    <value>True</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Low Power(dB)</name>
+    <key>pwr_low</key>
+    <value>20</value>
+    <type>float</type>
+  </param>
+  <param>
+    <name>High Power(dB)</name>
+    <key>pwr_high</key>
+    <value>50</value>
+    <type>float</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>byte</type>
+  </sink>
+  <sink>
+    <name>fb_in</name>
+    <type>message</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>byte</type>
+  </source>
+  <source>
+    <name>pwr_out</name>
+    <type>message</type>
+  </source>
+</block>

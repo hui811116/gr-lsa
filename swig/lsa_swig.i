@@ -56,6 +56,7 @@
 %include "gnuradio/filter/fir_filter.h"
 %{
 #include "gnuradio/blocks/count_bits.h"
+#include "lsa/su_pwrCtrl_stream_tx_bb.h"
 %}
 %include "gnuradio/blocks/count_bits.h"
 
@@ -131,3 +132,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, burst_tagger_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_tag_gate_cc);
 %include "lsa/file_downloader_tx.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, file_downloader_tx);
+%include "lsa/su_pwrCtrl_stream_tx_bb.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, su_pwrCtrl_stream_tx_bb);
