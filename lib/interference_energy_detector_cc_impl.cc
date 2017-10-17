@@ -33,7 +33,7 @@ namespace gr {
 
     interference_energy_detector_cc::sptr
     interference_energy_detector_cc::make(
-      size_t blocklength,
+      int blocklength,
       bool debug)
     {
       return gnuradio::get_initial_sptr
@@ -46,7 +46,7 @@ namespace gr {
      * The private constructor
      */
     interference_energy_detector_cc_impl::interference_energy_detector_cc_impl(
-      size_t blocklength,
+      int blocklength,
       bool debug)
       : gr::block("interference_energy_detector_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
@@ -73,7 +73,7 @@ namespace gr {
     }
 
     void
-    interference_energy_detector_cc_impl::set_blocklength(size_t blocklength)
+    interference_energy_detector_cc_impl::set_blocklength(int blocklength)
     {
       if(blocklength<0){
         throw std::invalid_argument("Block length cannot be negative");
@@ -82,7 +82,7 @@ namespace gr {
       set_history(d_blocklength);
     }
 
-    size_t
+    int
     interference_energy_detector_cc_impl::blocklength() const
     {
       return d_blocklength;

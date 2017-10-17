@@ -50,11 +50,11 @@ namespace gr {
        */
 
       static sptr make(
-        size_t blocklength,
+        int blocklength,
         bool debug);
 
-      virtual void set_blocklength(size_t blocklength) =0;
-      virtual size_t blocklength() const =0;
+      virtual void set_blocklength(int blocklength) =0;
+      virtual int blocklength() const =0;
     };
 
   } // namespace lsa

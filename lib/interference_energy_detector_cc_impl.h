@@ -44,7 +44,7 @@ namespace gr {
 
      public:
       interference_energy_detector_cc_impl(
-        size_t blocklength,
+        int blocklength,
         bool debug);
       ~interference_energy_detector_cc_impl();
 
@@ -56,8 +56,8 @@ namespace gr {
            gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
 
-      void set_blocklength(size_t blocklength);
-      size_t blocklength() const;
+      void set_blocklength(int blocklength);
+      int blocklength() const;
     };
 
   } // namespace lsa
