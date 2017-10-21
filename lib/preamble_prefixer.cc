@@ -86,7 +86,9 @@ namespace gr {
       assert(pmt::is_pair(msg));
       pmt::pmt_t mac_tag = pmt::car(msg);
       pmt::pmt_t blob = pmt::cdr(msg);
-      assert(pmt::is_blob(blob));
+      if(!pmt::is_blob(blob)){
+        return;
+      }
       size_t vlen = pmt::blob_length(blob);
       assert(vlen <= MAXIMUM_LEN);
       memcpy(d_buf+LSA_PREAMBLE_LEN,pmt::blob_data(blob),vlen);

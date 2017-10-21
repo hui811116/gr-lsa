@@ -32,6 +32,8 @@ namespace gr {
     #define PHYLEN 6
     #define HDRLEN 4
     #define RETRYLIMIT 10
+    #define EVENT_COLLISION 2
+    #define EVENT_CLEAR 3
     static unsigned char d_su_preamble[] = {0x00,0x00,0x00,0x00,0xE6,0x00};
     static int d_hdr_len = 4;
     su_pwrCtrl_stream_tx_bb::sptr
@@ -122,8 +124,12 @@ namespace gr {
     su_pwrCtrl_stream_tx_bb_impl::fb_in(pmt::pmt_t msg)
     {
       gr::thread::scoped_lock guard(d_mutex);
-      bool sensing = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("LSA_sensing"),pmt::PMT_F));
-      bool pu_clear = pmt::to_bool(pmt::dict_ref(msg,pmt::intern("PWR_clear"),pmt::PMT_F));
+      if(!pmt::dict_has_key(msg,pmt::intern("SNS_ctrl"))){
+        return;
+      }
+      int ctrl_type = pmt::to_long(pmt::dict_ref(msg,pmt::intern("SNS_ctrl"),pmt::from_long(-1)));
+      bool sensing = (ctrl_type == EVENT_COLLISION);
+      bool pu_clear = (ctrl_type == EVENT_CLEAR);
       int seqno = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));
       std::list<boost::tuples::tuple<uint16_t, boost::posix_time::ptime, int> >::iterator it;
       if(sensing){
