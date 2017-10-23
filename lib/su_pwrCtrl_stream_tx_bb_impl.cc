@@ -28,6 +28,8 @@
 
 namespace gr {
   namespace lsa {
+    #define d_debug 1
+    #define dout d_debug && std::cout
     #define TIMEOUT_MS 5000
     #define PHYLEN 6
     #define HDRLEN 4
@@ -79,6 +81,7 @@ namespace gr {
       d_failed_pkt = 0;
       memcpy(d_buf,d_su_preamble,sizeof(char)*PHYLEN);
       set_power(pwr1,pwr2);
+      update_sysTime();
     }
 
     /*
@@ -132,6 +135,8 @@ namespace gr {
       bool pu_clear = (ctrl_type == EVENT_CLEAR);
       int seqno = pmt::to_long(pmt::dict_ref(msg,pmt::intern("base"),pmt::from_long(-1)));
       std::list<boost::tuples::tuple<uint16_t, boost::posix_time::ptime, int> >::iterator it;
+      boost::posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - d_sys_time;
+
       if(sensing){
         if(!d_collision_state){
           d_collision_state = true;
@@ -155,6 +160,10 @@ namespace gr {
         if(tmp_seq == seqno){
           it = d_ack_pending.erase(it);
           d_success_pkt++;
+          if(d_success_pkt % d_fileSize == 0){
+            dout<<"send "<<d_fileSize<<" packets in "<<diff.total_milliseconds()<<" ms"<<std::endl;
+            update_sysTime();
+          }
           break;
         }
         it++;
@@ -195,7 +204,24 @@ namespace gr {
     {
       return d_pwr_high;
     }
+    void
+    su_pwrCtrl_stream_tx_bb_impl::reset_pktCnt(bool reset)
+    {
+      gr::thread::scoped_lock guard(d_mutex);
+      if(reset){
+        dout<<"Reset Packet Counters....."<<std::endl;
+        d_seqno = 0;
+        d_success_pkt =0;
+        d_failed_pkt = 0;
+        update_sysTime();  
+      }
+    }
     // helper functions
+    void
+    su_pwrCtrl_stream_tx_bb_impl::update_sysTime()
+    {
+      d_sys_time = boost::posix_time::microsec_clock::local_time();
+    }
     bool
     su_pwrCtrl_stream_tx_bb_impl::checkTimeout()
     {

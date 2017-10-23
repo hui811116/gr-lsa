@@ -6,6 +6,7 @@
   <import>import lsa</import>
   <make>lsa.su_pwrCtrl_stream_tx_bb($tagname,$filename,$useFile,$pwr_low,$pwr_high)</make>
   <callback>set_power($pwr_low,$pwr_high)</callback>
+  <callback>reset_pktCnt($resetCnt)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -48,6 +49,12 @@
     <key>pwr_high</key>
     <value>50</value>
     <type>float</type>
+  </param>
+  <param>
+    <name>Reset Counter</name>
+    <key>resetCnt</key>
+    <value>False</value>
+    <type>bool</type>
   </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:

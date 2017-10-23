@@ -54,6 +54,7 @@ namespace gr {
       bool checkTimeout();
       bool read_data(const std::string& filename);
       void run();
+      void update_sysTime();
 
      protected:
       int calculate_output_stream_length(const gr_vector_int &ninput_items);
@@ -67,7 +68,7 @@ namespace gr {
         float pwr2);
       ~su_pwrCtrl_stream_tx_bb_impl();
       void fb_in(pmt::pmt_t msg);
-
+      void reset_pktCnt(bool reset);
       void set_power(float pwr1, float pwr2);
       float power_low() const;
       float power_high() const;

@@ -55,6 +55,7 @@ namespace gr {
       virtual void set_power(float pwr1, float pwr2)=0;
       virtual float power_low() const =0;
       virtual float power_high() const=0;
+      virtual void reset_pktCnt(bool reset) =0;
     };
 
   } // namespace lsa
