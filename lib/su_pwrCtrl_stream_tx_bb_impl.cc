@@ -28,7 +28,7 @@
 
 namespace gr {
   namespace lsa {
-    #define d_debug 1
+    #define d_debug 0
     #define dout d_debug && std::cout
     #define TIMEOUT_MS 5000
     #define PHYLEN 6

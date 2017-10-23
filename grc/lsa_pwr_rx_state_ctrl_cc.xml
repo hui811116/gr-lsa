@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<block>
+  <name>PWR RX State CTRL</name>
+  <key>lsa_pwr_rx_state_ctrl_cc</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.pwr_rx_state_ctrl_cc($samples,$thres,$gapLen)</make>
+  <callback>set_threshold($thres)</callback>
+  <callback>set_gap($gapLen)</callback>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Sync Word</name>
+    <key>samples</key>
+    <type>complex_vector</type>
+  </param>
+  <param>
+    <name>Threshold</name>
+    <key>thres</key>
+    <value>0.75</value>
+    <type>float</type>
+  </param>
+  <param>
+    <name>Gap Length</name>
+    <key>gapLen</key>
+    <value>2560</value>
+    <type>int</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>complex</type>
+  </source>
+  <source>
+    <name>corr</name>
+    <type>complex</type>
+    <optional>1</optional>
+  </source>
+  <source>
+    <name>fb_out</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+</block>

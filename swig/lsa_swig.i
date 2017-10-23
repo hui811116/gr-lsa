@@ -47,18 +47,18 @@
 #include "lsa/burst_tagger_cc.h"
 #include "lsa/stop_n_wait_tag_gate_cc.h"
 #include "lsa/file_downloader_tx.h"
+#include "lsa/su_pwrCtrl_stream_tx_bb.h"
+#include "lsa/pwr_rx_state_ctrl_cc.h"
 %}
 
+
 %include "gnuradio/digital/constellation.h"
+%include "gnuradio/filter/fir_filter.h"
+%include "gnuradio/blocks/count_bits.h"
 %{
 #include "gnuradio/filter/fir_filter.h"
-%}
-%include "gnuradio/filter/fir_filter.h"
-%{
 #include "gnuradio/blocks/count_bits.h"
-#include "lsa/su_pwrCtrl_stream_tx_bb.h"
 %}
-%include "gnuradio/blocks/count_bits.h"
 
 %include "lsa/eng_det_cc.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, eng_det_cc);
@@ -134,3 +134,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, stop_n_wait_tag_gate_cc);
 GR_SWIG_BLOCK_MAGIC2(lsa, file_downloader_tx);
 %include "lsa/su_pwrCtrl_stream_tx_bb.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, su_pwrCtrl_stream_tx_bb);
+%include "lsa/pwr_rx_state_ctrl_cc.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, pwr_rx_state_ctrl_cc);
