@@ -35,44 +35,29 @@ namespace gr {
     static const unsigned char d_collision_bytes[] = {0xff,0x00};
     static const unsigned char d_clear_bytes[] = {0x00,0xff,0x0f};
     pwr_rx_state_ctrl_cc::sptr
-    pwr_rx_state_ctrl_cc::make(
-      const std::vector<gr_complex>& samples,
-      float threshold,
-      int gapLen)
+    pwr_rx_state_ctrl_cc::make()
     {
       return gnuradio::get_initial_sptr
-        (new pwr_rx_state_ctrl_cc_impl(samples,threshold,gapLen));
+        (new pwr_rx_state_ctrl_cc_impl());
     }
 
     /*
      * The private constructor
      */
-    pwr_rx_state_ctrl_cc_impl::pwr_rx_state_ctrl_cc_impl(
-      const std::vector<gr_complex>& samples,
-      float threshold,
-      int gapLen)
+    pwr_rx_state_ctrl_cc_impl::pwr_rx_state_ctrl_cc_impl()
       : gr::block("pwr_rx_state_ctrl_cc",
               gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make2(1, 2, sizeof(gr_complex),sizeof(gr_complex))),
-              d_max_out(8192*2),
+              gr::io_signature::make(1, 1, sizeof(gr_complex))),
               d_fb_port(pmt::mp("fb_out")),
+              d_in_port(pmt::mp("pu_in")),
               d_colli_blob(pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_collision_bytes,EVENT_COLLISION))),
               d_clear_blob(pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_clear_bytes,EVENT_CLEAR)))
     {
-      const int outMax = 8192*2;
-      if(samples.empty()){
-        throw std::invalid_argument("Empty sync words");
-      }
-      d_samples = samples;
-      volk_32fc_x2_conjugate_dot_prod_32fc(&d_sEng, samples.data(),samples.data(),samples.size());
       enter_idle();
       message_port_register_out(d_fb_port);
+      message_port_register_in(d_in_port);
+      set_msg_handler(d_in_port,boost::bind(&pwr_rx_state_ctrl_cc_impl::pu_msg_in,this,_1));
       set_tag_propagation_policy(TPP_DONT);
-      set_history(samples.size());
-      set_max_noutput_items(outMax);
-      d_corr_buf= (gr_complex*) volk_malloc(sizeof(gr_complex)*(outMax),volk_get_alignment());
-      set_threshold(threshold);
-      set_gap(gapLen);
       d_report_event = IDLE;
     }
 
@@ -81,34 +66,6 @@ namespace gr {
      */
     pwr_rx_state_ctrl_cc_impl::~pwr_rx_state_ctrl_cc_impl()
     {
-      volk_free(d_corr_buf);
-    }
-
-    void
-    pwr_rx_state_ctrl_cc_impl::set_threshold(float thres)
-    {
-      if(thres>1 || thres<0)
-        throw std::runtime_error("threshold should be within 1");
-      d_threshold = thres;
-    }
-    float
-    pwr_rx_state_ctrl_cc_impl::get_threshold() const
-    {
-      return d_threshold;
-    }
-    void
-    pwr_rx_state_ctrl_cc_impl::set_gap(int gapLen)
-    {
-      if(gapLen<=0){
-        throw std::invalid_argument("Gap size should be positive");
-      }
-      d_gapLen = gapLen;
-      d_gap_cnt =0;
-    }
-    int
-    pwr_rx_state_ctrl_cc_impl::get_gap()const
-    {
-      return d_gapLen;
     }
 
     void
@@ -116,7 +73,6 @@ namespace gr {
     {
       d_state = IDLE;
       d_collision_cnt =0;
-      d_gap_cnt =0;
       pub_msg(EVENT_CLEAR);
     }
     void
@@ -124,7 +80,6 @@ namespace gr {
     {
       d_state = COLLISION;
       d_collision_cnt++;
-      d_gap_cnt =0;
       pub_msg(EVENT_COLLISION);
     }
     void
@@ -152,6 +107,25 @@ namespace gr {
         }
       }
     }
+    void
+    pwr_rx_state_ctrl_cc_impl::pu_msg_in(pmt::pmt_t msg)
+    {
+      pmt::pmt_t k = pmt::car(msg);
+      pmt::pmt_t v = pmt::cdr(msg);
+      if(pmt::is_blob(v)){
+        size_t io(0);
+        const uint8_t* uvec = pmt::u8vector_elements(v,io);
+        if(io>0){
+          // valid pu packet
+          if(d_state == COLLISION && !d_voe_state){
+            d_collision_cnt--;
+            if(d_collision_cnt==0){
+              enter_idle();
+            }
+          }
+        }
+      }
+    }
     bool
     pwr_rx_state_ctrl_cc_impl::start()
     {
@@ -173,7 +147,7 @@ namespace gr {
     pwr_rx_state_ctrl_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
       for(int i=0;i<ninput_items_required.size();++i)
-        ninput_items_required[i] = noutput_items + history();
+        ninput_items_required[i] = noutput_items;
     }
 
     int
@@ -184,16 +158,9 @@ namespace gr {
     {
       const gr_complex *in = (const gr_complex *) input_items[0];
       gr_complex *out = (gr_complex *) output_items[0];
-      gr_complex *corr= d_corr_buf;
-      bool outCorr = (output_items.size()==2);
-      if(outCorr){
-        corr = (gr_complex *) output_items[1];
-      }
-      int nin = std::min(std::max((int)ninput_items[0]-(int)history(),0),noutput_items);
+      int nin = std::min(ninput_items[0],noutput_items);
       int count =0;
-      bool thresCheck = false;
       std::vector<tag_t> tags;
-      gr_complex corr_val, eng, corr_norm;
       if(nin==0){
         consume_each(0);
         return 0;
@@ -211,21 +178,21 @@ namespace gr {
             tags.erase(tags.begin());
           }
         }
-        volk_32fc_x2_conjugate_dot_prod_32fc(&corr_val,in+count,d_samples.data(),d_samples.size());
-        volk_32fc_x2_conjugate_dot_prod_32fc(&eng,in+count,in+count,d_samples.size());
-        corr_norm = corr_val / (std::sqrt(eng*d_sEng)+gr_complex(1e-6,0)); 
-        if(outCorr){
-          corr[count] = corr_norm;
-        }
-        if(std::abs(corr_norm)>=d_threshold){
+        //volk_32fc_x2_conjugate_dot_prod_32fc(&corr_val,in+count,d_samples.data(),d_samples.size());
+        //volk_32fc_x2_conjugate_dot_prod_32fc(&eng,in+count,in+count,d_samples.size());
+        //corr_norm = corr_val / (std::sqrt(eng*d_sEng)+gr_complex(1e-6,0)); 
+        //if(outCorr){
+        //  corr[count] = corr_norm;
+        //}
+        /*if(std::abs(corr_norm)>=d_threshold){
           if(d_state == COLLISION && !d_voe_state && d_gap_cnt>d_gapLen){
             d_collision_cnt--;
             if(d_collision_cnt==0){
               enter_idle();
             }
           }
-        }
-        d_gap_cnt++;
+        }*/
+        //d_gap_cnt++;
       }
       consume_each (count);
       return nin;

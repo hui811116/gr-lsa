@@ -46,12 +46,12 @@ namespace gr {
        * class. lsa::pwr_rx_state_ctrl_cc::make is the public interface for
        * creating new instances.
        */
-      virtual void set_threshold(float thres) =0;
+      /*virtual void set_threshold(float thres) =0;
       virtual float get_threshold() const =0;
       virtual void set_gap(int gapLen) =0;
-      virtual int get_gap() const =0;
+      virtual int get_gap() const =0;*/
 
-      static sptr make(const std::vector<gr_complex>& samples, float threshold, int gapLen);
+      static sptr make();
     };
 
   } // namespace lsa

@@ -797,9 +797,17 @@
     </param>
   </block>
   <block>
-    <key>variable</key>
+    <key>analog_quadrature_demod_cf</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
     <param>
       <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
       <value></value>
     </param>
     <param>
@@ -808,19 +816,27 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(8, 516)</value>
+      <value>(584, 380)</value>
     </param>
     <param>
       <key>_rotation</key>
       <value>0</value>
     </param>
     <param>
-      <key>id</key>
-      <value>zigPre</value>
+      <key>gain</key>
+      <value>1</value>
     </param>
     <param>
-      <key>value</key>
-      <value>[(0.00000000+0.00000000j),(0.70710677+0.00000000j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(-0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(-0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(-0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(-0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677+0.70710677j),(0.00000000+1.00000000j),(-0.70710677+0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(-0.70710677-0.70710677j),(-1.00000000+0.00000000j),(-0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j),(0.00000000-1.00000000j),(0.70710677-0.70710677j),(1.00000000+0.00000000j),(0.70710677+0.70710677j),(0.00000000+1.00000000j),(0.70710677+0.70710677j),(1.00000000+0.00000000j),(0.70710677-0.70710677j)]</value>
+      <key>id</key>
+      <value>analog_quadrature_demod_cf_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
     </param>
   </block>
   <block>
@@ -895,49 +911,6 @@
     <param>
       <key>id</key>
       <value>blocks_complex_to_mag_0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>vlen</key>
-      <value>1</value>
-    </param>
-  </block>
-  <block>
-    <key>blocks_complex_to_mag</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(432, 528)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>180</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>blocks_complex_to_mag_1</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -1541,6 +1514,57 @@
     </param>
   </block>
   <block>
+    <key>blocks_sub_xx</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(976, 376)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>blocks_sub_xx_0</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>num_inputs</key>
+      <value>2</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
     <key>blocks_tag_gate</key>
     <param>
       <key>alias</key>
@@ -1648,6 +1672,69 @@
     <param>
       <key>vector</key>
       <value>[0, sin(pi/4), 1, sin(3*pi/4)]</value>
+    </param>
+  </block>
+  <block>
+    <key>digital_clock_recovery_mm_xx</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1088, 360)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>gain_mu</key>
+      <value>0.03</value>
+    </param>
+    <param>
+      <key>gain_omega</key>
+      <value>0.000225</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>digital_clock_recovery_mm_xx_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>mu</key>
+      <value>0.5</value>
+    </param>
+    <param>
+      <key>omega_relative_limit</key>
+      <value>0.0002</value>
+    </param>
+    <param>
+      <key>omega</key>
+      <value>2</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>float</value>
     </param>
   </block>
   <block>
@@ -2289,6 +2376,49 @@
     </param>
   </block>
   <block>
+    <key>lsa_prou_packet_sink_f</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1312, 396)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>lsa_prou_packet_sink_f_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>thres</key>
+      <value>10</value>
+    </param>
+  </block>
+  <block>
     <key>lsa_pwr_rx_state_ctrl_cc</key>
     <param>
       <key>alias</key>
@@ -2315,10 +2445,6 @@
       <value>180</value>
     </param>
     <param>
-      <key>gapLen</key>
-      <value>2560</value>
-    </param>
-    <param>
       <key>id</key>
       <value>lsa_pwr_rx_state_ctrl_cc_0</value>
     </param>
@@ -2329,14 +2455,6 @@
     <param>
       <key>minoutbuf</key>
       <value>0</value>
-    </param>
-    <param>
-      <key>samples</key>
-      <value>zigPre</value>
-    </param>
-    <param>
-      <key>thres</key>
-      <value>0.75</value>
     </param>
   </block>
   <block>
@@ -3072,7 +3190,7 @@
     </param>
     <param>
       <key>name</key>
-      <value>Cross correlation</value>
+      <value>Autocorrelation</value>
     </param>
     <param>
       <key>nconnections</key>
@@ -3499,6 +3617,57 @@
     </param>
   </block>
   <block>
+    <key>single_pole_iir_filter_xx</key>
+    <param>
+      <key>alpha</key>
+      <value>0.00016</value>
+    </param>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(776, 412)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>single_pole_iir_filter_xx_0</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+  </block>
+  <block>
     <key>qtgui_tab_widget</key>
     <param>
       <key>alias</key>
@@ -3725,7 +3894,7 @@
     </param>
     <param>
       <key>num_tabs</key>
-      <value>5</value>
+      <value>3</value>
     </param>
   </block>
   <block>
@@ -5891,6 +6060,18 @@
     </param>
   </block>
   <connection>
+    <source_block_id>analog_quadrature_demod_cf_0</source_block_id>
+    <sink_block_id>blocks_sub_xx_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>analog_quadrature_demod_cf_0</source_block_id>
+    <sink_block_id>single_pole_iir_filter_xx_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>blocks_complex_to_float_0</source_block_id>
     <sink_block_id>blocks_delay_0_0</sink_block_id>
     <source_key>1</source_key>
@@ -5909,12 +6090,6 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>blocks_complex_to_mag_1</source_block_id>
-    <sink_block_id>qtgui_time_sink_x_0_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
     <source_block_id>blocks_complex_to_mag_squared_0</source_block_id>
     <sink_block_id>lsa_moving_average_ff_0</sink_block_id>
     <source_key>0</source_key>
@@ -5925,6 +6100,12 @@
     <sink_block_id>blocks_multiply_xx_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>1</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>blocks_delay_0</source_block_id>
+    <sink_block_id>analog_quadrature_demod_cf_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>blocks_delay_0</source_block_id>
@@ -5949,6 +6130,12 @@
     <sink_block_id>lsa_coarse_sync_cc_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>2</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>blocks_divide_xx_0</source_block_id>
+    <sink_block_id>qtgui_time_sink_x_0_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>blocks_float_to_complex_0</source_block_id>
@@ -5999,6 +6186,12 @@
     <sink_key>1</sink_key>
   </connection>
   <connection>
+    <source_block_id>blocks_sub_xx_0</source_block_id>
+    <sink_block_id>digital_clock_recovery_mm_xx_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
     <source_block_id>blocks_tag_gate_0</source_block_id>
     <sink_block_id>blocks_float_to_complex_0</sink_block_id>
     <source_key>0</source_key>
@@ -6007,6 +6200,12 @@
   <connection>
     <source_block_id>blocks_vector_source_x_0</source_block_id>
     <sink_block_id>blocks_multiply_xx_0_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>0</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>digital_clock_recovery_mm_xx_0</source_block_id>
+    <sink_block_id>lsa_prou_packet_sink_f_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -6119,10 +6318,10 @@
     <sink_key>pdus</sink_key>
   </connection>
   <connection>
-    <source_block_id>lsa_pwr_rx_state_ctrl_cc_0</source_block_id>
-    <sink_block_id>blocks_complex_to_mag_1</sink_block_id>
-    <source_key>1</source_key>
-    <sink_key>0</sink_key>
+    <source_block_id>lsa_prou_packet_sink_f_0</source_block_id>
+    <sink_block_id>lsa_pwr_rx_state_ctrl_cc_0</sink_block_id>
+    <source_key>pkt_out</source_key>
+    <sink_key>pu_in</sink_key>
   </connection>
   <connection>
     <source_block_id>lsa_pwr_rx_state_ctrl_cc_0</source_block_id>
@@ -6147,6 +6346,12 @@
     <sink_block_id>lsa_phy_crc_0</sink_block_id>
     <source_key>msg</source_key>
     <sink_key>phy_in</sink_key>
+  </connection>
+  <connection>
+    <source_block_id>single_pole_iir_filter_xx_0</source_block_id>
+    <sink_block_id>blocks_sub_xx_0</sink_block_id>
+    <source_key>0</source_key>
+    <sink_key>1</sink_key>
   </connection>
   <connection>
     <source_block_id>uhd_usrp_source_0</source_block_id>

@@ -4,14 +4,13 @@
   <key>lsa_pwr_rx_state_ctrl_cc</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.pwr_rx_state_ctrl_cc($samples,$thres,$gapLen)</make>
-  <callback>set_threshold($thres)</callback>
-  <callback>set_gap($gapLen)</callback>
+  <make>lsa.pwr_rx_state_ctrl_cc()</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
+  <!--
   <param>
     <name>Sync Word</name>
     <key>samples</key>
@@ -29,7 +28,7 @@
     <value>2560</value>
     <type>int</type>
   </param>
-
+  -->
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
        * type
@@ -38,6 +37,10 @@
   <sink>
     <name>in</name>
     <type>complex</type>
+  </sink>
+  <sink>
+    <name>pu_in</name>
+    <type>message</type>
   </sink>
 
   <!-- Make one 'source' node per output. Sub-nodes:
@@ -48,11 +51,6 @@
   <source>
     <name>out</name>
     <type>complex</type>
-  </source>
-  <source>
-    <name>corr</name>
-    <type>complex</type>
-    <optional>1</optional>
   </source>
   <source>
     <name>fb_out</name>

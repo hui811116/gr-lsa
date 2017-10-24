@@ -29,19 +29,20 @@ namespace gr {
     class pwr_rx_state_ctrl_cc_impl : public pwr_rx_state_ctrl_cc
     {
      private:
-      pmt::pmt_t d_fb_port;
+      const pmt::pmt_t d_fb_port;
+      const pmt::pmt_t d_in_port;
       gr::thread::mutex d_mutex;
-      std::vector<gr_complex> d_samples;
-      gr_complex d_sEng;
-      gr_complex* d_corr_buf;
-      const int d_max_out;
+      //std::vector<gr_complex> d_samples;
+      //gr_complex d_sEng;
+      //gr_complex* d_corr_buf;
+      //const int d_max_out;
       int d_collision_cnt;
       int d_state;
-      int d_gap_cnt;
-      int d_gapLen;
+      //int d_gap_cnt;
+      //int d_gapLen;
       int d_report_event;
       bool d_voe_state;
-      float d_threshold;
+      //float d_threshold;
       const pmt::pmt_t d_colli_blob;
       const pmt::pmt_t d_clear_blob;
       boost::shared_ptr<gr::thread::thread> d_thread;
@@ -51,6 +52,7 @@ namespace gr {
       void enter_collision();
       void pub_msg(int event);
       void run();
+      void pu_msg_in(pmt::pmt_t msg);
 
      public:
       enum RXSTATE{
@@ -60,16 +62,12 @@ namespace gr {
       
       bool start();
       bool stop();
-      pwr_rx_state_ctrl_cc_impl(
-        const std::vector<gr_complex>& samples,
-        float threshold,
-        int gapLen
-        );
+      pwr_rx_state_ctrl_cc_impl();
       ~pwr_rx_state_ctrl_cc_impl();
-      void set_threshold(float thres);
-      float get_threshold() const;
-      void set_gap(int gapLen);
-      int get_gap() const;
+      //void set_threshold(float thres);
+      //float get_threshold() const;
+      //void set_gap(int gapLen);
+      //int get_gap() const;
       // Where all the action really happens
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 
