@@ -193,14 +193,14 @@ namespace gr {
       int count =0;
       bool thresCheck = false;
       std::vector<tag_t> tags;
-      gr_complex corr_val, eng;
+      gr_complex corr_val, eng, corr_norm;
       if(nin==0){
         consume_each(0);
         return 0;
       }
       memcpy(out,in,sizeof(gr_complex)*nin);
       get_tags_in_window(tags,0,0,nin,d_voe_tag);
-      for(int count = 0; count<nin;++count){
+      for(count = 0; count<nin;++count){
         if(!tags.empty()){
           int offset = tags[0].offset - nitems_read(0);
           if(offset == count){
@@ -213,23 +213,18 @@ namespace gr {
         }
         volk_32fc_x2_conjugate_dot_prod_32fc(&corr_val,in+count,d_samples.data(),d_samples.size());
         volk_32fc_x2_conjugate_dot_prod_32fc(&eng,in+count,in+count,d_samples.size());
-        corr[count] = corr_val/(std::sqrt(eng*d_sEng)+gr_complex(1e-6,0));
-        thresCheck = abs(corr[count])>=d_threshold;
-        if(d_state == IDLE){
-          if(thresCheck){
-              // debugging, not in collision state, but detect the sync word of PU
-          }
-        }else if(d_state == COLLISION){
-          if(thresCheck && !d_voe_state && d_gap_cnt>d_gapLen){
+        corr_norm = corr_val / (std::sqrt(eng*d_sEng)+gr_complex(1e-6,0)); 
+        if(outCorr){
+          corr[count] = corr_norm;
+        }
+        if(std::abs(corr_norm)>=d_threshold){
+          if(d_state == COLLISION && !d_voe_state && d_gap_cnt>d_gapLen){
             d_collision_cnt--;
             if(d_collision_cnt==0){
               enter_idle();
             }
           }
-        }else{
-          throw std::runtime_error("invalid state");
         }
-        count++;
         d_gap_cnt++;
       }
       consume_each (count);
