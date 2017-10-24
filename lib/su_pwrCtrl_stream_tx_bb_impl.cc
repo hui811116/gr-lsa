@@ -28,7 +28,7 @@
 
 namespace gr {
   namespace lsa {
-    #define d_debug 0
+    #define d_debug false
     #define dout d_debug && std::cout
     #define TIMEOUT_MS 5000
     #define PHYLEN 6
@@ -139,6 +139,7 @@ namespace gr {
 
       if(sensing){
         if(!d_collision_state){
+          dout<<"change tx state to collision and send a low power request"<<std::endl;
           d_collision_state = true;
           // change power to low level
           message_port_pub(d_pwr_out_port,pmt::cons(pmt::PMT_NIL,pmt::from_double((double)d_pwr_low)));
@@ -146,6 +147,7 @@ namespace gr {
         }
       }
       if(d_collision_state && pu_clear){
+        dout<<"Resolve a collision and return to high power configuration"<<std::endl;
         d_collision_state = false;
         message_port_pub(d_pwr_out_port,pmt::cons(pmt::PMT_NIL,pmt::from_double((double)d_pwr_high)));
         return;

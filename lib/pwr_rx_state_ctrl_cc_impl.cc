@@ -29,6 +29,8 @@
 
 namespace gr {
   namespace lsa {
+    #define d_debug 1
+    #define dout d_debug && std::cout
     #define EVENT_COLLISION 2
     #define EVENT_CLEAR 3
     static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
@@ -95,6 +97,7 @@ namespace gr {
         if(d_report_event == EVENT_CLEAR){
           message_port_pub(d_fb_port,d_clear_blob);
         }else if(d_report_event == EVENT_COLLISION){
+          dout<<"publish clear state"<<std::endl;
           message_port_pub(d_fb_port,d_colli_blob);
         }else{
           // undefined
@@ -116,9 +119,12 @@ namespace gr {
         size_t io(0);
         const uint8_t* uvec = pmt::u8vector_elements(v,io);
         if(io>0){
+          dout<<"received a valid pu packet of size="<<io<<std::endl;
           // valid pu packet
-          if(d_state == COLLISION && !d_voe_state){
+          if(d_state == COLLISION && d_collision_cnt>0){
+            // if detect a pu, subtract one
             d_collision_cnt--;
+            dout<<"resolved one collision, "<<d_collision_cnt<<" left"<<std::endl; 
             if(d_collision_cnt==0){
               enter_idle();
             }
