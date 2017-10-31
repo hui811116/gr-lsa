@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<block>
+  <name>SU PWR Sense TX</name>
+  <key>lsa_pwr_sense_tx_bb</key>
+  <category>[lsa]</category>
+  <import>import lsa</import>
+  <make>lsa.pwr_sense_tx_bb($tagname,$filename,$useF,$hPwr,$lPwr,$senseTime)</make>
+  <callback>set_power($hPwr,$lPwr)</callback>
+  <callback>set_sense_time($senseTime)</callback>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Tagname</name>
+    <key>tagname</key>
+    <value>"packet_len"</value>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Filename</name>
+    <key>filename</key>
+    <value></value>
+    <type>file_open</type>
+  </param>
+  <param>
+    <name>Use File</name>
+    <key>useF</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>High Power(dB)</name>
+    <key>hPwr</key>
+    <value>50</value>
+    <type>float</type>
+  </param>
+  <param>
+    <name>Low Power(dB)</name>
+    <key>lPwr</key>
+    <value>30</value>
+    <type>float</type>
+  </param>
+  <param>
+    <name>Sensing Time(ms)</name>
+    <key>senseTime</key>
+    <value>50</value>
+    <type>float</type>
+  </param>
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>byte</type>
+  </sink>
+  <sink>
+    <name>fb_in</name>
+    <type>message</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>byte</type>
+  </source>
+  <source>
+    <name>pwr_out</name>
+    <type>message</type>
+  </source>
+</block>

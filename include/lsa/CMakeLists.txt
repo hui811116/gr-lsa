@@ -59,5 +59,6 @@ install(FILES
     stop_n_wait_tag_gate_cc.h
     file_downloader_tx.h
     su_pwrCtrl_stream_tx_bb.h
-    pwr_rx_state_ctrl_cc.h DESTINATION include/lsa
+    pwr_rx_state_ctrl_cc.h
+    pwr_sense_tx_bb.h DESTINATION include/lsa
 )

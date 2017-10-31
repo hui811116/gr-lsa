@@ -63,7 +63,8 @@ list(APPEND lsa_sources
     stop_n_wait_tag_gate_cc_impl.cc
     file_downloader_tx.cc
     su_pwrCtrl_stream_tx_bb_impl.cc
-    pwr_rx_state_ctrl_cc_impl.cc )
+    pwr_rx_state_ctrl_cc_impl.cc
+    pwr_sense_tx_bb_impl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

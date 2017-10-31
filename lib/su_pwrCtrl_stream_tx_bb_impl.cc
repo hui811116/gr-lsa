@@ -293,14 +293,16 @@ namespace gr {
         d_ack_pending.push_back(boost::tuples::make_tuple(next_seq,nowTime,0));
       }
       pkt_len = (uint8_t) d_data_src[next_seq].size();
-      d_buf[PHYLEN-1] = pkt_len;
       uint8_t* u8_seq = (uint8_t*) &next_seq;
-      d_buf[PHYLEN] = u8_seq[1];
-      d_buf[PHYLEN+1] = u8_seq[0];
-      d_buf[PHYLEN+2] = u8_seq[1];
-      d_buf[PHYLEN+3] = u8_seq[0];
+      memcpy(out,d_buf,sizeof(char)*PHYLEN);
+      out[PHYLEN-1] = pkt_len + HDRLEN;
+      out[PHYLEN] = u8_seq[1];
+      out[PHYLEN+1] = u8_seq[0];
+      out[PHYLEN+2] = u8_seq[1];
+      out[PHYLEN+3] = u8_seq[0];
       noutput_items = pkt_len + PHYLEN+HDRLEN;
-      memcpy(out,d_buf,sizeof(char)*noutput_items);
+      memcpy(&out[PHYLEN+HDRLEN],d_data_src[next_seq].data(),sizeof(char)*pkt_len);
+      
       return noutput_items;
     }
 
