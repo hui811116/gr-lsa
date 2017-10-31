@@ -26,7 +26,7 @@
 #include "boost/tuple/tuple.hpp"
 namespace gr {
   namespace lsa {
-    #define d_debug 1
+    #define d_debug false
     #define dout d_debug && std::cout
     #define EVENT_COLLISION 2
     #define EVENT_CLEAR 3
