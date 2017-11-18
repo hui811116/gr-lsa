@@ -50,6 +50,7 @@
 #include "lsa/su_pwrCtrl_stream_tx_bb.h"
 #include "lsa/pwr_rx_state_ctrl_cc.h"
 #include "lsa/pwr_sense_tx_bb.h"
+#include "lsa/pwr_ctrl.h"
 %}
 
 
@@ -139,3 +140,5 @@ GR_SWIG_BLOCK_MAGIC2(lsa, su_pwrCtrl_stream_tx_bb);
 GR_SWIG_BLOCK_MAGIC2(lsa, pwr_rx_state_ctrl_cc);
 %include "lsa/pwr_sense_tx_bb.h"
 GR_SWIG_BLOCK_MAGIC2(lsa, pwr_sense_tx_bb);
+%include "lsa/pwr_ctrl.h"
+GR_SWIG_BLOCK_MAGIC2(lsa, pwr_ctrl);

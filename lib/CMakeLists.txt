@@ -64,7 +64,8 @@ list(APPEND lsa_sources
     file_downloader_tx.cc
     su_pwrCtrl_stream_tx_bb_impl.cc
     pwr_rx_state_ctrl_cc_impl.cc
-    pwr_sense_tx_bb_impl.cc )
+    pwr_sense_tx_bb_impl.cc
+    pwr_ctrl.cc )
 
 set(lsa_sources "${lsa_sources}" PARENT_SCOPE)
 if(NOT lsa_sources)

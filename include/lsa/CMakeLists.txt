@@ -60,5 +60,6 @@ install(FILES
     file_downloader_tx.h
     su_pwrCtrl_stream_tx_bb.h
     pwr_rx_state_ctrl_cc.h
-    pwr_sense_tx_bb.h DESTINATION include/lsa
+    pwr_sense_tx_bb.h
+    pwr_ctrl.h DESTINATION include/lsa
 )
