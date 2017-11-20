@@ -72,6 +72,7 @@ namespace gr {
       void set_power(float pwr1, float pwr2);
       float power_low() const;
       float power_high() const;
+      int success_packets() const;
 
       bool start();
       bool stop();

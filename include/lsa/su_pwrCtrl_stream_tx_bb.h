@@ -56,6 +56,7 @@ namespace gr {
       virtual float power_low() const =0;
       virtual float power_high() const=0;
       virtual void reset_pktCnt(bool reset) =0;
+      virtual int success_packets() const =0;
     };
 
   } // namespace lsa

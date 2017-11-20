@@ -206,6 +206,11 @@ namespace gr {
     {
       return d_pwr_high;
     }
+    int
+    su_pwrCtrl_stream_tx_bb_impl::success_packets() const
+    {
+      return d_success_pkt;
+    }
     void
     su_pwrCtrl_stream_tx_bb_impl::reset_pktCnt(bool reset)
     {
