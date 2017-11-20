@@ -64,6 +64,15 @@ namespace gr {
           d_pkt_failed_cnt=0;
         }
         ~simple_tx_impl(){}
+        void reset_system(bool reset)
+        {
+          gr::thread::scoped_lock guard(d_mutex);
+          if(reset){
+            d_pkt_success_cnt =0;
+            d_pkt_failed_cnt =0;
+            d_seqno = 0;
+          }
+        }
         bool start()
         {
           d_finished = false;

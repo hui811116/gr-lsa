@@ -31,7 +31,6 @@ list(APPEND lsa_sources
     correlate_sync_cc_impl.cc
     preamble_prefixer.cc
     su_ctrl.cc
-    chip_mapper.cc
     moving_average_cc_impl.cc
     moving_average_ff_impl.cc 
     coarse_sync_cc_impl.cc
@@ -41,7 +40,6 @@ list(APPEND lsa_sources
     su_sr_transmitter_bb_impl.cc
     su_tx_helper.cc
     su_packet_sink_c_impl.cc
-    throughput_report.cc
     utils.cc
     stop_n_wait_tx_bb_impl.cc
     stop_n_wait_rx_ctrl_cc_impl.cc
@@ -53,12 +51,9 @@ list(APPEND lsa_sources
     simple_rx.cc
     phy_crc.cc
     byte_to_symbol_bc_impl.cc
-    throughput_file_sink.cc
     ic_resync_cc_impl.cc
     su_block_receiver_c_impl.cc
     ic_ncfo_cc_impl.cc
-    arq_tx.cc
-    dump_tx.cc
     burst_tagger_cc_impl.cc
     stop_n_wait_tag_gate_cc_impl.cc
     file_downloader_tx.cc

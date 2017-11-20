@@ -36,8 +36,7 @@ namespace gr {
     {
     public:
       typedef boost::shared_ptr<pwr_ctrl> sptr;
-      static sptr make(float high_thres,float low_thres);
-      virtual void set_threshold(float high_thres,float low_thres)=0;
+      static sptr make();
     };
 
   } // namespace lsa

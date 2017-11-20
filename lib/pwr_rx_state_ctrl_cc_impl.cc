@@ -33,34 +33,27 @@ namespace gr {
     #define dout d_debug && std::cout
     #define EVENT_COLLISION 2
     #define EVENT_CLEAR 3
-    static const pmt::pmt_t d_voe_tag = pmt::intern("voe_tag");
-    static const unsigned char d_collision_bytes[] = {0xff,0x00};
-    static const unsigned char d_clear_bytes[] = {0x00,0xff,0x0f};
     pwr_rx_state_ctrl_cc::sptr
-    pwr_rx_state_ctrl_cc::make()
+    pwr_rx_state_ctrl_cc::make(float high_db,float low_db)
     {
       return gnuradio::get_initial_sptr
-        (new pwr_rx_state_ctrl_cc_impl());
+        (new pwr_rx_state_ctrl_cc_impl(high_db,low_db));
     }
 
     /*
      * The private constructor
      */
-    pwr_rx_state_ctrl_cc_impl::pwr_rx_state_ctrl_cc_impl()
+    pwr_rx_state_ctrl_cc_impl::pwr_rx_state_ctrl_cc_impl(float high_db,float low_db)
       : gr::block("pwr_rx_state_ctrl_cc",
-              gr::io_signature::make(1, 1, sizeof(gr_complex)),
-              gr::io_signature::make(1, 1, sizeof(gr_complex))),
+              gr::io_signature::make(1, 1, sizeof(float)),
+              gr::io_signature::make(0, 0, 0)),
               d_fb_port(pmt::mp("fb_out")),
-              d_in_port(pmt::mp("pu_in")),
-              d_colli_blob(pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_collision_bytes,EVENT_COLLISION))),
-              d_clear_blob(pmt::cons(pmt::PMT_NIL,pmt::make_blob(d_clear_bytes,EVENT_CLEAR)))
+              d_ed_valid(64)
     {
-      enter_idle();
+      enter_high();
       message_port_register_out(d_fb_port);
-      message_port_register_in(d_in_port);
-      set_msg_handler(d_in_port,boost::bind(&pwr_rx_state_ctrl_cc_impl::pu_msg_in,this,_1));
-      set_tag_propagation_policy(TPP_DONT);
-      d_report_event = IDLE;
+      set_threshold(high_db,low_db);
+      d_update = false;
     }
 
     /*
@@ -71,89 +64,51 @@ namespace gr {
     }
 
     void
-    pwr_rx_state_ctrl_cc_impl::enter_idle()
+    pwr_rx_state_ctrl_cc_impl::enter_high()
     {
-      d_state = IDLE;
-      d_collision_cnt =0;
-      pub_msg(EVENT_CLEAR);
+      d_state = HIGH;
+      d_ed_cnt =0;
+      d_cd_cnt=0;
+      d_ncolli=0;
     }
     void
-    pwr_rx_state_ctrl_cc_impl::enter_collision()
+    pwr_rx_state_ctrl_cc_impl::enter_trans()
     {
-      d_state = COLLISION;
-      d_collision_cnt++;
-      pub_msg(EVENT_COLLISION);
+      d_state = TRANS;
+      d_ed_cnt =0;
+      d_cd_cnt =0;
+      d_ncolli = 1;
     }
     void
-    pwr_rx_state_ctrl_cc_impl::pub_msg(int event)
+    pwr_rx_state_ctrl_cc_impl::enter_low()
     {
-      d_report_event = event;
-      d_pub_state.notify_one();
+      d_state = LOW;
+      d_ed_cnt =0;
     }
     void
-    pwr_rx_state_ctrl_cc_impl::run()
+    pwr_rx_state_ctrl_cc_impl::set_threshold(float high,float low)
     {
-      while(true){
-        if(d_report_event == EVENT_CLEAR){
-          message_port_pub(d_fb_port,d_clear_blob);
-        }else if(d_report_event == EVENT_COLLISION){
-          dout<<"publish clear state"<<std::endl;
-          message_port_pub(d_fb_port,d_colli_blob);
-        }else{
-          // undefined
-        }
-        gr::thread::scoped_lock lock(d_mutex);
-        d_pub_state.wait(lock);
-        lock.unlock();
-        if(d_finished){
-          return;
-        }
+      gr::thread::scoped_lock guard(d_mutex);
+      if(low>high){
+        d_thres_high = low;
+        d_thres_low = high;
+      }else{
+        d_thres_low = low;
+        d_thres_high = high;
       }
     }
     void
-    pwr_rx_state_ctrl_cc_impl::pu_msg_in(pmt::pmt_t msg)
+    pwr_rx_state_ctrl_cc_impl::reset_state(bool reset)
     {
-      pmt::pmt_t k = pmt::car(msg);
-      pmt::pmt_t v = pmt::cdr(msg);
-      if(pmt::is_blob(v)){
-        size_t io(0);
-        const uint8_t* uvec = pmt::u8vector_elements(v,io);
-        if(io>0){
-          dout<<"received a valid pu packet of size="<<io<<", collision cnt="<<d_collision_cnt<<std::endl;
-          // valid pu packet
-          if(d_state == COLLISION && d_collision_cnt>0){
-            // if detect a pu, subtract one
-            d_collision_cnt--;
-            dout<<"resolved one collision, "<<d_collision_cnt<<" left"<<std::endl; 
-          }
-          if(d_collision_cnt==0){
-            enter_idle();
-          }
-        }
+      gr::thread::scoped_lock guard(d_mutex);
+      if(d_state != HIGH){
+        d_update = true;
       }
-    }
-    bool
-    pwr_rx_state_ctrl_cc_impl::start()
-    {
-      d_finished = false;
-      d_thread = boost::shared_ptr<gr::thread::thread>
-        (new gr::thread::thread(boost::bind(&pwr_rx_state_ctrl_cc_impl::run,this)));
-      return block::start();
-    }
-    bool
-    pwr_rx_state_ctrl_cc_impl::stop()
-    {
-      d_finished = true;
-      d_pub_state.notify_one();
-      d_thread->interrupt();
-      d_thread->join();
-      return block::stop();
     }
     void
     pwr_rx_state_ctrl_cc_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required)
     {
-      for(int i=0;i<ninput_items_required.size();++i)
-        ninput_items_required[i] = noutput_items;
+      ninput_items_required[0] = noutput_items;
     }
 
     int
@@ -162,46 +117,67 @@ namespace gr {
                        gr_vector_const_void_star &input_items,
                        gr_vector_void_star &output_items)
     {
-      const gr_complex *in = (const gr_complex *) input_items[0];
-      gr_complex *out = (gr_complex *) output_items[0];
-      int nin = std::min(ninput_items[0],noutput_items);
+      const float *in = (const float *) input_items[0];
+      int nin = ninput_items[0];
       int count =0;
-      std::vector<tag_t> tags;
-      if(nin==0){
-        consume_each(0);
-        return 0;
+      if(d_update){
+        d_update = false;
+        enter_high();
       }
-      memcpy(out,in,sizeof(gr_complex)*nin);
-      get_tags_in_window(tags,0,0,nin,d_voe_tag);
-      for(count = 0; count<nin;++count){
-        if(!tags.empty()){
-          int offset = tags[0].offset - nitems_read(0);
-          if(offset == count){
-            if(pmt::to_bool(tags[0].value)){
-              enter_collision();
+      while(count<nin){
+        switch(d_state){
+          case HIGH:
+            if(in[count++]>d_thres_high){
+              d_ed_cnt++;
+              if(d_ed_cnt==d_ed_valid){
+                enter_trans();
+                message_port_pub(d_fb_port,pmt::cons(pmt::PMT_NIL,pmt::from_long(EVENT_COLLISION)));
+              }
+            }else{
+              d_ed_cnt=0;
             }
-            d_voe_state = pmt::to_bool(tags[0].value);
-            tags.erase(tags.begin());
-          }
+          break;
+          case TRANS:
+            if(in[count]>d_thres_high){
+              d_cd_cnt++;
+              if(d_cd_cnt == d_ed_valid){
+                d_cd_cnt=0;
+                d_ncolli++;
+              }
+            }else{
+              d_cd_cnt=0;
+            }
+            if(in[count++]<d_thres_low){
+              d_ed_cnt++;
+              if(d_ed_cnt==d_ed_valid){
+                enter_low();
+              }
+            }else{
+              d_ed_cnt=0;
+            }
+          break;
+          case LOW:
+            if(in[count++]>d_thres_low){
+              d_ed_cnt++;
+              if(d_ed_cnt==d_ed_valid){
+                d_ed_cnt=0;
+                d_ncolli--;
+                if(d_ncolli==0){
+                  enter_high();
+                  message_port_pub(d_fb_port,pmt::cons(pmt::PMT_NIL,pmt::from_long(EVENT_CLEAR)));
+                }
+              }
+            }else{
+              d_ed_cnt=0;
+            }
+          break;
+          default:
+            throw std::runtime_error("Undefined state");
+          break;
         }
-        //volk_32fc_x2_conjugate_dot_prod_32fc(&corr_val,in+count,d_samples.data(),d_samples.size());
-        //volk_32fc_x2_conjugate_dot_prod_32fc(&eng,in+count,in+count,d_samples.size());
-        //corr_norm = corr_val / (std::sqrt(eng*d_sEng)+gr_complex(1e-6,0)); 
-        //if(outCorr){
-        //  corr[count] = corr_norm;
-        //}
-        /*if(std::abs(corr_norm)>=d_threshold){
-          if(d_state == COLLISION && !d_voe_state && d_gap_cnt>d_gapLen){
-            d_collision_cnt--;
-            if(d_collision_cnt==0){
-              enter_idle();
-            }
-          }
-        }*/
-        //d_gap_cnt++;
       }
       consume_each (count);
-      return nin;
+      return 0;
     }
 
   } /* namespace lsa */

@@ -4,25 +4,12 @@
   <key>lsa_pwr_ctrl</key>
   <category>[lsa]</category>
   <import>import lsa</import>
-  <make>lsa.pwr_ctrl($high,$low)</make>
-  <callback>set_threshold($high,$low)</callback>
+  <make>lsa.pwr_ctrl()</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
-  <param>
-    <name>High Threshold(dB)</name>
-    <key>high</key>
-    <value>50</value>
-    <type>float</type>
-  </param>
-  <param>
-    <name>Low Threshold(dB)</name>
-    <key>low</key>
-    <value>20</value>
-    <type>float</type>
-  </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)

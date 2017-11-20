@@ -30,45 +30,38 @@ namespace gr {
     {
      private:
       const pmt::pmt_t d_fb_port;
-      const pmt::pmt_t d_in_port;
       gr::thread::mutex d_mutex;
-      //std::vector<gr_complex> d_samples;
-      //gr_complex d_sEng;
-      //gr_complex* d_corr_buf;
-      //const int d_max_out;
-      int d_collision_cnt;
+      
+      const int d_ed_valid;
+      int d_ed_cnt;
       int d_state;
-      //int d_gap_cnt;
-      //int d_gapLen;
-      int d_report_event;
-      bool d_voe_state;
-      //float d_threshold;
-      const pmt::pmt_t d_colli_blob;
-      const pmt::pmt_t d_clear_blob;
-      boost::shared_ptr<gr::thread::thread> d_thread;
-      bool d_finished;
-      gr::thread::condition_variable d_pub_state;
-      void enter_idle();
-      void enter_collision();
-      void pub_msg(int event);
-      void run();
-      void pu_msg_in(pmt::pmt_t msg);
+      int d_cd_cnt;
+      int d_ncolli;
+      
+      //boost::shared_ptr<gr::thread::thread> d_thread;
+      //bool d_finished;
+      //gr::thread::condition_variable d_pub_state;
+
+      float d_thres_low;
+      float d_thres_high;
+      bool d_update;
+
+      void enter_high();
+      void enter_trans();
+      void enter_low();
+      void reset_state(bool reset);
 
      public:
       enum RXSTATE{
-        IDLE,
-        COLLISION
+        HIGH,
+        TRANS,
+        LOW
       };
       
-      bool start();
-      bool stop();
-      pwr_rx_state_ctrl_cc_impl();
+      void set_threshold(float high,float low);
+      pwr_rx_state_ctrl_cc_impl(float high_db,float low_db);
       ~pwr_rx_state_ctrl_cc_impl();
-      //void set_threshold(float thres);
-      //float get_threshold() const;
-      //void set_gap(int gapLen);
-      //int get_gap() const;
-      // Where all the action really happens
+      
       void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 
       int general_work(int noutput_items,

@@ -28,7 +28,6 @@ install(FILES
     correlate_sync_cc.h
     preamble_prefixer.h
     su_ctrl.h
-    chip_mapper.h
     moving_average_cc.h
     moving_average_ff.h
     coarse_sync_cc.h
@@ -38,7 +37,6 @@ install(FILES
     su_sr_transmitter_bb.h
     su_tx_helper.h
     su_packet_sink_c.h
-    throughput_report.h
     stop_n_wait_tx_bb.h
     stop_n_wait_rx_ctrl_cc.h
     stop_n_wait_ack.h
@@ -49,12 +47,9 @@ install(FILES
     simple_rx.h
     phy_crc.h
     byte_to_symbol_bc.h
-    throughput_file_sink.h
     ic_resync_cc.h
     su_block_receiver_c.h
     ic_ncfo_cc.h
-    arq_tx.h
-    dump_tx.h
     burst_tagger_cc.h
     stop_n_wait_tag_gate_cc.h
     file_downloader_tx.h

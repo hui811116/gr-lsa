@@ -5,6 +5,7 @@
   <category>[lsa]</category>
   <import>import lsa</import>
   <make>lsa.simple_tx($filename,$timeout,$slow,$verb)</make>
+  <callback>reset_system($reset)</callback>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -50,7 +51,12 @@
       <key>False</key>
     </option>
   </param>
-  
+  <param>
+    <name>Reset</name>
+    <key>reset</key>
+    <value>False</value>
+    <type>bool</type>
+  </param>
 
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)

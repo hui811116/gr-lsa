@@ -220,7 +220,9 @@ namespace gr {
         d_seqno = 0;
         d_success_pkt =0;
         d_failed_pkt = 0;
-        update_sysTime();  
+        update_sysTime();
+        d_collision_state = false;
+        d_update_pwr.notify_one();
       }
     }
     // helper functions

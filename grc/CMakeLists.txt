@@ -23,7 +23,6 @@ install(FILES
     lsa_correlate_sync_cc.xml
     lsa_preamble_prefixer.xml
     lsa_su_ctrl.xml
-    lsa_chip_mapper.xml
     lsa_moving_average_cc.xml
     lsa_moving_average_ff.xml
     lsa_coarse_sync_cc.xml
@@ -33,7 +32,6 @@ install(FILES
     lsa_su_sr_transmitter_bb.xml
     lsa_su_tx_helper.xml
     lsa_su_packet_sink_c.xml
-    lsa_throughput_report.xml
     lsa_stop_n_wait_tx_bb.xml
     lsa_stop_n_wait_rx_ctrl_cc.xml
     lsa_stop_n_wait_ack.xml
@@ -44,12 +42,9 @@ install(FILES
     lsa_simple_rx.xml
     lsa_phy_crc.xml
     lsa_byte_to_symbol_bc.xml
-    lsa_throughput_file_sink.xml
     lsa_ic_resync_cc.xml
     lsa_su_block_receiver_c.xml
     lsa_ic_ncfo_cc.xml
-    lsa_arq_tx.xml
-    lsa_dump_tx.xml
     lsa_burst_tagger_cc.xml
     lsa_stop_n_wait_tag_gate_cc.xml
     lsa_file_downloader_tx.xml
