@@ -14,6 +14,8 @@ For reference, we develop the prototype in ubunut 16.04 operating system.
 
 If you are interested in this work. Welcome to contact us.
 
+[See the thesis](https://hdl.handle.net/11296/3v74d2)
+
 # Demo
 
 [![gr-lsa demo video](http://img.youtube.com/vi/vLPpGS-Pzbs/0.jpg)](https://www.youtube.com/watch?v=vLPpGS-Pzbs)
